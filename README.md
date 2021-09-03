@@ -1,4 +1,4 @@
-[DyNAS-T Logo](docs/images/dynast_logo.png)
+![DyNAS-T Logo](docs/images/dynast_logo.png)
 
 # DyNAS-T
 
@@ -19,21 +19,16 @@ HANDI, Intel BootstrapNAS, or external libraries such as Hanlab Once-for-All (OF
 * BootstarNAS (Q4'21)
 * Hanlab OFA (Q4'21)
 
-## Supported DNN Backends
+## Getting Started
 
-DyNAS-T is intended to be used with existing standalone SuperNet frameworks suchs as Intel
-HANDI, Intel BootstrapNAS, or external libraries such as Hanlab Once-for-All (OFA). 
-
-* HANDI Image Classification (supported)
-* HANDI Machine Translation (Q3'21)
-* BootstarNAS (Q4'21)
-* Hanlab OFA (Q4'21)
+Examples of setting up DyNAS-T with various SuperNet frameworks are given in the
+./docs/examples directory. 
 
 ## Design Overview
 
 DyNAS-T supplements existing SuperNet Training frameworks in the following ways. 
 
-[DyNAS-T Design Flow](docs/images/dynast_design.png)
+![DyNAS-T Design Flow](docs/images/dynast_design.png)
 
 ## Requirements
 
@@ -44,3 +39,4 @@ be aware of are:
 * scikit-learn == 0.23.2  
 * pandas == 1.1.5  
 
+ 
