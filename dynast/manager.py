@@ -1,121 +1,200 @@
+import random
+import numpy as np
+import pandas as pd
+import ast
+from sklearn.model_selection import train_test_split
 
 
-
-
-
-
-class SuperNetManager:
-    """
-    This class manages the supernet architecture (i.e. elastic parameters)
-    """
-        
-    def __init__(self, parameter_dict, verbose=True):
-        self.parameter_dict = parameter_dict
+class ParameterManager:
+    
+    def __init__(self, param_dict, verbose=False, seed=0):
+        self.param_dict = param_dict
         self.verbose = verbose
-    
-    def map_to_onehot(self):
-        pass
+        self.mapper, self.param_upperbound, self.param_count = self.process_param_dict()
+        self.inv_mapper = self.inv_mapper()
+        self.set_seed(seed)
         
-    def map_from_onehot(self):
-        pass
-    
-    def describe(self):
-        print('[Info] Parameter Dict:\n{}'.format(self.parameter_dict))
-    
-    def __len__(self):
-        return len(self.parameter_dict)
+    def process_param_dict(self):
+        '''
+        Builds a parameter mapping arrays and an upper-bound vector for PyMoo.    
+        '''
+        parameter_count = 0
+        parameter_bound = list()
+        parameter_upperbound = list()
+        parameter_mapper = list()
 
+        for parameter, options in self.param_dict.items():
+            # How many variables should be searched for
+            parameter_count += options['count']
+            parameter_bound.append(options['count'])
 
-class CustomImageClassifierManager(SuperNetManager):
-    
-    def __init__(self, parameter_dict=dict(), verbose=True):
-        super().__init__(parameter_dict, verbose)
-        self.block_counter = None
+            # How many variables for each parameter
+            for i in range(options['count']):
+                parameter_upperbound.append(len(options['vars'])-1)
+                index_simple = [x for x in range(len(options['vars']))]
+                parameter_mapper.append(dict(zip(index_simple, options['vars'])))
         
-    def add_categorical(self, category, value):
-        self.parameter_dict[category] = value
-        
-    def remove_categorical(self, category):
-        if category in self.parameter_dict:
-            self.parameter_dict.pop(category, None)
-            print('[Info] removed category key {}'.format(category))
-        else:
-            print('[Warning] invalid category key {}'.format(category))
-        
-    def add_single_block(self, block_arch):
-        if self.block_counter == None:
-            self.block_counter = 0
-        else:
-            self.block_counter += 1
-        
-        if block_arch:
-            self.parameter_dict['block_{}'.format(self.block_counter)] = block_arch
-            print('[Info] Added block {} with parameters {}'.format(self.block_counter, block_arch))
         if self.verbose:
-            print('[Info] Parameter Dict:\n{}'.format(self.parameter_dict))
+            print('[Info] Problem definition variables: {}'.format(parameter_count))
+            print('[Info] Variable Upper Bound array: {}'.format(parameter_upperbound))
+            print('[Info] Mapping dictionary created of length: {}'.format(len(parameter_mapper)))
+            print('[Info] Parameter Bound: {}'.format(parameter_bound))
+
+        return parameter_mapper, parameter_upperbound, parameter_count
     
-    def replace_single_block(self, block_name, block_arch):
-        if block_name not in self.parameter_dict:
-            print('[Warning] block name not found in full parameter dictionary')
+    def inv_mapper(self):
+        '''
+        Builds inverse of self.mapper    
+        '''
+        inv_parameter_mapper = list()
+        
+        for value in self.mapper:
+            inverse_dict = {v: k for k, v in value.items()}
+            inv_parameter_mapper.append(inverse_dict)
+        
+        return inv_parameter_mapper
+        
+    def onehot_generic(self, in_array):
+        '''
+        This is a generic approach to one-hot vectorization for predictor training 
+        and testing. It does not account for unused parameter mapping (e.g. block depth).
+        For unused parameter mapping, the end user will need to provide a custom solution.
+
+        input_array - the pymoo individual 1-D vector
+        mapper - the map for elastic parameters of the supernetwork
+        '''
+        # Insure compatible array and mapper
+        assert len(in_array) == len(self.mapper)
+
+        onehot = list()
+
+        # This function converts a pymoo input vector to a one-hot feature vector
+        for i in range(len(self.mapper)):
+            segment = [0 for _ in range(len(self.mapper[i]))]
+            segment[in_array[i]] = 1
+            onehot.extend(segment)
+
+        return np.array(onehot)
+    
+    def random_sample(self):
+        '''
+        Generates a random subnetwork from the possible elastic parameter range
+        '''
+        pymoo_vector = list()
+        for i in range(len(self.mapper)):
+            options = [x for x in range(len(self.mapper[i]))]
+            pymoo_vector.append(random.choice(options))
+
+        return pymoo_vector
+    
+    def translate2param(self, pymoo_vector):
+        '''
+        Translate a PyMoo 1-D parameter vector back to the elastic parameter dictionary format
+        '''
+        output = dict()
+
+        # Assign (and map) each vector element to the appropriate parameter dictionary key
+        counter = 0
+        for key, value in self.param_dict.items():
+            output[key] = list()
+            for i in range(value['count']):
+                output[key].append(self.mapper[counter][pymoo_vector[counter]])
+                counter += 1
+
+        # Insure correct vector mapping occurred        
+        assert counter == len(self.mapper)
+
+        return output
+
+    def translate2pymoo(self, parameters):
+        '''
+        Translate a single parameter dict to pymoo vector
+        '''
+        output = list()
+        
+        mapper_counter = 0
+        for key, value in self.param_dict.items():
+            param_counter = 0
+            for i in range(value['count']):
+                output.append(self.inv_mapper[mapper_counter][parameters[key][param_counter]])
+                mapper_counter += 1
+                param_counter += 1
+        
+        return output
+    
+    def import_csv(self, filepath, config, objective, column_names=None):
+        '''
+        Import a csv file generated from a supernetwork search for the purpose 
+        of training a predictor. 
+
+        filepath - path of the csv to be imported. 
+        config - the subnetwork configuration
+        objective - target/label for the subnet configuration (e.g. accuracy, latency)
+        column_names - a list of column names for the dataframe
+        df - the output dataframe that contains the original config dict, pymoo, and 1-hot 
+             equivalent vector for training. 
+        '''
+    
+        if column_names == None:
+            df = pd.read_csv(filepath)
         else:
-            self.parameter_dict[block_name] = block_arch
-        if self.verbose:
-            print('[Info] Parameter Dict:\n{}'.format(self.parameter_dict))
+            df = pd.read_csv(filepath, names=column_names)
+        df = df[[config, objective]]
 
-    def delete_block(self, block_name):
-        if block_name in self.parameter_dict:
-            self.parameter_dict.pop('key', None)
-            print('[Info] removed block_name {}'.format(block_name))
+        # Old corner case coverage
+        df[config] = df[config].replace({'null': 'None'}, regex=True)
+
+        convert_to_dict = list()
+        convert_to_pymoo = list()
+        convert_to_onehot = list()
+        for i in range(len(df)):
+            # Elastic Param Config format
+            config_as_dict = ast.literal_eval(df[config].iloc[i])
+            convert_to_dict.append(config_as_dict)  
+            # PyMoo 1-D vector format
+            config_as_pymoo = self.translate2pymoo(config_as_dict)
+            convert_to_pymoo.append(config_as_pymoo)
+            # Onehot preditor format
+            config_as_onehot = self.onehot_generic(config_as_pymoo)
+            convert_to_onehot.append(config_as_onehot)
+
+        df[config] = convert_to_dict
+        df['config_pymoo'] = convert_to_pymoo
+        df['config_onehot'] = convert_to_onehot
+
+        return df
+
+    def set_seed(self, seed):
+        '''
+        Set the random seed for randomized subnet generation and test/train split
+        '''
+        self.seed = seed
+        random.seed(seed)        
+
+    @staticmethod
+    def create_training_set(dataframe, train_only=True, split=0.33):
+        '''
+        Create a sklearn compatible test/train set from an imported results csv
+        after "import_csv" method is run.        
+        '''
+        collect_rows = list()
+        for i in range(len(dataframe)):
+            collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i]))
+        features = np.asarray(collect_rows)   
+
+        labels = dataframe.drop(columns=['config', 'config_pymoo', 'config_onehot']).values
+
+        assert len(features) == len(labels)
+
+        if train_only:
+            print('[Info] Training set length={}'.format(len(labels)))
+            return features, labels
         else:
-            print('[Warning] invalid block_name {}'.format(block_name))
+            features_train, features_test, labels_train, labels_test \
+                = train_test_split(features, labels, test_size=split, random_state=self.seed)
+            print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), splits))
+            return features_train, features_test, labels_train, labels_test
+
     
 
-class HANDImageClfManager(SuperNetManager):
-    
-    def __init__(self, parameter_dict=dict(), verbose=True):
-        super().__init__(parameter_dict, verbose)
-        
-    def build_mobilenetv3(self, resolution=224, width=None):
-        self.parameter_dict = dict()
-        sub_dict = dict()
-        
-        self.parameter_dict['r'] = resolution
-        self.parameter_dict['wid'] = width
-        for layer in range(4):
-            sub_dict[f'layer_{layer}'] = {'kernel_size' : [3,5,7], 
-                                          'expansion_ratio' : [3,4,6]}
-        sub_dict[f'depth_options'] = [2,3,4]
-        for block in range(5):
-            self.parameter_dict[f'block_{block}'] = sub_dict
-        if self.verbose:
-            print('[Info] MobileNetV3 SuperNet parameter dictionary created:\
-                  \n{}'.format(self.parameter_dict))
-        
-    def build_resnet50(self, resolution=224, width=None):
-        raise NotImplementedError
-
-    def pymoo_map(self):
-        block_depth_map = list()
-        kernel_size_map = list()
-        expansion_ratio_map = list()
-
-        for key, value in self.parameter_dict.items():
-            if 'block' in key:
-                for layer, operation in self.parameter_dict[key].items():
-                    if 'layer' in layer:
-                        if 'kernel_size' in operation:
-                            kernel_size_map.append(self.parameter_dict[key][layer]['kernel_size']) 
-                        if 'expansion_ratio' in operation:
-                            expansion_ratio_map.append(self.parameter_dict[key][layer]['expansion_ratio'])
-                    elif 'depth_options' in layer:
-                        block_depth_map.append(self.parameter_dict[key]['depth_options'])
-
-        return block_depth_map, kernel_size_map, expansion_ratio_map 
-        
-        
-
-class BootstrapNASManager(SuperNetManager):
-    
-    def __init__(self, parameter_dict=dict()):
-        super().__init__(parameter_dict)
-        self.block_counter = None
+            
