@@ -276,8 +276,8 @@ def main(args):
         # Instantiate Search Manager
         search_manager = SearchAlgoManager(algorithm=args.algorithm, 
                                         seed=args.seed)
-        search_manager.configure_nsga2(population=args.population, 
-                                    num_evals=10000)
+        search_manager.configure_nsga2(population=args.population,
+                                    num_evals=args.num_evals)
 
         # Run the search!
         output = search_manager.run_search(problem)          
