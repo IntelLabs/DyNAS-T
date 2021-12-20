@@ -6,52 +6,47 @@ DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a Su
 optimization package designed for finding the optimal Pareto front during neural architure
 search while minimizing the number of search validation measurements. It supports
 single-/multi-/many-objective problems for a variety of domains supported by the
-Intel AI Lab HANDI framework. The system leans heavily on the [pymoo](https://pymoo.org/) 
-optimization framework. Unique to DyNAS-T are the following features:
+Intel AI Lab [HANDI framework](https://gitlab.devtools.intel.com/handi). The system currently heavily utilizes the [pymoo](https://pymoo.org/)
+optimization library. Some of the key DyNAS-T features are:
 * Automatic handling of supernetwork parameters for search and predictor training
-* ConcurrentNAS accelerated search
+* Genetic Algorithm (e.g., NSGA-II) multi-objective subnetworks
+* ConcurrentNAS accelerated search using approximate predictors
 * Warm-start (transfer) search
 * Search population statistical analysis
 
 ## Supported SuperNet Frameworks
 
 DyNAS-T is intended to be used with existing standalone SuperNet frameworks suchs as Intel
-HANDI, Intel BootstrapNAS, or external libraries such as Hanlab Once-for-All (OFA). 
+HANDI, [Intel BootstrapNAS](https://gitlab.devtools.intel.com/jpmunoz/bootstrapnas_poc_subnet_extraction), or external libraries such as [Once-for-All (OFA)](https://github.com/mit-han-lab/once-for-all).
 
 * HANDI MobileNetV3 (supported)
 * HANDI ResNet50 (supported)
-* HANDI Transformer (Q4'21)
-* BootstrapNAS ResNet50 torchvision (Q4'21)
+* HANDI Transformer (supported)
+* HANDI Recommender (Q1'22)
+* BootstrapNAS ResNet50 torchvision (supported)
 
 ## Getting Started
 
 To setup DyNAS-T run `pip install -e .` or make a local copy of the `dynast` subfolder in your
-local subnetwork repository. 
+local subnetwork repository with the `requirements.txt` dependencies installed.
 
 Examples of setting up DyNAS-T with various SuperNet frameworks are given in the
 ./examples directory. We suggested using `dynast_mbnv3_full.py` as a starting point
-using the HANDI MobileNetV3 supernetwork. 
+using the HANDI MobileNetV3 supernetwork.
 
 ## Design Overview
 
-DyNAS-T supplements existing SuperNet Training frameworks in the following ways. 
+DyNAS-T supplements existing SuperNet Training frameworks in the following ways.
 
 ![DyNAS-T Design Flow](docs/images/dynast_design.png)
 
-## Requirements
-
-Requirements for using DyNAS-T are given in `requirements.txt`. Key requirements to
-be aware of are:  
-* pymoo == 0.5.0   
-* optuna == 2.4.0   
-* scikit-learn == 0.23.2  
-* pandas == 1.1.5  
-
 ## Release Notes
 
-0.3.0 (current) - Draft:   
+0.1.0 - 0.3.0:
 * Updated to pymoo version 0.5.0
-* Added ConcurrentNAS example for MobileNetV3
+* Added example templates for HANDI MobileNetV3, Transformer, ResNet50
+* Added ConcurrentNAS examples for HANDI MobileNetV3, BootstrapNAS
+* Added OpenVINO INT8 search example for HANDI MobileNetV3
+* Updated search results to be managed by pymoo results object.
 * New `ParameterManager` handles tranlation between dictionary, pymoo, and one-hot vector formats
 
- 

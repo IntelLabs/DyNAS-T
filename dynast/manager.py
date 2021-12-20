@@ -6,17 +6,17 @@ from sklearn.model_selection import train_test_split
 
 
 class ParameterManager:
-    
+
     def __init__(self, param_dict, verbose=False, seed=0):
         self.param_dict = param_dict
         self.verbose = verbose
         self.mapper, self.param_upperbound, self.param_count = self.process_param_dict()
         self.inv_mapper = self.inv_mapper()
         self.set_seed(seed)
-        
+
     def process_param_dict(self):
         '''
-        Builds a parameter mapping arrays and an upper-bound vector for PyMoo.    
+        Builds a parameter mapping arrays and an upper-bound vector for PyMoo.
         '''
         parameter_count = 0
         parameter_bound = list()
@@ -33,7 +33,7 @@ class ParameterManager:
                 parameter_upperbound.append(len(options['vars'])-1)
                 index_simple = [x for x in range(len(options['vars']))]
                 parameter_mapper.append(dict(zip(index_simple, options['vars'])))
-        
+
         if self.verbose:
             print('[Info] Problem definition variables: {}'.format(parameter_count))
             print('[Info] Variable Upper Bound array: {}'.format(parameter_upperbound))
@@ -41,22 +41,22 @@ class ParameterManager:
             print('[Info] Parameter Bound: {}'.format(parameter_bound))
 
         return parameter_mapper, parameter_upperbound, parameter_count
-    
+
     def inv_mapper(self):
         '''
-        Builds inverse of self.mapper    
+        Builds inverse of self.mapper
         '''
         inv_parameter_mapper = list()
-        
+
         for value in self.mapper:
             inverse_dict = {v: k for k, v in value.items()}
             inv_parameter_mapper.append(inverse_dict)
-        
+
         return inv_parameter_mapper
-        
+
     def onehot_generic(self, in_array):
         '''
-        This is a generic approach to one-hot vectorization for predictor training 
+        This is a generic approach to one-hot vectorization for predictor training
         and testing. It does not account for unused parameter mapping (e.g. block depth).
         For unused parameter mapping, the end user will need to provide a custom solution.
 
@@ -75,7 +75,7 @@ class ParameterManager:
             onehot.extend(segment)
 
         return np.array(onehot)
-    
+
     def random_sample(self):
         '''
         Generates a random subnetwork from the possible elastic parameter range
@@ -86,7 +86,26 @@ class ParameterManager:
             pymoo_vector.append(random.choice(options))
 
         return pymoo_vector
-    
+
+    def random_samples(self, size=100, trial_limit=100000):
+        '''
+        Generates a list of random subnetworks from the possible elastic parameter range
+        '''
+        pymoo_vector_list = list()
+
+        trials = 0
+        while len(pymoo_vector_list) < size and trials < trial_limit:
+            sample = self.random_sample()
+            if sample not in pymoo_vector_list:
+                pymoo_vector_list.append(sample)
+            trials += 1
+
+        if trials >= trial_limit:
+            print('[Warning] Unable to create unique list of samples.')
+
+        return pymoo_vector_list
+
+
     def translate2param(self, pymoo_vector):
         '''
         Translate a PyMoo 1-D parameter vector back to the elastic parameter dictionary format
@@ -101,7 +120,7 @@ class ParameterManager:
                 output[key].append(self.mapper[counter][pymoo_vector[counter]])
                 counter += 1
 
-        # Insure correct vector mapping occurred        
+        # Insure correct vector mapping occurred
         assert counter == len(self.mapper)
 
         return output
@@ -111,7 +130,7 @@ class ParameterManager:
         Translate a single parameter dict to pymoo vector
         '''
         output = list()
-        
+
         mapper_counter = 0
         for key, value in self.param_dict.items():
             param_counter = 0
@@ -119,22 +138,23 @@ class ParameterManager:
                 output.append(self.inv_mapper[mapper_counter][parameters[key][param_counter]])
                 mapper_counter += 1
                 param_counter += 1
-        
-        return output
-    
-    def import_csv(self, filepath, config, objective, column_names=None):
-        '''
-        Import a csv file generated from a supernetwork search for the purpose 
-        of training a predictor. 
 
-        filepath - path of the csv to be imported. 
+        return output
+
+    def import_csv(self, filepath, config, objective, column_names=None,
+                   drop_duplicates=True):
+        '''
+        Import a csv file generated from a supernetwork search for the purpose
+        of training a predictor.
+
+        filepath - path of the csv to be imported.
         config - the subnetwork configuration
         objective - target/label for the subnet configuration (e.g. accuracy, latency)
         column_names - a list of column names for the dataframe
-        df - the output dataframe that contains the original config dict, pymoo, and 1-hot 
-             equivalent vector for training. 
+        df - the output dataframe that contains the original config dict, pymoo, and 1-hot
+             equivalent vector for training.
         '''
-    
+
         if column_names == None:
             df = pd.read_csv(filepath)
         else:
@@ -144,13 +164,17 @@ class ParameterManager:
         # Old corner case coverage
         df[config] = df[config].replace({'null': 'None'}, regex=True)
 
+        if drop_duplicates:
+            df.drop_duplicates(subset=[config], inplace=True)
+            df.reset_index(drop=True, inplace=True)
+
         convert_to_dict = list()
         convert_to_pymoo = list()
         convert_to_onehot = list()
         for i in range(len(df)):
             # Elastic Param Config format
             config_as_dict = ast.literal_eval(df[config].iloc[i])
-            convert_to_dict.append(config_as_dict)  
+            convert_to_dict.append(config_as_dict)
             # PyMoo 1-D vector format
             config_as_pymoo = self.translate2pymoo(config_as_dict)
             convert_to_pymoo.append(config_as_pymoo)
@@ -169,24 +193,26 @@ class ParameterManager:
         Set the random seed for randomized subnet generation and test/train split
         '''
         self.seed = seed
-        random.seed(seed)        
+        random.seed(seed)
 
     @staticmethod
-    def create_training_set(dataframe, train_only=True, split=0.33):
+    def create_training_set(dataframe, train_with_all=True, split=0.33):
         '''
         Create a sklearn compatible test/train set from an imported results csv
-        after "import_csv" method is run.        
+        after "import_csv" method is run.
         '''
+
+
         collect_rows = list()
         for i in range(len(dataframe)):
             collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i]))
-        features = np.asarray(collect_rows)   
+        features = np.asarray(collect_rows)
 
         labels = dataframe.drop(columns=['config', 'config_pymoo', 'config_onehot']).values
 
         assert len(features) == len(labels)
 
-        if train_only:
+        if train_with_all:
             print('[Info] Training set length={}'.format(len(labels)))
             return features, labels
         else:
@@ -195,6 +221,5 @@ class ParameterManager:
             print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), splits))
             return features_train, features_test, labels_train, labels_test
 
-    
 
-            
+

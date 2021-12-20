@@ -1,11 +1,15 @@
 """
 DyNAS-T Reference Search
 
-SuperNetwork: HANDI OFA MobileNetV3
+SuperNetwork: OFA MobileNetV3
 
-Search Tactic: ConcurrentNAS
+Search Tactic: Concurrent Search (predictor training then search)
 
 Description: Multi-Objective genetic algorithm search.
+Assumes that the user has:
+    * a latency LUT to predict the network, and the metadata
+      with information on the hardware config
+    * an AccuracyPredictor neural network that predicts the acc
 The results can be saved to the `--csv_path` file.
 """
 # Imports
@@ -19,6 +23,10 @@ import copy
 import pickle
 import uuid
 from fvcore.nn import FlopCountAnalysis, parameter_count
+from handi.runner import OVRunner
+import shutil
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # OFA Specific Imports
 from ofa.tutorial.latency_table import LatencyEstimator
@@ -34,11 +42,14 @@ from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
 from dynast.analytics_module.results import ResultsManager
 
 
+
+
+
 class OFARunner:
     '''
     The OFARunner is responsible for 'running' the subnetwork evaluation.
     '''
-    def __init__(self, supernet, model_dir, lut, acc_predictor, macs_predictor,
+    def __init__(self, supernet, model_dir, acc_predictor, macs_predictor,
                  latency_predictor, imagenetpath):
 
         self.supernet = supernet
@@ -46,13 +57,13 @@ class OFARunner:
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
         self.latency_predictor = latency_predictor
-        if isinstance(lut, dict):
-            self.lut = lut
-        else:
-            with open(lut, 'r') as f:
-                self.lut = json.load(f)
-        self.latencyEstimator = LatencyEstimator(url=self.lut)
-        self.width = float(supernet[-3:])
+        #if isinstance(lut, dict):
+        #    self.lut = lut
+        #else:
+        #    with open(lut, 'r') as f:
+        #        self.lut = json.load(f)
+        #self.latencyEstimator = LatencyEstimator(url=self.lut)
+        #self.width = float(supernet[-3:])
 
         # Validation setup
         self.target = 'cpu'
@@ -103,27 +114,27 @@ class OFARunner:
 
     def estimate_accuracy_top1(self, subnet_cfg):
 
-        # Ridge Acc Predictor
+        # Ridge Predictor - 135 vector
         top1 = self.acc_predictor.predict_single(subnet_cfg)
         return top1
 
     def estimate_macs(self, subnet_cfg):
 
-        # Ridge MACs Predictor
+        # Ridge Predictor - 135 vector
         macs = self.macs_predictor.predict_single(subnet_cfg)
         return macs
 
     def estimate_latency(self, subnet_cfg):
 
-        # Ridge Latency Predictor
+        # LUT Latency Predictor
         latency = self.latency_predictor.predict_single(subnet_cfg)
         return latency
 
-    def estimate_latency_lut(self, subnet_cfg):
+    #def estimate_latency_lut(self, subnet_cfg):
 
-        # LUT Latency
-        latency = self.latencyEstimator.predict_network_latency_given_spec(subnet_cfg, width=self.width)
-        return latency
+        # LUT Latency Predictor
+    #    latency = self.latencyEstimator.predict_network_latency_given_spec(subnet_cfg, width=self.width)
+    #    return latency
 
 
 class UserEvaluationInterface:
@@ -160,8 +171,18 @@ class UserEvaluationInterface:
         subnet_sample = copy.deepcopy(sample)
 
         if validation:
-            latency = self.evaluator.estimate_latency_lut(subnet_sample)
-            top1 = self.evaluator.validate_top1(subnet_sample)
+            latency_ov_quant, throughput_ov_quant, top1_ov_quant, top5_ov_quant, \
+            latency_ov_fp32, throughput_ov_fp32, top1_ov_fp32, top5_ov_fp32 = self.evaluator.evaluate_quantized(
+                subnet_cfg=subnet_sample,
+                cores=56,
+                quant_policy='DefaultQuantization',
+                exp_name='test',
+                test_size=100,
+                test_ov_fp32=False,
+            )
+
+            latency = latency_ov_quant
+            top1 = top1_ov_quant
             #top1 = self.evaluator.estimate_accuracy_top1(self.manager.onehot_generic(x))
         else:
             latency = self.evaluator.estimate_latency(self.manager.onehot_generic(x))
@@ -193,27 +214,39 @@ def main(args):
     supernet_manager = ParameterManager(param_dict=supernet_parameters,
                                         seed=args.seed)
 
-    supernet = args.supernet
-    print('[Info] Loading Latency LUT.')
-    with open(args.lut_path, 'r') as f:
-        lut = json.load(f)
-    supernet = lut['metadata']['_net']
-    assert supernet == args.supernet
 
-    print('[Info] Building Accuracy Predictor')
-    df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
-    features, labels = supernet_manager.create_training_set(df)
-    acc_pred_main = MobileNetAccuracyPredictor()
-    acc_pred_main.train(features, labels)
+    runner_validator = OVRunner(
+            net=args.supernet,
+            path=args.dataset_path,
+            model_dir=args.model_dir,
+            batch_size=128,
+            batch_size_val=128,
+            workers=2,
+            test_size=100,
+        )
+
+
+    supernet = args.supernet
+    if args.lut_path:
+        print('[Info] Loading Latency LUT.')
+        with open(args.lut_path, 'r') as f:
+            lut = json.load(f)
+        supernet = lut['metadata']['_net']
+        assert supernet == args.supernet
+
+    #print('[Info] Building Accuracy Predictor')
+    #df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
+    #features, labels = supernet_manager.create_training_set(df)
+    #acc_pred_main = MobileNetAccuracyPredictor()
+    #acc_pred_main.train(features, labels)
 
     # Instatiate objective 'runner', treating latency LUT as ground truth for latency in this example
-    runner_validator = OFARunner(supernet=supernet,
-                       model_dir=args.model_dir,
-                       lut=lut,
-                       acc_predictor=acc_pred_main,
-                       macs_predictor=None,
-                       latency_predictor=None,
-                       imagenetpath=args.dataset_path)
+    #runner_validator = OFARunner(supernet=supernet,
+    #                   model_dir=args.model_dir,
+    #                   acc_predictor=None,
+    #                   macs_predictor=None,
+    #                   latency_predictor=None,
+    #                   imagenetpath=args.dataset_path_ov)
 
     # Define how evaluations occur, gives option for csv file
     validation_interface = UserEvaluationInterface(evaluator=runner_validator,
@@ -221,10 +254,17 @@ def main(args):
 
     # Take initial validation measurements to start concurrent search
     # validated_population is the csv that will contain all the validated pop results
-    validated_population = 'val_set2.csv'
-    with open(validated_population, 'w') as f:
-        writer = csv.writer(f)
-    last_population = [supernet_manager.random_sample() for _ in range(args.population)]
+
+    if False:
+        validated_population = 'val_set_int8_p50.csv'
+        with open(validated_population, 'w') as f:
+            writer = csv.writer(f)
+        last_population = [supernet_manager.random_sample() for _ in range(args.population)]
+
+    if True:
+        validated_population = 'val_set_int8_p50.csv'
+        #shutil.copy2('val_set_int8_start.csv',
+        #            validated_population)
 
     # --------------------------------
     # DyNAS-T ConcurrentNAS Loop
@@ -234,9 +274,10 @@ def main(args):
     for loop in range(1, num_loops+1):
         print(f'[Info] Starting ConcurrentNAS loop {loop} of {num_loops}.')
 
-        for individual in last_population:
-            print(individual)
-            validation_interface.eval_subnet(individual, validation=True, csv_path=validated_population)
+        if loop != 1:
+            for individual in last_population:
+                print(individual)
+                validation_interface.eval_subnet(individual, validation=True, csv_path=validated_population)
 
         print('[Info] Training "weak" latency predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='latency',
@@ -252,7 +293,7 @@ def main(args):
         acc_pred = MobileNetAccuracyPredictor()
         acc_pred.train(features, labels)
 
-        runner_predictor = OFARunner(supernet=supernet, model_dir=args.model_dir, lut=lut, macs_predictor=None,
+        runner_predictor = OFARunner(supernet=supernet, model_dir=args.model_dir, macs_predictor=None,
             imagenetpath=args.dataset_path, acc_predictor=acc_pred, latency_predictor=lat_pred)
 
         prediction_interface = UserEvaluationInterface(evaluator=runner_predictor,
@@ -267,14 +308,14 @@ def main(args):
         search_manager = SearchAlgoManager(algorithm=args.algorithm,
                                         seed=args.seed)
         search_manager.configure_nsga2(population=args.population,
-                                    num_evals=args.num_evals)
+                                    num_evals=100000)
 
         # Run the search!
         output = search_manager.run_search(problem)
         last_population = output.pop.get('X')
 
         # Process results
-        results = ResultsManager(csv_path=f'./results_temp/loop{loop}_{args.csv_path}',
+        results = ResultsManager(csv_path=f'./results_temp/loop{loop}c_{args.csv_path}',
                                 manager=supernet_manager,
                                 search_output=output)
         results.history_to_csv()
@@ -293,6 +334,9 @@ if __name__ == '__main__':
     parser.add_argument('--input_csv', help='path to pre-trained acc predictor')
     parser.add_argument('--dataset_path', help='The path of dataset (e.g. ImageNet)',
                         type=str, default='/datasets/imagenet-ilsvrc2012')
+    parser.add_argument('--dataset_path_ov', help='The path of OV dataset (e.g. ImageNet)',
+                        type=str, default='~/nosnap/dataset/pot-acc-aware-quant/ImageNet/original')
+
 
     # DyNAS-T Arguments
     parser.add_argument('--algorithm', default='nsga2', choices=['nsga2', 'rnsga2'],
@@ -301,6 +345,8 @@ if __name__ == '__main__':
     parser.add_argument('--csv_path', required=True, default=None, help='location to save results.')
     parser.add_argument('--population', default=50, type=int, help='population size for each generation')
     parser.add_argument('--verbose', action='store_true', help='Flag to control output')
+    parser.add_argument('--search_tactic', default='nsga2', choices=['nsga2', 'rnsga2'],
+                        help='Search tactic (e.g., full search, warm-start, concurrent.')
     args = parser.parse_args()
 
     print('\n'+'-'*40)
