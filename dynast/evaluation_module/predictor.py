@@ -33,6 +33,21 @@ class Predictor:
         # Return predictions
         return self.regressor.predict(examples)
 
+    def predict_single(self, example):
+        '''
+        Predicts the output values of the specified single example using the underlying regressor.
+
+        Parameters
+        ----------
+            example: Single example for which prediction will be made.
+
+        Returns
+        -------
+            Predictions of the specified example.
+        '''
+
+        return self.regressor.predict(example.reshape(1,-1))[0]
+
     def get_parameters(self):
         '''
         Returns the optimal parameter values of the underlying regressor.

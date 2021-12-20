@@ -9,7 +9,7 @@ import autograd.numpy as anp
 
 
 
-class SearchAlgoManager: 
+class SearchAlgoManager:
     '''
     Manages the search parameters for multi-objective search (2 objectives).
 
@@ -33,14 +33,14 @@ class SearchAlgoManager:
         if self.algorithm == 'nsga2' and self.engine == 'pymoo':
             self.algorithm_def = self.configure_nsga2()
         elif self.algorithm == 'rnsga2' and self.engine == 'pymoo':
-            self.algorithm_def = self.configure_rnsga2()    
+            self.algorithm_def = self.configure_rnsga2()
         else:
             print('[Warning] algorithm specified not implemented.')
             raise NotImplementedError
 
     def configure_nsga2(self, population=50, num_evals=1000, warm_pop=None,
-                        crossover_prob=0.9, crossover_eta=10.0,
-                        mutation_prob=None, mutation_eta=3.0):
+                        crossover_prob=0.9, crossover_eta=15.0,
+                        mutation_prob=0.02, mutation_eta=20.0):
         self.population = population
         self.num_evals = num_evals
 
@@ -50,7 +50,7 @@ class SearchAlgoManager:
         else:
             sample_strategy = get_sampling("int_lhs")
 
-        self.algorithm_def = NSGA2(pop_size=self.population, 
+        self.algorithm_def = NSGA2(pop_size=self.population,
             sampling=sample_strategy,
             crossover=get_crossover("int_sbx", prob=crossover_prob, eta=crossover_eta),
             mutation=get_mutation("int_pm", prob=mutation_prob, eta=mutation_eta),
@@ -59,10 +59,10 @@ class SearchAlgoManager:
         if num_evals % population != 0:
             print('[Warning] Number of samples not divisible by population size')
 
-    def configure_rnsga2(self, population=50, num_evals=1000, warm_pop=None, 
+    def configure_rnsga2(self, population=50, num_evals=1000, warm_pop=None,
                          ref_points=[[0, 0]],
-                         crossover_prob=0.9, crossover_eta=10.0,
-                         mutation_prob=None, mutation_eta=3.0):
+                         crossover_prob=0.9, crossover_eta=15.0,
+                         mutation_prob=0.02, mutation_eta=20.0):
         self.population = population
         self.num_evals = num_evals
 
@@ -91,15 +91,15 @@ class SearchAlgoManager:
             print('[Warning] Number of samples not divisible by population size')
 
     def run_search(self, problem):
-        
+
         print('[Info] Running Search .', end='', flush=True)
         start_time = time.time()
 
-        if self.algorithm == 'nsga2' and self.engine == 'pymoo':    
-            result = minimize(problem, 
-                              self.algorithm_def, 
-                              ('n_gen', int(self.num_evals/self.population)), 
-                              seed=self.seed, 
+        if self.algorithm == 'nsga2' and self.engine == 'pymoo':
+            result = minimize(problem,
+                              self.algorithm_def,
+                              ('n_gen', int(self.num_evals/self.population)),
+                              seed=self.seed,
                               save_history=True,
                               verbose=self.verbose)
         else:
@@ -115,11 +115,11 @@ class ProblemSingleObjective(Problem):
     def __init__(self, evaluation_interface, param_count, param_upperbound):
         super().__init__(n_var=param_count, n_obj=1, n_constr=0,
                          xl=0, xu=param_upperbound, type_var=np.int)
-        
+
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-        
+
         # Store results for a given generation for PyMoo
         objective_arr = list()
 
@@ -127,13 +127,13 @@ class ProblemSingleObjective(Problem):
         for i in range(len(x)):
 
             _, objective = self.evaluation_interface.eval_subnet(x[i])
-        
+
             objective_arr.append(objective)
 
-        print('.', end='', flush=True)  
+        print('.', end='', flush=True)
 
-        # Update PyMoo with evaluation data     
-        out["F"] = anp.column_stack([objective_arr])    
+        # Update PyMoo with evaluation data
+        out["F"] = anp.column_stack([objective_arr])
 
 
 class ProblemMultiObjective(Problem):
@@ -141,11 +141,11 @@ class ProblemMultiObjective(Problem):
     def __init__(self, evaluation_interface, param_count, param_upperbound):
         super().__init__(n_var=param_count, n_obj=3, n_constr=0,
                          xl=0, xu=param_upperbound, type_var=np.int)
-        
+
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-        
+
         # Store results for a given generation for PyMoo
         objective_x_arr, objective_y_arr = list(), list()
 
@@ -153,25 +153,25 @@ class ProblemMultiObjective(Problem):
         for i in range(len(x)):
 
             _, objective_x, objective_y = self.evaluation_interface.eval_subnet(x[i])
-        
+
             objective_x_arr.append(objective_x)
             objective_y_arr.append(objective_y)
 
-        print('.', end='', flush=True)  
+        print('.', end='', flush=True)
 
-        # Update PyMoo with evaluation data     
-        out["F"] = anp.column_stack([objective_x_arr, objective_y_arr])   
+        # Update PyMoo with evaluation data
+        out["F"] = anp.column_stack([objective_x_arr, objective_y_arr])
 
 class ProblemManyObjective(Problem):
 
     def __init__(self, evaluation_interface, param_count, param_upperbound):
         super().__init__(n_var=param_count, n_obj=3, n_constr=0,
                          xl=0, xu=param_upperbound, type_var=np.int)
-        
+
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-        
+
         # Store results for a given generation for PyMoo
         objective_x_arr, objective_y_arr, objective_z_arr = list(), list(), list()
 
@@ -179,12 +179,12 @@ class ProblemManyObjective(Problem):
         for i in range(len(x)):
 
             _, objective_x, objective_y, objective_z = self.evaluation_interface.eval_subnet(x[i])
-        
+
             objective_x_arr.append(objective_x)
             objective_y_arr.append(objective_y)
-            objective_z_arr.append(objective_z)   
+            objective_z_arr.append(objective_z)
 
-        print('.', end='', flush=True)  
+        print('.', end='', flush=True)
 
-        # Update PyMoo with evaluation data     
-        out["F"] = anp.column_stack([objective_x_arr, objective_y_arr, objective_z_arr])    
+        # Update PyMoo with evaluation data
+        out["F"] = anp.column_stack([objective_x_arr, objective_y_arr, objective_z_arr])
