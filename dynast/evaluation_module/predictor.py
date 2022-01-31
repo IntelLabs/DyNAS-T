@@ -142,8 +142,10 @@ class RidgePredictor(Predictor):
 
         # Create parameter searcher
         search_parameters = {'alpha': alphas}
-        self.searcher = GridSearchCV(estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
-                                     scoring='neg_root_mean_squared_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0)
+        self.searcher = GridSearchCV(
+            estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
+            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0
+        )
 
 
 class SVRPredictor(Predictor):
@@ -161,13 +163,15 @@ class SVRPredictor(Predictor):
 
         # Create parameter searcher
         search_parameters = {'C': cost_factors, 'epsilon': epsilons}
-        self.searcher = GridSearchCV(estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
-                                     scoring='neg_root_mean_squared_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0)
+        self.searcher = GridSearchCV(
+            estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
+            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0
+        )
 
 
 class ResNet50AccuracyPredictor(RidgePredictor):
 
-    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
+    DEFAULT_ALPHAS = np.arange(0.5, 4.5, 0.5)
     DEFAULT_MAX_ITERATIONS = 1000000
 
     def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
@@ -221,7 +225,8 @@ class TransformerBleuPredictor(SVRPredictor):
     DEFAULT_EPSILONS = np.arange(0.0, 0.55, 0.05)
     DEFAULT_MAX_ITERATIONS = 1000000
 
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
+                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
         super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
 
@@ -234,3 +239,27 @@ class TransformerLatencyPredictor(RidgePredictor):
     def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
         super().__init__(alphas, max_iterations, verbose)
+
+
+class NCFHitRatePredictor(SVRPredictor):
+
+    DEFAULT_COST_FACTORS = np.arange(1.0, 11.0, 1.0)
+    DEFAULT_EPSILONS = np.arange(0.0, 0.25, 0.05)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
+                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
+
+
+class NCFLatencyPredictor(SVRPredictor):
+
+    DEFAULT_COST_FACTORS = np.arange(0.01, 0.11, 0.01)
+    DEFAULT_EPSILONS = np.arange(0.0, 0.25, 0.05)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, kernel_type='linear', cost_factors=DEFAULT_COST_FACTORS,
+                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
