@@ -219,6 +219,16 @@ class MobileNetMACsPredictor(RidgePredictor):
         super().__init__(alphas, max_iterations, verbose)
 
 
+class MobileNetCyclesPredictor(RidgePredictor):
+
+    DEFAULT_ALPHAS = np.arange(0.1, 0.6, 0.1)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(alphas, max_iterations, verbose)
+
+
 class TransformerBleuPredictor(SVRPredictor):
 
     DEFAULT_COST_FACTORS = np.arange(1.0, 6.0, 1.0)
