@@ -196,7 +196,7 @@ class ParameterManager:
         random.seed(seed)
 
     @staticmethod
-    def create_training_set(dataframe, train_with_all=True, split=0.33):
+    def create_training_set(dataframe, train_with_all=True, split=0.33, seed=None):
         '''
         Create a sklearn compatible test/train set from an imported results csv
         after "import_csv" method is run.
@@ -217,8 +217,8 @@ class ParameterManager:
             return features, labels
         else:
             features_train, features_test, labels_train, labels_test \
-                = train_test_split(features, labels, test_size=split, random_state=self.seed)
-            print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), splits))
+                = train_test_split(features, labels, test_size=split, random_state=seed)
+            print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), split))
             return features_train, features_test, labels_train, labels_test
 
 
