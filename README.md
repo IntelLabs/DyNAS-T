@@ -6,7 +6,7 @@ DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a Su
 optimization package designed for finding the optimal Pareto front during neural architure
 search while minimizing the number of search validation measurements. It supports
 single-/multi-/many-objective problems for a variety of domains supported by the
-Intel AI Lab [HANDI framework](https://gitlab.devtools.intel.com/handi). The system currently heavily utilizes the [pymoo](https://pymoo.org/)
+Intel AI Lab [HANDI framework](https://github.com/intel-innersource?q=handi&type=all&language=&sort=). The system currently heavily utilizes the [pymoo](https://pymoo.org/)
 optimization library. Some of the key DyNAS-T features are:
 * Automatic handling of supernetwork parameters for search and predictor training
 * Genetic Algorithm (e.g., NSGA-II) multi-objective subnetworks
