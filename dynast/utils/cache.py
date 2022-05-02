@@ -53,7 +53,7 @@ class Cache(object):
         """
         try:
             with open(self._get_key_path(key), 'r') as f:
-                self._hit += 1
+                self._hits += 1
                 return json.load(f)
         except FileNotFoundError:
             return None
@@ -80,4 +80,4 @@ class Cache(object):
         Params:
         - `key` - (str) `key` under which the payload is/will be stored.
         """
-        return os.path.join(self.cache_dir, self.name, '{}.csv'.format(key))
+        return os.path.join(self.cache_dir, self.name, '{}.json'.format(key))

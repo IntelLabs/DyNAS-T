@@ -6,6 +6,7 @@ import subprocess
 import numpy as np
 from openvino.inference_engine import IECore
 
+from dynast.quantization.policy import OVQuantizationPolicy
 from dynast.utils import get_cores, get_hostname, log, measure_time
 from dynast.utils.onnx import save_onnx_model
 
@@ -23,9 +24,11 @@ def load_openvino(
     folder: str,
     name: str,
     return_net: bool = False,
+    is_quantized=False,
 ):
     ie = IECore()
-
+    if is_quantized:
+        folder = os.path.join(folder, 'optimized')
     net = ie.read_network(
         model=os.path.join(folder, name + '.xml'),
         weights=os.path.join(folder, name + '.bin')
@@ -36,6 +39,42 @@ def load_openvino(
         return exec_net, net
     else:
         return exec_net
+
+
+@measure_time
+def save_ov_quantized(
+    tmp_folder: str = '/store/.torch/',
+    model_name: str = 'tmp',
+    quant_policy: str = 'DefaultQuantization',
+    stat_subset_size: int = 3*128
+) -> None:
+
+    fp32_path_xml = os.path.join(tmp_folder, model_name + '.xml')
+    fp32_path_bin = os.path.join(tmp_folder, model_name + '.bin')
+    q_path = os.path.join(tmp_folder, '')
+
+    policy_to_use = OVQuantizationPolicy.get_policy(
+        model_name=model_name,
+        fp32_path_xml=fp32_path_xml,
+        fp32_path_bin=fp32_path_bin,
+        quant_policy=quant_policy,
+        stat_subset_size=stat_subset_size,
+    )
+
+    json_fname = os.path.join(tmp_folder, 'cfg_tmp.json')
+
+    with open(json_fname, 'w') as f:
+        json.dump(policy_to_use, f, indent=4)
+
+    cmd_pot = [
+        'python', '/opt/intel/openvino_2021/deployment_tools/tools/post_training_optimization_toolkit/main.py',
+        '-c', json_fname,
+        '--output-dir', q_path,
+        '-d'
+    ]
+    log.info('Running external command: {}'.format(' '.join(cmd_pot)))
+    result = subprocess.run(cmd_pot)
+    assert result.returncode == 0, cmd_pot
 
 
 @measure_time
@@ -65,7 +104,7 @@ def save_openvino(model, shape, tmp_folder='/store/.torch/', name='tmp', verbose
 
 
 @measure_time
-def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, cores=None, nstreams=1):
+def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, cores=None, nstreams=1, is_quantized=False):
     # NOTE(Maciej) Model has to already be quentized and saved.
     if not experiment_name:
         experiment_name = '{}_dynast_eval'.format(get_hostname())
@@ -77,7 +116,10 @@ def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, c
     folder_name = os.path.expanduser('/store/.torch/{}'.format(experiment_name))
     ov_model_dir = os.path.join(folder_name, 'ov_model')
 
-    file_path = os.path.join(ov_model_dir, experiment_name + '.xml')
+    if is_quantized:
+        file_path = os.path.join(ov_model_dir, 'optimized', experiment_name + '.xml')
+    else:
+        file_path = os.path.join(ov_model_dir, experiment_name + '.xml')
 
     if cores is not None:
         cmd = ['taskset', '-c', cores]

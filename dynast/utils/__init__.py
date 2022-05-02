@@ -167,7 +167,8 @@ def validate_classification(
                     # openvino cannot handle dynamic batch sizes, so for
                     # the last batch of dataset, zero pad the batch size
                     if batch_size != expected_batch_size:
-                        assert batch_size < expected_batch_size
+                        assert batch_size < expected_batch_size, 'Assert batch_size:{} < expected_batch_size:{}'.format(
+                            batch_size, expected_batch_size)
                         npad = expected_batch_size - batch_size
                         img = np.pad(img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode='constant')
                         img = img.copy()

@@ -30,7 +30,6 @@ class BNASRunner:
     def validate_subnet(self, subnet_cfg):
         self.supernet.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         subnet = self.supernet.get_active_subnet()
-        self.validate(subnet)
         self.reset_bn(subnet, 4000, 64)
         top1, top5, gflops = self.validate(subnet)
         model_params = self.count_parameters(subnet)
@@ -224,7 +223,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
     print(f'[Info] Using device: {device}')
     if args.describe_models:
-        print(summary(supernet.to(device),input_size=(3,224,224)))
+        print(summary(supernet.to(device),input_size=(3,224,224)))  # TODO(Maciej) Summary is never imported
 
     data_dir = '/datasets/imagenet-ilsvrc2012'
     valdir = data_dir + '/val'
@@ -332,7 +331,7 @@ def main(args):
         search_manager = SearchAlgoManager(algorithm=args.algorithm,
                                         seed=args.seed)
         search_manager.configure_nsga2(population=args.population,
-                                    num_evals=100000)
+                                       num_evals=100000)
 
         # Run the search!
         output = search_manager.run_search(problem)
