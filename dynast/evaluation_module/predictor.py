@@ -159,7 +159,7 @@ class SVRPredictor(Predictor):
         if (kernel_type == 'linear'):
             self.regressor = svm.LinearSVR(max_iter=max_iterations)
         else:
-            self.regressor = svm.SVR(kernel=kernel_type, max_iter=max_iterations)
+            self.regressor = svm.SVR(kernel=kernel_type, gamma='auto', max_iter=max_iterations)
 
         # Create parameter searcher
         search_parameters = {'C': cost_factors, 'epsilon': epsilons}
@@ -169,29 +169,41 @@ class SVRPredictor(Predictor):
         )
 
 
-class ResNet50AccuracyPredictor(RidgePredictor):
+class BERTAccuracyPredictor(SVRPredictor):
 
-    DEFAULT_ALPHAS = np.arange(0.5, 4.5, 0.5)
+    DEFAULT_COST_FACTORS = np.round(np.linspace(10.0, 80.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0, 0.1]
     DEFAULT_MAX_ITERATIONS = 1000000
 
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
-        super().__init__(alphas, max_iterations, verbose)
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
 
 
-class ResNet50LatencyPredictor(RidgePredictor):
+class BERTLatencyPredictor(SVRPredictor):
 
-    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
+    DEFAULT_COST_FACTORS = np.round(np.linspace(0.1, 8.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0, 0.1]
     DEFAULT_MAX_ITERATIONS = 1000000
 
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
-        super().__init__(alphas, max_iterations, verbose)
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
 
 
 class MobileNetAccuracyPredictor(RidgePredictor):
 
     DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(alphas, max_iterations, verbose)
+
+
+class MobileNetCyclesPredictor(RidgePredictor):
+
+    DEFAULT_ALPHAS = np.arange(0.1, 0.6, 0.1)
     DEFAULT_MAX_ITERATIONS = 1000000
 
     def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
@@ -219,42 +231,10 @@ class MobileNetMACsPredictor(RidgePredictor):
         super().__init__(alphas, max_iterations, verbose)
 
 
-class MobileNetCyclesPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.1, 0.6, 0.1)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class TransformerBleuPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.arange(1.0, 6.0, 1.0)
-    DEFAULT_EPSILONS = np.arange(0.0, 0.55, 0.05)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
-                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class TransformerLatencyPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(5.0, 26.0, 1.0)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
 class NCFHitRatePredictor(SVRPredictor):
 
-    DEFAULT_COST_FACTORS = np.arange(1.0, 11.0, 1.0)
-    DEFAULT_EPSILONS = np.arange(0.0, 0.25, 0.05)
+    DEFAULT_COST_FACTORS = np.round(np.linspace(10.0, 20.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0, 0.1]
     DEFAULT_MAX_ITERATIONS = 1000000
 
     def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
@@ -265,11 +245,55 @@ class NCFHitRatePredictor(SVRPredictor):
 
 class NCFLatencyPredictor(SVRPredictor):
 
-    DEFAULT_COST_FACTORS = np.arange(0.01, 0.11, 0.01)
-    DEFAULT_EPSILONS = np.arange(0.0, 0.25, 0.05)
+    DEFAULT_COST_FACTORS = np.round(np.linspace(1.0, 8.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0]
     DEFAULT_MAX_ITERATIONS = 1000000
 
-    def __init__(self, kernel_type='linear', cost_factors=DEFAULT_COST_FACTORS,
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
+                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
+
+
+class ResNet50AccuracyPredictor(RidgePredictor):
+
+    DEFAULT_ALPHAS = np.arange(0.5, 4.5, 0.5)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(alphas, max_iterations, verbose)
+
+
+class ResNet50LatencyPredictor(RidgePredictor):
+
+    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(alphas, max_iterations, verbose)
+
+
+class TransformerBleuPredictor(SVRPredictor):
+
+    DEFAULT_COST_FACTORS = np.round(np.linspace(5.0, 10.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0, 0.1]
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
+                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
+
+
+class TransformerLatencyPredictor(SVRPredictor):
+
+    DEFAULT_COST_FACTORS = np.round(np.linspace(30.0, 100.0, 10), 1)
+    DEFAULT_EPSILONS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
                  epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
         super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
