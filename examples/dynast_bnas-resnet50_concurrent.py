@@ -1,21 +1,23 @@
+import argparse
+import copy
+import csv
+import time
+from datetime import datetime
+
 import torch
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from bnas_resnets import BootstrapNASResnet50
-import time
-import csv
-import numpy as np
-import autograd.numpy as anp
-from datetime import datetime
-import argparse
-import copy
-from fvcore.nn import FlopCountAnalysis, parameter_count
+from fvcore.nn import FlopCountAnalysis
 
+from dynast.analytics_module.results import ResultsManager
+from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
+                                                MobileNetMACsPredictor)
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
-from dynast.evaluation_module.predictor import MobileNetAccuracyPredictor, MobileNetMACsPredictor
-from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
-from dynast.analytics_module.results import ResultsManager
+from dynast.search_module.search import (ProblemMultiObjective,
+                                         SearchAlgoManager)
+from dynast.utils.nn import AverageMeter, accuracy, count_parameters, reset_bn
 
 
 class BNASRunner:
@@ -30,9 +32,9 @@ class BNASRunner:
     def validate_subnet(self, subnet_cfg):
         self.supernet.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         subnet = self.supernet.get_active_subnet()
-        self.reset_bn(subnet, 4000, 64)
+        reset_bn(subnet, 4000, 64)  # FIXME(Maciej) Add dataloader
         top1, top5, gflops = self.validate(subnet)
-        model_params = self.count_parameters(subnet)
+        model_params = count_parameters(subnet)
 
         return top1, top5, gflops, model_params
 
@@ -73,7 +75,7 @@ class BNASRunner:
                     print('GFLOPs: {}'.format(gflops))
 
                 output = model(images)
-                acc1, acc5 = self.accuracy(output, labels, topk=(1, 5))
+                acc1, acc5 = accuracy(output, labels, topk=(1, 5))
                 top1.update(acc1, images.size(0))
                 top5.update(acc5, images.size(0))
 
@@ -95,63 +97,6 @@ class BNASRunner:
             # if is_main_process():
             #     TODO: Tensorboard.
         return top1.avg, top5.avg, gflops
-
-
-    def count_parameters(self, model):
-        device = 'cpu'
-        model.to(device)
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    def reset_bn(self, model, num_samples, batch_size):
-        model.train()
-        if num_samples / batch_size > len(self.train_loader):
-            print("BN set stats: num of samples exceed the samples in loader. Using full loader")
-        for i, (images, _) in enumerate(self.train_loader):
-            images = images.cuda()
-            model(images)
-            if i > num_samples / batch_size:
-                print(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
-                break
-
-    def accuracy(self, output, target, topk=(1,)):
-        """Computes the accuracy over the k top predictions for the specified values of k"""
-        with torch.no_grad():
-            maxk = max(topk)
-            batch_size = target.size(0)
-
-            _, pred = output.topk(maxk, 1, True, True)
-            pred = pred.t()
-            correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-            res = []
-            for k in topk:
-                correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-                res.append(correct_k.mul_(100.0 / batch_size).item())
-            return res
-
-
-class AverageMeter:
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.val = None
-        self.avg = None
-        self.sum = None
-        self.count = None
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
 
 
 class UserEvaluationInterface:

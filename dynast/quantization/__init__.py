@@ -1,7 +1,7 @@
 import os
 
 from dynast.utils import get_hostname, samples_to_batch_multiply
-from dynast.utils import validate_classification
+from dynast.utils.nn import validate_classification
 from dynast.utils.ov import load_openvino, save_openvino, save_ov_quantized
 
 

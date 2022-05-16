@@ -1,12 +1,10 @@
 import torch
-import torchvision.datasets as datasets
-import torchvision.transforms as transforms
 from bnas_resnets import BootstrapNASResnet50
-from tqdm import tqdm
 
 from dynast.quantization import quantize_ov, validate
-from dynast.utils import (count_parameters, get_gflops, log, measure_time,
-                          samples_to_batch_multiply)
+from dynast.utils import samples_to_batch_multiply
+from dynast.utils.datasets import ImageNet
+from dynast.utils.nn import count_parameters, get_gflops, reset_bn
 from dynast.utils.ov import benchmark_openvino
 
 SUPERNET_PARAMETERS = {
@@ -71,10 +69,13 @@ class BNASRunner:
         self.supernet.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         subnet = self.supernet.get_active_subnet()
 
+        train_dataloader= ImageNet.train_dataloader(batch_size=self.batch_size)
+
         reset_bn(
-            subnet,
-            samples_to_batch_multiply(self.bn_samples, self.batch_size),
-            self.batch_size,
+            model=subnet,
+            num_samples=samples_to_batch_multiply(self.bn_samples, self.batch_size),
+            batch_size=self.batch_size,
+            train_dataloader=train_dataloader,
         )
 
         quantize_ov(
@@ -90,61 +91,3 @@ def get_supernet(path='supernet/torchvision_resnet50_supernet.pth', device='cpu'
     init = torch.load(path, map_location=torch.device(device))['state_dict']
     supernet.load_state_dict(init)
     return supernet
-
-
-@measure_time
-def reset_bn(model, num_samples, batch_size, device='cpu'):
-    train_loader = get_train_loader()
-    model.train()
-    if num_samples / batch_size > len(train_loader):
-        log.warn(
-            "BN set stats: num of samples exceed the samples in loader. Using full loader")
-    for i, (images, _) in tqdm(enumerate(train_loader), total=num_samples // batch_size, desc='Reset BN'):
-        if 'cpu' not in device:
-            images = images.cuda()
-        model(images)
-        if i > num_samples / batch_size:
-            log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
-            break
-
-
-def get_transform_normalize():
-    return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-
-
-def get_train_loader(batch_size=128, image_size=224, train_dir='/datasets/imagenet-ilsvrc2012/train'):
-    train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(image_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        get_transform_normalize(),
-    ])
-    train_dataset = datasets.ImageFolder(
-        train_dir,
-        train_transforms,
-    )
-    train_sampler = None
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=(train_sampler is None),
-        num_workers=4, pin_memory=True, sampler=train_sampler, drop_last=True
-    )
-
-    return train_loader
-
-
-def get_val_lovader(batch_size=128, image_size=224, val_dir='/datasets/imagenet-ilsvrc2012/train'):
-    val_transforms = transforms.Compose([
-        transforms.Resize(int(image_size / 0.875)),
-        transforms.CenterCrop(image_size),
-        transforms.ToTensor(),
-        get_transform_normalize(),
-    ])
-    val_dataset = datasets.ImageFolder(
-        val_dir,
-        val_transforms,
-    )
-    val_sampler = torch.utils.data.SequentialSampler(val_dataset)
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, sampler=val_sampler, drop_last=True
-    )
-    return val_loader

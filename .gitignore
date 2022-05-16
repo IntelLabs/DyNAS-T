@@ -116,3 +116,8 @@ venv.bak/
 .mypy_cache/
 
 *.csv
+.torch/
+*.pth
+*.tar.gz
+*.meta
+cifar10/
