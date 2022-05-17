@@ -182,7 +182,7 @@ class BERTAccuracyPredictor(SVRPredictor):
 
 class BERTLatencyPredictor(SVRPredictor):
 
-    DEFAULT_COST_FACTORS = np.round(np.linspace(0.1, 8.0, 10), 1)
+    DEFAULT_COST_FACTORS = np.round(np.linspace(1.0, 8.0, 10), 1)
     DEFAULT_EPSILONS = [0.0, 0.1]
     DEFAULT_MAX_ITERATIONS = 1000000
 
@@ -263,6 +263,17 @@ class ResNet50AccuracyPredictor(RidgePredictor):
     def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
 
         super().__init__(alphas, max_iterations, verbose)
+
+
+class ResNet50CyclesPredictor(SVRPredictor):
+
+    DEFAULT_COST_FACTORS = np.arange(1.0, 11.0, 1.0)
+    DEFAULT_EPSILONS = [0.0]
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
 
 
 class ResNet50LatencyPredictor(RidgePredictor):
