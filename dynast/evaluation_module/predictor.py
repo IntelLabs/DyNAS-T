@@ -9,13 +9,57 @@ from sklearn.model_selection import GridSearchCV
 
 class Predictor:
 
+    DEFAULT_ALPHAS = np.arange(0.1, 10.1, 0.1)
+    DEFAULT_COST_FACTORS = np.arange(1.0, 101.0, 1.0)
+    DEFAULT_MAX_ITERATIONS = 1000000
+
+    def __init__(self, alphas=DEFAULT_ALPHAS, cost_factors=DEFAULT_COST_FACTORS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
+        SEARCHER_VERBOSITY = 10
+
+        # Initialize label normalization factor
+        self.normalization_factor = 1.0
+
+        # Initialize best searcher index
+        self.best_index = 0
+    
+        # Create lists of regressors and associated hyper-parameters
+        regressors = [linear_model.Ridge(max_iter=max_iterations), svm.SVR(kernel='rbf', gamma='auto', epsilon=0.0, max_iter=max_iterations)]
+        hyper_parameters = [{'alpha': alphas}, {'C': cost_factors}]
+
+        # Create list of hyper-parameter searchers
+        self.searchers = []
+        for regressor, parameters in zip(regressors, hyper_parameters):
+            self.searchers.append(GridSearchCV(estimator=regressor, param_grid=parameters, n_jobs=-1,
+            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0))
+
     def train(self, examples, labels):
 
-        # Search for optimal regressor parameters
-        self.searcher.fit(examples, labels)
+        '''
+        Trains the predictor on the specified examples and labels using the underlying regressor.
 
-        # Retrieve regressor trained with optimal parameters
-        self.regressor = self.searcher.best_estimator_
+        Parameters
+        ----------
+            examples: Examples to be used for training.
+            labels: Labels to be used for training.
+
+        Returns
+        -------
+            None
+        '''
+
+        # Compute normalized labels
+        self.normalization_factor = 10 ** (np.floor(np.log10(np.amax(labels))) - 1.0)
+        normalized_labels = labels / self.normalization_factor
+
+        # Train regressors with optimal parameters
+        scores = np.zeros(len(self.searchers))
+        for s in range(len(self.searchers)):
+            self.searchers[s].fit(examples, normalized_labels)
+            scores[s] = self.searchers[s].best_score_
+
+        # Determine index of best searcher
+        self.best_index = np.argmax(scores)
 
     def predict(self, examples):
         '''
@@ -30,23 +74,12 @@ class Predictor:
             Predictions of the specified examples.
         '''
 
-        # Return predictions
-        return self.regressor.predict(examples)
+        # Compute predictions
+        regressor = self.searchers[self.best_index].best_estimator_
+        normalized_predictions = regressor.predict(examples)
+        predictions = normalized_predictions * self.normalization_factor
 
-    def predict_single(self, example):
-        '''
-        Predicts the output values of the specified single example using the underlying regressor.
-
-        Parameters
-        ----------
-            example: Single example for which prediction will be made.
-
-        Returns
-        -------
-            Predictions of the specified example.
-        '''
-
-        return self.regressor.predict(example.reshape(1,-1))[0]
+        return predictions
 
     def get_parameters(self):
         '''
@@ -62,7 +95,14 @@ class Predictor:
         '''
 
         # Retrieve optimal parameters
-        return self.searcher.best_params_
+        parameters = {}
+        for searcher in self.searchers:
+            regressor_name = searcher.best_estimator_.__class__.__name__
+            for key in searcher.best_params_:
+                parameter_key = regressor_name + '_' + key
+                parameters[parameter_key.lower()] = searcher.best_params_[key]
+
+        return parameters
 
     def get_metrics(self, examples, labels):
         '''
@@ -109,8 +149,9 @@ class Predictor:
 
         # Load searcher and regressor from specified file
         with open(filename, 'rb') as input_file:
-            self.searcher = pickle.load(input_file)
-            self.regressor = pickle.load(input_file)
+            self.normalization_factor = pickle.load(input_file)
+            self.best_index = pickle.load(input_file)
+            self.searchers = pickle.load(input_file)
 
     def save(self, filename):
         '''
@@ -127,184 +168,6 @@ class Predictor:
 
         # Save searcher and regressor to specified file
         with open(filename, 'wb') as output_file:
-            pickle.dump(self.searcher, output_file)
-            pickle.dump(self.regressor, output_file)
-
-
-class RidgePredictor(Predictor):
-
-    def __init__(self, alphas, max_iterations, verbose):
-
-        SEARCHER_VERBOSITY = 10
-
-        # Create regressor
-        self.regressor = linear_model.Ridge(max_iter=max_iterations)
-
-        # Create parameter searcher
-        search_parameters = {'alpha': alphas}
-        self.searcher = GridSearchCV(
-            estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
-            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0
-        )
-
-
-class SVRPredictor(Predictor):
-
-    def __init__(self, kernel_type, cost_factors, epsilons, max_iterations, verbose):
-
-        SEARCHER_VERBOSITY = 10
-
-        # Create regressor
-        self.regressor = None
-        if (kernel_type == 'linear'):
-            self.regressor = svm.LinearSVR(max_iter=max_iterations)
-        else:
-            self.regressor = svm.SVR(kernel=kernel_type, gamma='auto', max_iter=max_iterations)
-
-        # Create parameter searcher
-        search_parameters = {'C': cost_factors, 'epsilon': epsilons}
-        self.searcher = GridSearchCV(
-            estimator=self.regressor, param_grid=search_parameters, n_jobs=-1,
-            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0
-        )
-
-
-class BERTAccuracyPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(10.0, 80.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0, 0.1]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class BERTLatencyPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(1.0, 8.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0, 0.1]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class MobileNetAccuracyPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class MobileNetCyclesPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.1, 0.6, 0.1)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class MobileNetLatencyPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class MobileNetMACsPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.1, 0.6, 0.1)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class NCFHitRatePredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(10.0, 20.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0, 0.1]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
-                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class NCFLatencyPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(1.0, 8.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
-                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class ResNet50AccuracyPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.5, 4.5, 0.5)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class ResNet50CyclesPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.arange(1.0, 11.0, 1.0)
-    DEFAULT_EPSILONS = [0.0]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS, epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class ResNet50LatencyPredictor(RidgePredictor):
-
-    DEFAULT_ALPHAS = np.arange(0.5, 2.5, 0.5)
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, alphas=DEFAULT_ALPHAS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(alphas, max_iterations, verbose)
-
-
-class TransformerBleuPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(5.0, 10.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0, 0.1]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
-                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
-
-
-class TransformerLatencyPredictor(SVRPredictor):
-
-    DEFAULT_COST_FACTORS = np.round(np.linspace(30.0, 100.0, 10), 1)
-    DEFAULT_EPSILONS = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-    DEFAULT_MAX_ITERATIONS = 1000000
-
-    def __init__(self, kernel_type='rbf', cost_factors=DEFAULT_COST_FACTORS,
-                 epsilons=DEFAULT_EPSILONS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
-
-        super().__init__(kernel_type, cost_factors, epsilons, max_iterations, verbose)
+            pickle.dump(self.normalization_factor, output_file)
+            pickle.dump(self.best_index, output_file)
+            pickle.dump(self.searchers, output_file)
