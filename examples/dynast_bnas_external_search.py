@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 
+import torch
 from addict import Dict
 from torch import nn
 
@@ -50,30 +51,40 @@ def get_nas_argument_parser():
 
     parser.add_argument('--log-dir', type=str, default='runs', help='The directory where logs'
                         ' are saved.')
+    parser.add_argument('-d', '--device', type=str, default='auto', choices=['auto', 'cuda', 'cpu'],
+                        help='Target device to run on. `auto` will automatically use GPU acceleration if available.')
+    parser.add_argument('-b', '--batch_size', type=int, default=128)
+    parser.add_argument('--num_samples', type=int, default=4000, help='Number of samples used to reset batch norm')
     parser.add_argument('--dataset', type=str, default='cifar10', choices=['cifar10'])
     return parser
 
 
 @measure_time
-def validate_subnet(subnet: nn.Module):
-    train_dataloader = CIFAR10.train_dataloader(batch_size=128)
+def validate_subnet(
+    subnet: nn.Module,
+    train_dataloader: torch.utils.data.DataLoader,
+    validation_dataloader: torch.utils.data.DataLoader,
+    batch_size: int = 128,
+    num_samples: int = 4000,
+    device: str = 'cuda',
+):
 
     reset_bn(
         model=subnet,
         train_dataloader=train_dataloader,
-        num_samples=4000,
-        batch_size=128,
-        device='cuda',
+        num_samples=num_samples,
+        batch_size=batch_size,
+        device=device,
     )
 
     loss, top1, top5 = validate_classification(
         net=subnet,
-        data_loader=CIFAR10.validation_dataloader(batch_size=128),
+        data_loader=validation_dataloader,
         no_logs=False,
         is_openvino=False,
-        device='cuda',
-        batch_size=128,
-        workers=4,
+        device=device,
+        batch_size=batch_size,
+        workers=16,
     )
 
     return loss, top1, top5
@@ -90,6 +101,11 @@ def main(argv):
     config.checkpoint_save_dir = config.log_dir
     config.supernet_path = args.supernet_path
     config.supernet_weights = args.supernet_weights
+    config.device = torch.device(
+        ('cuda' if torch.cuda.is_available() else 'cpu') if args.device == 'auto' else args.device
+    )
+
+    log.info('Target device: {}'.format(config.device))
 
     configure_paths(config)
 
@@ -102,9 +118,17 @@ def main(argv):
     search_space = bootstrapNAS.get_search_space()
     log.info('Search Space: {search_space}'.format(search_space=search_space))
 
+    train_dataloader = CIFAR10.train_dataloader(batch_size=args.batch_size)
+    validation_dataloader = CIFAR10.validation_dataloader(batch_size=args.batch_size)
+
     loss, top1, top5 = bootstrapNAS.eval_subnet(
         [0, 0, 2, 2, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3],
-        validate_subnet,  # TODO(Maciej): How to pass additional params?
+        validate_subnet,
+        batch_size=args.batch_size,
+        num_samples=args.num_samples,
+        train_dataloader=train_dataloader,
+        validation_dataloader=validation_dataloader,
+        device=config.device,
     )
     log.info('loss {loss} top1 {top1} top5 {top5}'.format(loss=loss, top1=top1, top5=top5))
     # TODO Do some magic with DyNAS-T!

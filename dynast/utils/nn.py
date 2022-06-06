@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import onnxruntime
 import torch
@@ -185,7 +187,7 @@ def reset_bn(
     num_samples: int,
     batch_size: int,
     train_dataloader: torch.utils.data.DataLoader,
-    device: str = 'cpu',
+    device: Union[str, torch.device] = 'cpu',
 ) -> None:
     model.train()
     model.to(device)
@@ -199,7 +201,7 @@ def reset_bn(
             log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
             break
 
-    if 'cuda' in device:
+    if 'cuda' in str(device):
         log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated()//1024//1024))
 
     model.eval()
