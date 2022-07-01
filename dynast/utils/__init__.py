@@ -1,23 +1,32 @@
 import functools as _functools
 import json
-import logging as _logging
+import logging
 import os
 import subprocess
 import time as _time
 
 import pandas as pd
-from rich.console import Console as _Console
-from rich.logging import RichHandler as _RichHandler
 
-console = _Console()
-_logging.basicConfig(
-    level='INFO',
-    format="%(message)s",
-    datefmt='[%X]',
-    handlers=[_RichHandler()],
-)
 
-log = _logging.getLogger('rich')
+def set_logger(level: int = logging.INFO):
+    """Create logger object and set the logging level to `level`."""
+    global log
+    log = logging.getLogger()
+    log.setLevel(level)
+    log.handlers.clear()
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+
+    formatter = logging.Formatter(
+        "[%(asctime)s] %(levelname)-8s %(filename)s:%(lineno)d - %(message)s",
+        "%m-%d %H:%M:%S",
+    )
+    console_handler.setFormatter(formatter)
+    log.addHandler(console_handler)
+
+
+log = None
+set_logger()
 
 
 def measure_time(func):
