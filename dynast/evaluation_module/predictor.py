@@ -95,7 +95,7 @@ class Predictor:
         '''
 
         # Retrieve optimal parameters
-        parameters = {}
+        parameters = {'best_index': self.best_index}
         for searcher in self.searchers:
             regressor_name = searcher.best_estimator_.__class__.__name__
             for key in searcher.best_params_:
