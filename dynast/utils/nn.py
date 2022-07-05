@@ -1,4 +1,5 @@
-from typing import Union
+import time
+from typing import Tuple, Union
 
 import numpy as np
 import onnxruntime
@@ -205,3 +206,60 @@ def reset_bn(
         log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated()//1024//1024))
 
     model.eval()
+
+
+def rm_bn_from_net(
+    net: nn.Module,
+) -> None:
+    for m in net.modules():
+        if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
+            m.forward = lambda x: x
+
+
+@torch.no_grad()
+def measure_latency(
+    model: nn.Module,
+    input_size: Tuple[int, int, int, int],
+    warmup_steps: int = 10,
+    measure_steps: int = 50,
+    device: str = 'cpu',
+) -> Tuple[float, float]:
+    """Measure Torch model's latency.
+
+    Returns
+    -------
+    `(mean latency; std latency)`
+    """
+    # TODO(macsz) Compare results with https://pytorch.org/tutorials/recipes/recipes/benchmark.html
+    times = []
+
+    inputs = torch.randn(*input_size, device=device)
+    model = model.eval()
+    rm_bn_from_net(model)
+    model = model.to(device)
+
+    if 'cuda' in str(device):
+        torch.cuda.synchronize()
+    for _ in tqdm(range(warmup_steps), desc='Warming up'):
+        model(inputs)
+    if 'cuda' in str(device):
+        torch.cuda.synchronize()
+
+    data_gen = tqdm(range(measure_steps), desc='Benchmarking')
+    for _ in data_gen:
+        if 'cuda' in str(device):
+            torch.cuda.synchronize()
+        st = time.time()
+        model(inputs)
+        if 'cuda' in str(device):
+            torch.cuda.synchronize()
+        ed = time.time()
+        times.append(ed - st)
+
+        # Round to 0.001
+        latency_mean = int(np.mean(times)*1000*1000)/1000
+        latency_std = int(np.std(times)*1000*1000)/1000
+        data_gen.set_description('Benchmarking (BS {bs}): {latency_mean} +/- {latency_std} s'.format(
+            bs=input_size[0], latency_mean=latency_mean, latency_std=latency_std))
+
+    return latency_mean, latency_std
