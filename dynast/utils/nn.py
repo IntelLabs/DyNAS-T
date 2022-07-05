@@ -6,7 +6,6 @@ import onnxruntime
 import torch
 import torch.nn as nn
 from fvcore.nn import FlopCountAnalysis
-from tqdm import tqdm
 
 from dynast.utils import log, measure_time
 
@@ -69,7 +68,7 @@ def accuracy(
 def validate_classification(
     epoch=0,
     is_test=True,
-    run_str='',
+    run_str='',  # TODO(macsz) Drop?
     net=None,
     data_loader=None,
     no_logs=False,
@@ -112,55 +111,69 @@ def validate_classification(
         return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
     with torch.no_grad():
-        with tqdm(total=total, desc='Validate Epoch #{} {}'.format(epoch + 1, run_str), disable=no_logs) as t:
-            for i, (images, labels) in enumerate(data_loader):
-                images, labels = images.to(device), labels.to(device)
+        for i, (images, labels) in enumerate(data_loader):
+            epoch += 1
+            log.debug(
+                "Validate #{}/{} {} - {}".format(
+                    epoch,
+                    total,
+                    run_str,
+                    {
+                        "loss": losses.avg,
+                        "top1": top1.avg,
+                        "top5": top5.avg,
+                        "img_size": images.size(2),
+                    },
+                )
+            )
+            images, labels = images.to(device), labels.to(device)
 
-                if ofa_use_mkldnn:
-                    images = images.to_mkldnn()
+            if ofa_use_mkldnn:
+                images = images.to_mkldnn()
 
-                # compute output
-                if is_onnx:
-                    output = net.run([net.get_outputs()[0].name], {net.get_inputs()[0].name: to_numpy(images)})
-                    output = torch.from_numpy(output[0]).to(device)
-                elif is_openvino:
-                    expected_batch_size = net.inputs['input'].shape[0]
-                    img = to_numpy(images)
-                    batch_size = len(img)
+            # compute output
+            if is_onnx:
+                output = net.run(
+                    [net.get_outputs()[0].name],
+                    {net.get_inputs()[0].name: to_numpy(images)},
+                )
+                output = torch.from_numpy(output[0]).to(device)
+            elif is_openvino:
+                expected_batch_size = net.inputs["input"].shape[0]
+                img = to_numpy(images)
+                batch_size = len(img)
 
-                    # openvino cannot handle dynamic batch sizes, so for
-                    # the last batch of dataset, zero pad the batch size
-                    if batch_size != expected_batch_size:
-                        assert batch_size < expected_batch_size, 'Assert batch_size:{} < expected_batch_size:{}'.format(
-                            batch_size, expected_batch_size)
-                        npad = expected_batch_size - batch_size
-                        img = np.pad(img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode='constant')
-                        img = img.copy()
+                # openvino cannot handle dynamic batch sizes, so for
+                # the last batch of dataset, zero pad the batch size
+                if batch_size != expected_batch_size:
+                    assert (
+                        batch_size < expected_batch_size
+                    ), "Assert batch_size:{} < expected_batch_size:{}".format(
+                        batch_size, expected_batch_size
+                    )
+                    npad = expected_batch_size - batch_size
+                    img = np.pad(
+                        img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode="constant"
+                    )
+                    img = img.copy()
 
-                    output = net.infer(inputs={'input': img})
-                    output = torch.Tensor(output['output'])[:batch_size]
-                else:
-                    output = net(images)
+                output = net.infer(inputs={"input": img})
+                output = torch.Tensor(output["output"])[:batch_size]
+            else:
+                output = net(images)
 
-                if ofa_use_mkldnn:
-                    output = output.to_dense()
+            if ofa_use_mkldnn:
+                output = output.to_dense()
 
-                loss = test_criterion(output, labels)
-                # measure accuracy and record loss
-                acc1, acc5 = accuracy(output, labels, topk=(1, 5))
+            loss = test_criterion(output, labels)
+            # measure accuracy and record loss
+            acc1, acc5 = accuracy(output, labels, topk=(1, 5))
 
-                losses.update(loss.item(), images.size(0))
-                top1.update(acc1, images.size(0))
-                top5.update(acc5, images.size(0))
-                t.set_postfix({
-                    'loss': losses.avg,
-                    'top1': top1.avg,
-                    'top5': top5.avg,
-                    'img_size': images.size(2),
-                })
-                t.update(1)
-                if i > total:
-                    break
+            losses.update(loss.item(), images.size(0))
+            top1.update(acc1, images.size(0))
+            top5.update(acc5, images.size(0))
+            if i > total:
+                break
     return losses.avg, top1.avg, top5.avg
 
 
@@ -194,12 +207,18 @@ def reset_bn(
     model.to(device)
     if num_samples / batch_size > len(train_dataloader):
         log.warn(
-            "BN set stats: num of samples exceed the samples in loader. Using full loader")
-    for i, (images, _) in tqdm(enumerate(train_dataloader), total=num_samples // batch_size, desc='Reset BN'):
+            "BN set stats: num of samples exceed the samples in loader. Using full loader"
+        )
+    for i, (images, _) in enumerate(train_dataloader):
+        log.debug(
+            "Calibrating BN statistics #{}/{}".format(i, num_samples // batch_size + 1)
+        )
         images = images.to(device)
         model(images)
         if i > num_samples / batch_size:
-            log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
+            log.info(
+                f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}"
+            )
             break
 
     if 'cuda' in str(device):
