@@ -259,13 +259,15 @@ def measure_latency(
 
     if 'cuda' in str(device):
         torch.cuda.synchronize()
-    for _ in tqdm(range(warmup_steps), desc='Warming up'):
+
+    log.debug('Warming up for {} steps...'.format(warmup_steps))
+    for _ in range(warmup_steps):
         model(inputs)
     if 'cuda' in str(device):
         torch.cuda.synchronize()
 
-    data_gen = tqdm(range(measure_steps), desc='Benchmarking')
-    for _ in data_gen:
+    log.debug('Measuring latency for {} steps'.format(measure_steps))
+    for _ in range(measure_steps):
         if 'cuda' in str(device):
             torch.cuda.synchronize()
         st = time.time()
@@ -275,10 +277,8 @@ def measure_latency(
         ed = time.time()
         times.append(ed - st)
 
-        # Round to 0.001
-        latency_mean = int(np.mean(times)*1000*1000)/1000
-        latency_std = int(np.std(times)*1000*1000)/1000
-        data_gen.set_description('Benchmarking (BS {bs}): {latency_mean} +/- {latency_std} s'.format(
-            bs=input_size[0], latency_mean=latency_mean, latency_std=latency_std))
+    # Round to 0.001
+    latency_mean = int(np.mean(times)*1000*1000)/1000
+    latency_std = int(np.std(times)*1000*1000)/1000
 
     return latency_mean, latency_std
