@@ -14,23 +14,23 @@ The results can be saved to the `--csv_path` file.
 """
 # Imports
 import argparse
+import copy
 import csv
 import json
-from datetime import datetime
-import numpy as np
-import pandas as pd
-import random
-import copy
 import pickle
+from datetime import datetime
 
+import numpy as np
 # OFA Specific Imports
 from ofa.tutorial.latency_table import LatencyEstimator
 
+from dynast.analytics_module.results import ResultsManager
+from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
+                                                MobileNetMACsPredictor)  # TODO(Maciej) Change to `Predictor`
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
-from dynast.evaluation_module.predictor import MobileNetAccuracyPredictor, MobileNetMACsPredictor
-from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
-from dynast.analytics_module.results import ResultsManager
+from dynast.search_module.search import (ProblemMultiObjective,
+                                         SearchAlgoManager)
 
 
 class OFARunner:

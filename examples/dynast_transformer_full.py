@@ -14,23 +14,20 @@ The results can be saved to the `--csv_path` file.
 """
 # Imports
 import argparse
-import csv
-import json
-from datetime import datetime
-import numpy as np
-import pandas as pd
-import random
 import copy
+import csv
 import pickle
+from datetime import datetime
 
-# OFA Specific Imports
-from ofa.tutorial.latency_table import LatencyEstimator
+import numpy as np
 
+from dynast.analytics_module.results import ResultsManager
+from dynast.evaluation_module.predictor import (TransformerBleuPredictor,
+                                                TransformerLatencyPredictor)  # TODO(Maciej) Change to `Predictor`
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
-from dynast.evaluation_module.predictor import TransformerBleuPredictor, TransformerLatencyPredictor
-from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
-from dynast.analytics_module.results import ResultsManager
+from dynast.search_module.search import (ProblemMultiObjective,
+                                         SearchAlgoManager)
 
 
 class HATRunner:
@@ -44,7 +41,7 @@ class HATRunner:
         self.acc_predictor = acc_predictor
         self.latency_predictor = lat_predictor
         self.onehot_unique = unique_value_path
-    
+
 
     def estimate_accuracy_bleu(self, subnet_cfg):
 

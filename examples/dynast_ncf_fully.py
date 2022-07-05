@@ -14,20 +14,20 @@ The results can be saved to the `--csv_path` file.
 """
 # Imports
 import argparse
+import copy
 import csv
 import json
 from datetime import datetime
+
 import numpy as np
-import pandas as pd
-import random
-import copy
-import pickle
-import json
+
+from dynast.analytics_module.results import ResultsManager
+from dynast.evaluation_module.predictor import (NCFHitRatePredictor,
+                                                NCFLatencyPredictor)  # TODO(Maciej) Change to `Predictor`
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
-from dynast.evaluation_module.predictor import NCFHitRatePredictor, NCFLatencyPredictor
-from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
-from dynast.analytics_module.results import ResultsManager
+from dynast.search_module.search import (ProblemMultiObjective,
+                                         SearchAlgoManager)
 
 
 class NCFRunner:

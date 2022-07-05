@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from dynast.analytics_module.results import ResultsManager
 from dynast.evaluation_module.predictor import (ResNet50AccuracyPredictor,
-                                                ResNet50LatencyPredictor)
+                                                ResNet50LatencyPredictor)  # TODO(Maciej) Change to `Predictor`
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)

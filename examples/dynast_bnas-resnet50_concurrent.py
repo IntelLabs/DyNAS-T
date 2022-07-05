@@ -12,7 +12,7 @@ from fvcore.nn import FlopCountAnalysis
 
 from dynast.analytics_module.results import ResultsManager
 from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
-                                                MobileNetMACsPredictor)
+                                                MobileNetMACsPredictor)  # TODO(Maciej) Change to `Predictor`
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,

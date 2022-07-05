@@ -1,19 +1,22 @@
+import itertools
+import math
+from turtle import pd
+
 import matplotlib.pyplot as plt
-import alphashape
-from descartes import PolygonPatch
 from scipy.spatial import Delaunay
-from shapely.ops import cascaded_union, polygonize, unary_union
-from shapely.geometry import MultiPoint, MultiLineString, mapping
+from shapely.geometry import MultiLineString, MultiPoint, mapping
+from shapely.ops import cascaded_union, polygonize
+
 
 def frontier_builder(df, alpha=0, verbose=False):
     """
     Modified alphashape algorithm to draw Pareto Front for OFA search.
     Takes a DataFrame of column form [x, y] = [latency, accuracy]
-    
+
     Params:
     df     - 2 column dataframe in order of 'Latency' and 'Accuracy'
     alpha  - Dictates amount of tolerable 'concave-ness' allowed.
-             A fully convex front will be given if 0 (also better for runtime)    
+             A fully convex front will be given if 0 (also better for runtime)
     """
     if verbose:
         print('Running front builder')
@@ -70,24 +73,24 @@ def frontier_builder(df, alpha=0, verbose=False):
         m = MultiLineString(edge_points)
         triangles = list(polygonize(m))
         result = cascaded_union(triangles)
-    
+
     # Find multi-polygon boundary
     bound = list(mapping(result.boundary)['coordinates'])
-    
-    # Cutoff non-Pareto front points 
+
+    # Cutoff non-Pareto front points
     # note that extreme concave geometries will create issues if bi-sected by line
     df = pd.DataFrame(bound, columns=['x', 'y'])
-    
+
     # y=mx+b
     left_point = (df.iloc[df.idxmin()[0]][0], df.iloc[df.idxmin()[0]][1])
     right_point = (df.iloc[df.idxmax()[1]][0], df.iloc[df.idxmax()[1]][1])
     m = (left_point[1]-right_point[1])/(left_point[0]-right_point[0])
     b = left_point[1]-(m*left_point[0])
-    
+
     df = df[df['y'] >= (m*df['x']+b)]
     df.sort_values(by='x', inplace=True)
     df.reset_index(drop=True, inplace=True)
-    
+
     # Cleanup - insure accuracy is always increasing with latency up the Pareto front
     best_acc = 0
     drop_list = []
@@ -98,7 +101,7 @@ def frontier_builder(df, alpha=0, verbose=False):
             drop_list.append(i)
     df.drop(df.index[drop_list], inplace=True)
     df.reset_index(drop=True, inplace=True)
-    
+
     df.columns = ['Latency', 'Accuracy']
-    
+
     return df

@@ -1,6 +1,5 @@
-import numpy as np
-import pandas as pd
 import hdbscan
+import pandas as pd
 
 
 class ClusteredResult(object):
@@ -21,11 +20,11 @@ class ClusteredResult(object):
         )
         print("[Info] Clustering Features" + repr(clustered))
         clustered.cluster_features()
-        
+
         print("[Info] Number of Clusters " + str(len(set(clustered.labels))))
 
         print("[Info] Saving pickles")
-        clustered.cluster_analysis("popdb_freqs.pkl") 
+        clustered.cluster_analysis("popdb_freqs.pkl")
     """
 
     def __init__(
@@ -68,7 +67,7 @@ class ClusteredResult(object):
 
     def calc_rel_freqs(self):
         """ Calculate relative frequencies of elastic parameter values
-            
+
             Returns: Dataframe of relative frequencies
         """
         relfreqs = []
@@ -76,7 +75,7 @@ class ClusteredResult(object):
         # Create mask of non-noise points
         clustered_points = self.labels != -1
 
-        # For each elastic parameter in a non-noise cluster 
+        # For each elastic parameter in a non-noise cluster
         # calculate and store relative frequencies of values
         for col_ix, column in enumerate(self.features.columns):
             clustered_elastic_params = self.features[clustered_points].iloc[:, col_ix]
@@ -86,7 +85,7 @@ class ClusteredResult(object):
 
     def cluster_analysis(self, out_file=None):
         """ Runs the clustering on the elastic parameter data
-    
+
             Args:
             out_file = optional pickle of elastic paramemter relative frequencies
 
@@ -99,5 +98,5 @@ class ClusteredResult(object):
 
         if out_file is not None:
             cluster_freqs_df.to_pickle(out_file)
-        
+
         return cluster_freqs_df

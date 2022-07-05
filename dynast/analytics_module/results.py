@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime
 
+
 class ResultsManager:
     '''
     Search results are stored in a Pymoo result object. This class manages the retrieval 

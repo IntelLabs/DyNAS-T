@@ -10,28 +10,28 @@ The results can be saved to the `--csv_path` file.
 """
 # Imports
 import argparse
+import copy
 import csv
 import json
-from datetime import datetime
-import numpy as np
-import pandas as pd
-import copy
-import pickle
 import uuid
-from fvcore.nn import FlopCountAnalysis, parameter_count
+from datetime import datetime
 
+import ofa
+import torch
+from fvcore.nn import FlopCountAnalysis
+from ofa.imagenet_codebase.data_providers.imagenet import ImagenetDataProvider
+from ofa.imagenet_codebase.run_manager import ImagenetRunConfig, RunManager
+from ofa.tutorial.flops_table import rm_bn_from_net
 # OFA Specific Imports
 from ofa.tutorial.latency_table import LatencyEstimator
-from ofa.imagenet_codebase.data_providers.imagenet import ImagenetDataProvider
-from ofa.imagenet_codebase.run_manager import ImagenetRunConfig
-from ofa.imagenet_codebase.run_manager import RunManager
-import ofa
 
+from dynast.analytics_module.results import ResultsManager
+from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
+                                                MobileNetLatencyPredictor)  # TODO(Maciej) Change to `Predictor`
 # DyNAS-T Specific Imports
 from dynast.manager import ParameterManager
-from dynast.evaluation_module.predictor import MobileNetAccuracyPredictor, MobileNetLatencyPredictor
-from dynast.search_module.search import SearchAlgoManager, ProblemMultiObjective
-from dynast.analytics_module.results import ResultsManager
+from dynast.search_module.search import (ProblemMultiObjective,
+                                         SearchAlgoManager)
 
 
 class OFARunner:

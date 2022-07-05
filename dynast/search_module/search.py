@@ -1,12 +1,12 @@
+import time
+
+import autograd.numpy as anp
+import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.moo.rnsga2 import RNSGA2
-from pymoo.factory import get_crossover, get_mutation, get_sampling
 from pymoo.core.problem import Problem
+from pymoo.factory import get_crossover, get_mutation, get_sampling
 from pymoo.optimize import minimize
-import time
-import numpy as np
-import autograd.numpy as anp
-
 
 
 class SearchAlgoManager:
