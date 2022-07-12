@@ -24,6 +24,9 @@ def set_logger(level: int = logging.INFO):
     console_handler.setFormatter(formatter)
     log.addHandler(console_handler)
 
+    # Disable PIL polluting logs with it's debug logs: https://github.com/camptocamp/pytest-odoo/issues/15
+    logging.getLogger('PIL').setLevel(logging.WARNING)
+
 
 log = None
 set_logger()
