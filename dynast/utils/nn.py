@@ -187,6 +187,8 @@ def get_gflops(
     input_size: tuple = (1, 3, 224, 224),
     device: str = 'cpu',
 ) -> float:
+    model.eval()
+    model = model.to(device)
     input = torch.randn(*input_size, device=device)
     flops = FlopCountAnalysis(model, input)
     flop_batch_size = input_size[0]
@@ -196,7 +198,7 @@ def get_gflops(
 
 
 @measure_time
-def reset_bn(
+def reset_bn(  # TODO(Maciej) This can be reupruposed/merged with training method - same thing.
     model: nn.Module,
     num_samples: int,
     batch_size: int,

@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from dynast.utils import log
+
 
 class ParameterManager:
 
@@ -12,7 +14,7 @@ class ParameterManager:
         self.param_dict = param_dict
         self.verbose = verbose
         self.mapper, self.param_upperbound, self.param_count = self.process_param_dict()
-        self.inv_mapper = self.inv_mapper()
+        self.inv_mapper = self.inv_mapper()  # TODO(Maciej) this replaces method with a list - intented?
         self.set_seed(seed)
 
     def process_param_dict(self):
@@ -102,7 +104,7 @@ class ParameterManager:
             trials += 1
 
         if trials >= trial_limit:
-            print('[Warning] Unable to create unique list of samples.')
+            log.warn('Unable to create unique list of samples.')
 
         return pymoo_vector_list
 
@@ -221,6 +223,3 @@ class ParameterManager:
                 = train_test_split(features, labels, test_size=split, random_state=seed)
             print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), split))
             return features_train, features_test, labels_train, labels_test
-
-
-
