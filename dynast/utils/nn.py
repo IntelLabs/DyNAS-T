@@ -277,8 +277,8 @@ def measure_latency(
         ed = time.time()
         times.append(ed - st)
 
-    # Round to 0.001
-    latency_mean = int(np.mean(times)*1000*1000)/1000
-    latency_std = int(np.std(times)*1000*1000)/1000
+    # Convert to [ms] and round to 0.001
+    latency_mean = np.round(np.mean(times)*1000, 3)
+    latency_std = np.round(np.std(times)*1000, 3)
 
     return latency_mean, latency_std
