@@ -18,6 +18,7 @@ from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)
 from dynast.utils.nn import AverageMeter, accuracy, count_parameters, reset_bn
+from dynast.utils import log
 
 
 class BNASRunner:
@@ -68,11 +69,11 @@ class BNASRunner:
                 # Note, smaller batches do not save much time on FLOP measurement
                 if i == 0:
                     start_time = time.time()
-                    print('Running fvcore FLOP counter:')
+                    log.info('Running fvcore FLOP counter:')
                     flops = FlopCountAnalysis(model, images)
                     flop_batch_size = 64
                     gflops = flops.total()/(flop_batch_size*10**9)
-                    print('GFLOPs: {}'.format(gflops))
+                    log.info('GFLOPs: {}'.format(gflops))
 
                 output = model(images)
                 acc1, acc5 = accuracy(output, labels, topk=(1, 5))
@@ -80,7 +81,7 @@ class BNASRunner:
                 top5.update(acc5, images.size(0))
 
                 if i % 100 == 0:
-                    print(
+                    log.info(
                         '{rank}'
                         'Val: [{0}/{1}] '
                         'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
@@ -88,7 +89,7 @@ class BNASRunner:
                             i, len_val_loader,
                             top1=top1, top5=top5,
                             rank=''))
-            print(
+            log.info(
                 'Val: '
                 'Acc@1: {top1.val:.3f} ({top1.avg:.3f}) '
                 'Acc@5: {top5.val:.3f} ({top5.avg:.3f})'.format(
@@ -161,14 +162,14 @@ def main(args):
                                     expand_ratio_list=[0.2, 0.25],
                                     width_mult_list=[0.65,0.8,1.0])
 
-    print('Loading Model: supernet/torchvision_resnet50_supernet.pth')
+    log.info('Loading Model: supernet/torchvision_resnet50_supernet.pth')
     init = torch.load('supernet/torchvision_resnet50_supernet.pth')['state_dict']
     supernet.load_state_dict(init)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # PyTorch v0.4.0
-    print(f'[Info] Using device: {device}')
+    log.info(f'Using device: {device}')
     if args.describe_models:
-        print(summary(supernet.to(device),input_size=(3,224,224)))  # TODO(Maciej) Summary is never imported
+        log.info(summary(supernet.to(device),input_size=(3,224,224)))  # TODO(Maciej) Summary is never imported
 
     data_dir = '/datasets/imagenet-ilsvrc2012'
     valdir = data_dir + '/val'
@@ -224,7 +225,7 @@ def main(args):
 
     # Concurrent Search
     validated_population = args.csv_path_val_output
-    print(f'[Info] Validated population file: {args.csv_path_val_output}')
+    log.info(f'Validated population file: {args.csv_path_val_output}')
 
     # clear validation file
     with open(validated_population, 'w') as f:
@@ -238,20 +239,20 @@ def main(args):
 
     num_loops = 10
     for loop in range(1, num_loops+1):
-        print(f'[Info] Starting ConcurrentNAS loop {loop} of {num_loops}.')
+        log.info(f'Starting ConcurrentNAS loop {loop} of {num_loops}.')
 
         for individual in last_population:
-            print(individual)
+            log.debug(individual)
             validation_interface.eval_subnet(individual, validation=True, csv_path=validated_population)
 
-        print('[Info] Training "weak" MACs predictor.')
+        log.info('Training "weak" MACs predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='latency',
             column_names=['config','date','latency','top1'])
         features, labels = supernet_manager.create_training_set(df)
         macs_pred = MobileNetMACsPredictor()
         macs_pred.train(features, labels)
 
-        print('[Info] Training "weak" accuracy predictor.')
+        log.info('Training "weak" accuracy predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='top1',
             column_names=['config','date','latency','top1'])
         features, labels = supernet_manager.create_training_set(df)
@@ -314,7 +315,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print('[Info] Starting BootstrapNASResnet50 Search')
+    log.info('Starting BootstrapNASResnet50 Search')
     main(args)
 
 

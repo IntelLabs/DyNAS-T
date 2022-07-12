@@ -38,10 +38,10 @@ class ParameterManager:
                 parameter_mapper.append(dict(zip(index_simple, options['vars'])))
 
         if self.verbose:
-            print('[Info] Problem definition variables: {}'.format(parameter_count))
-            print('[Info] Variable Upper Bound array: {}'.format(parameter_upperbound))
-            print('[Info] Mapping dictionary created of length: {}'.format(len(parameter_mapper)))
-            print('[Info] Parameter Bound: {}'.format(parameter_bound))
+            log.info('Problem definition variables: {}'.format(parameter_count))
+            log.info('Variable Upper Bound array: {}'.format(parameter_upperbound))
+            log.info('Mapping dictionary created of length: {}'.format(len(parameter_mapper)))
+            log.info('Parameter Bound: {}'.format(parameter_bound))
 
         return parameter_mapper, parameter_upperbound, parameter_count
 
@@ -104,7 +104,7 @@ class ParameterManager:
             trials += 1
 
         if trials >= trial_limit:
-            log.warn('Unable to create unique list of samples.')
+            log.warning('Unable to create unique list of samples.')
 
         return pymoo_vector_list
 
@@ -216,10 +216,10 @@ class ParameterManager:
         assert len(features) == len(labels)
 
         if train_with_all:
-            print('[Info] Training set length={}'.format(len(labels)))
+            log.info('Training set length={}'.format(len(labels)))
             return features, labels
         else:
             features_train, features_test, labels_train, labels_test \
                 = train_test_split(features, labels, test_size=split, random_state=seed)
-            print('[Info] Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), split))
+            log.info('Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), split))
             return features_train, features_test, labels_train, labels_test

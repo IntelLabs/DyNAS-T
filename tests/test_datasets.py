@@ -14,7 +14,6 @@ def test_dataset_get_by_valid_name():
 
     for ds_name, expected_type in valid_dataset_names:
         obj = Dataset.get(ds_name)
-        print(type(obj))
         assert issubclass(obj, Dataset)
         assert isinstance(obj(), expected_type)
 

@@ -1,15 +1,17 @@
 import hdbscan
 import pandas as pd
 
+from dynast.utils import log
+
 
 class ClusteredResult(object):
     """ A cluster results object used to hold clustering method and
         frequencies.
 
         Usage:
-        print("[Info] Starting Cluster Ananlysis")
+        log.info("Starting Cluster Ananlysis")
         ofa_df = load_ofa_csv(args.csv_file, add_build=True)
-        print("[Info] Loaded CSV " + args.csv_file)
+        log.info("Loaded CSV " + args.csv_file)
         ofa_df = build_param_table(ofa_df, kmeans_fmt=True)
 
         clustered = ClusteredResult(
@@ -18,12 +20,12 @@ class ClusteredResult(object):
             min_samples=20,
             cluster_selection_epsilon=args.cluster_selection_epsilon,
         )
-        print("[Info] Clustering Features" + repr(clustered))
+        log.info("Clustering Features" + repr(clustered))
         clustered.cluster_features()
 
-        print("[Info] Number of Clusters " + str(len(set(clustered.labels))))
+        log.info("Number of Clusters " + str(len(set(clustered.labels))))
 
-        print("[Info] Saving pickles")
+        log.info("Saving pickles")
         clustered.cluster_analysis("popdb_freqs.pkl")
     """
 

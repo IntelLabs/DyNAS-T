@@ -108,7 +108,7 @@ def main(args):
 
     # Concurrent Search
     validated_population = args.csv_path_val_output
-    print(f'[Info] Validated population file: {args.csv_path_val_output}')
+    log.info(f'[Info] Validated population file: {args.csv_path_val_output}')
 
     # Define how evaluations occur, gives option for csv file
     validation_interface = UserEvaluationInterface(evaluator=validation_runner,
@@ -128,20 +128,20 @@ def main(args):
 
     num_loops = 10
     for loop in range(1, num_loops+1):
-        print(f'[Info] Starting ConcurrentNAS loop {loop} of {num_loops}.')
+        log.info(f'[Info] Starting ConcurrentNAS loop {loop} of {num_loops}.')
 
         for individual in tqdm(last_population, desc='Population'):
-            print(individual)
+            log.debug(individual)
             validation_interface.eval_subnet(individual, validation=True)
 
-        print('[Info] Training "weak" Latency predictor.')
+        log.info('[Info] Training "weak" Latency predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='latency',
                                          column_names=['config', 'date', 'latency', 'top1'])
         features, labels = supernet_manager.create_training_set(df)
         lat_pred = ResNet50LatencyPredictor()
         lat_pred.train(features, labels)
 
-        print('[Info] Training "weak" accuracy predictor.')
+        log.info('Training "weak" accuracy predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='top1',
                                          column_names=['config', 'date', 'latency', 'top1'])
         features, labels = supernet_manager.create_training_set(df)

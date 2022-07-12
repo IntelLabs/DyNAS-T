@@ -143,8 +143,8 @@ def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, c
     out, code = p.communicate()
 
     if (code == 0):
-        print('FAILED')
-        print(cmd)
+        log.error('FAILED')
+        log.error(cmd)
     # parse output
     numbers = re.findall('\d*\.?\d+', str(out))
     latency_ov = float(numbers[-2])

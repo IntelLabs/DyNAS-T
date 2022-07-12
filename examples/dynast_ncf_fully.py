@@ -28,6 +28,7 @@ from dynast.evaluation_module.predictor import (NCFHitRatePredictor,
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)
+from dynast.utils import log
 
 
 class NCFRunner:
@@ -227,22 +228,22 @@ def main(args):
     latency_file = convert_dataset(args.latency_csv,'latency',max_layers)
 
     if args.accpred_path:
-        print('[Info] Loading pre-trained accuracy predictor.')
+        log.info('Loading pre-trained accuracy predictor.')
         acc_pred = NCFHitRatePredictor()
         acc_pred.load(args.accpred_path)
     else:
-        print('[Info] Building Accuracy Predictor')
+        log.info('Building Accuracy Predictor')
         examples, labels = extract_data(args.accuracy_csv,'accuracy')
         one_hot, unique_values = to_one_hot(examples)
         acc_pred = NCFHitRatePredictor()
         acc_pred.train(one_hot, labels)
 
     if args.latpred_path:
-       print('[Info] Loading pre-trained latency predictor.')
+       log.info('Loading pre-trained latency predictor.')
        lat_pred = NCFLatencyPredictor()
        lat_pred.load(args.latpred_path)
     else:
-       print('[Info] Building Latency Predictor')
+       log.info('Building Latency Predictor')
 
        examples,labels = extract_data(args.latency_csv,'latency')
        one_hot, unique_values = to_one_hot(examples)
@@ -311,8 +312,8 @@ if __name__ == '__main__':
                         help='Search tactic (e.g., full search, warm-start, concurrent.')
     args = parser.parse_args()
 
-    print('\n'+'-'*40)
-    print('DyNAS-T Multi-Objective Search Starting')
-    print('-'*40)
+    log.info('\n'+'-'*40)
+    log.info('DyNAS-T Multi-Objective Search Starting')
+    log.info('-'*40)
 
     main(args)

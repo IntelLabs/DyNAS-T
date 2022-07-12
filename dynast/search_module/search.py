@@ -9,6 +9,9 @@ from pymoo.factory import get_crossover, get_mutation, get_sampling
 from pymoo.optimize import minimize
 
 
+from dynast.utils import log
+
+
 class SearchAlgoManager:
     '''
     Manages the search parameters for multi-objective search (2 objectives).
@@ -35,7 +38,7 @@ class SearchAlgoManager:
         elif self.algorithm == 'rnsga2' and self.engine == 'pymoo':
             self.algorithm_def = self.configure_rnsga2()
         else:
-            print('[Warning] algorithm specified not implemented.')
+            log.warning('Algorithm specified not implemented.')
             raise NotImplementedError
 
     def configure_nsga2(self, population=50, num_evals=1000, warm_pop=None,
@@ -45,7 +48,7 @@ class SearchAlgoManager:
         self.num_evals = num_evals
 
         if type(warm_pop) == 'numpy.ndarray':
-            print('[Info] Using warm start population')
+            log.info('Using warm start population')
             sample_strategy = warm_pop
         else:
             sample_strategy = get_sampling("int_lhs")
@@ -57,7 +60,7 @@ class SearchAlgoManager:
             eliminate_duplicates=True)
 
         if num_evals % population != 0:
-            print('[Warning] Number of samples not divisible by population size')
+            log.warning('Number of samples not divisible by population size')
 
     def configure_rnsga2(self, population=50, num_evals=1000, warm_pop=None,
                          ref_points=[[0, 0]],
@@ -67,12 +70,12 @@ class SearchAlgoManager:
         self.num_evals = num_evals
 
         if type(warm_pop) == 'numpy.ndarray':
-            print('[Info] Using warm start population')
+            log.info('Using warm start population')
             sample_strategy = warm_pop
         else:
             sample_strategy = get_sampling("int_lhs")
 
-        print('[Info] Reference points for RNSGA-II are: {}'.format(ref_points))
+        log.info('Reference points for RNSGA-II are: {}'.format(ref_points))
         reference_points = np.array(ref_points)  # lat=0, 1/acc=0
 
         self.algorithm_def = RNSGA2(
@@ -88,11 +91,11 @@ class SearchAlgoManager:
             eliminate_duplicates=True)
 
         if num_evals % population != 0:
-            print('[Warning] Number of samples not divisible by population size')
+            log.warning('Number of samples not divisible by population size')
 
     def run_search(self, problem):
 
-        print('[Info] Running Search .', end='', flush=True)
+        log.info('Running Search .', end='', flush=True)
         start_time = time.time()
 
         if self.algorithm == 'nsga2' and self.engine == 'pymoo':
@@ -105,8 +108,7 @@ class SearchAlgoManager:
         else:
             raise NotImplementedError
 
-        print("Success")
-        print('[Info] Search Took {:.3f} seconds.'.format(time.time()-start_time))
+        log.info('Success! Search Took {:.3f} seconds.'.format(time.time()-start_time))
 
         return result
 

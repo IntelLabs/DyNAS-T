@@ -105,7 +105,7 @@ def main(args):
 
     # Concurrent Search
     validated_population = args.csv_path_val_output
-    print(f'[Info] Validated population file: {args.csv_path_val_output}')
+    log.info(f'Validated population file: {args.csv_path_val_output}')
 
     # clear validation file
     with open(validated_population, 'w') as f:

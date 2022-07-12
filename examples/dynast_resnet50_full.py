@@ -31,6 +31,7 @@ from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)
+from dynast.utils import log
 
 
 class OFAResNetRunner:
@@ -172,7 +173,7 @@ def main(args):
     # Objective 1 (Latency or MACs)
     supernet = args.supernet
     if args.lut_path:
-        print('[Info] Loading Latency LUT.')
+        log.info('Loading Latency LUT.')
         with open(args.lut_path, 'r') as f:
             lut = json.load(f)
         supernet = lut['metadata']['_net']
@@ -180,7 +181,7 @@ def main(args):
 
     # MACs example
     if False:
-        print('[Info] Building MACs Predictor')
+        log.info('Building MACs Predictor')
         df = supernet_manager.import_csv(args.input_csv, config='config', objective='macs', column_names=['config','date','macs','top1'])
         features, labels = supernet_manager.create_training_set(df)
         macs_pred = MobileNetMACsPredictor()
@@ -188,11 +189,11 @@ def main(args):
 
     # Objective 2 (Accuracy)
     if args.accpred_path:
-        print('[Info] Loading pre-trained accuracy predictor.')
+        log.info('Loading pre-trained accuracy predictor.')
         with open(args.accpred_path, 'rb') as f:
             acc_pred = pickle.load(f)
     else:
-        print('[Info] Building Accuracy Predictor')
+        log.info('Building Accuracy Predictor')
         df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
         features, labels = supernet_manager.create_training_set(df)
         acc_pred = MobileNetAccuracyPredictor()
@@ -267,8 +268,8 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', action='store_true', help='Flag to control output')
     args = parser.parse_args()
 
-    print('\n'+'-'*40)
-    print('DyNAS-T Multi-Objective Search Starting')
-    print('-'*40)
+    log.info(('\n'+'-'*40)
+    log.info(('DyNAS-T Multi-Objective Search Starting')
+    log.info(('-'*40)
 
     main(args)

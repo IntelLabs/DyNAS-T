@@ -2,10 +2,11 @@ import itertools
 import math
 from turtle import pd
 
-import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay
 from shapely.geometry import MultiLineString, MultiPoint, mapping
 from shapely.ops import cascaded_union, polygonize
+
+from dynast.utils import log
 
 
 def frontier_builder(df, alpha=0, verbose=False):
@@ -19,14 +20,14 @@ def frontier_builder(df, alpha=0, verbose=False):
              A fully convex front will be given if 0 (also better for runtime)
     """
     if verbose:
-        print('Running front builder')
+        log.info('Running front builder')
     df = df[['Latency', 'Accuracy']]
     points = list(df.to_records(index=False))
     points = MultiPoint(list(points))
 
     if len(points) < 4 or (alpha is not None and alpha <= 0):
         if verbose:
-            print('Alpha=0 -> convex hull')
+            log.info('Alpha=0 -> convex hull')
         result = points.convex_hull
     else:
         coords = np.array([point.coords[0] for point in points])

@@ -39,6 +39,7 @@ from dynast.evaluation_module.predictor import (MobileNetAccuracyPredictor,
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)
+from dynast.utils import log
 
 
 class OFARunner:
@@ -224,13 +225,13 @@ def main(args):
 
     supernet = args.supernet
     if args.lut_path:
-        print('[Info] Loading Latency LUT.')
+        log.info('Loading Latency LUT.')
         with open(args.lut_path, 'r') as f:
             lut = json.load(f)
         supernet = lut['metadata']['_net']
         assert supernet == args.supernet
 
-    #print('[Info] Building Accuracy Predictor')
+    #log.info('Building Accuracy Predictor')
     #df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
     #features, labels = supernet_manager.create_training_set(df)
     #acc_pred_main = MobileNetAccuracyPredictor()
@@ -268,21 +269,21 @@ def main(args):
 
     num_loops = 10
     for loop in range(1, num_loops+1):
-        print(f'[Info] Starting ConcurrentNAS loop {loop} of {num_loops}.')
+        log.info(f'Starting ConcurrentNAS loop {loop} of {num_loops}.')
 
         if loop != 1:
             for individual in last_population:
-                print(individual)
+                log.debug(individual)
                 validation_interface.eval_subnet(individual, validation=True, csv_path=validated_population)
 
-        print('[Info] Training "weak" latency predictor.')
+        log.info('Training "weak" latency predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='latency',
             column_names=['config','date','latency','top1'])
         features, labels = supernet_manager.create_training_set(df)
         lat_pred = MobileNetLatencyPredictor()
         lat_pred.train(features, labels)
 
-        print('[Info] Training "weak" accuracy predictor.')
+        log.info('Training "weak" accuracy predictor.')
         df = supernet_manager.import_csv(validated_population, config='config', objective='top1',
             column_names=['config','date','latency','top1'])
         features, labels = supernet_manager.create_training_set(df)
@@ -345,8 +346,8 @@ if __name__ == '__main__':
                         help='Search tactic (e.g., full search, warm-start, concurrent.')
     args = parser.parse_args()
 
-    print('\n'+'-'*40)
-    print('DyNAS-T Multi-Objective Concurrent Search Starting')
-    print('-'*40)
+    log.info('\n'+'-'*40)
+    log.info('DyNAS-T Multi-Objective Concurrent Search Starting')
+    log.info('-'*40)
 
     main(args)

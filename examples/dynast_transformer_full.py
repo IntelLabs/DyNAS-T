@@ -28,6 +28,7 @@ from dynast.evaluation_module.predictor import (TransformerBleuPredictor,
 from dynast.manager import ParameterManager
 from dynast.search_module.search import (ProblemMultiObjective,
                                          SearchAlgoManager)
+from dynast.utils import log
 
 
 class HATRunner:
@@ -47,7 +48,7 @@ class HATRunner:
 
         # Ridge Predictor - 121 vector
         bleu = self.acc_predictor.predict_single(subnet_cfg)
-        print(bleu)
+        log.debug('BLEU: {}'.format(bleu))
         return bleu
 
     def estimate_accuracy_bleuq(self, subnet_cfg):
@@ -236,22 +237,22 @@ def main(args):
 
     # Objective 2 (Accuracy)
     if args.accpred_path:
-        print('[Info] Loading pre-trained accuracy predictor.')
+        log.info('Loading pre-trained accuracy predictor.')
         acc_pred = TransformerBleuPredictor()
         acc_pred.load(args.accpred_path)
     else:
-        print('[Info] Building Accuracy Predictor')
+        log.info('Building Accuracy Predictor')
         df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
         features, labels = supernet_manager.create_training_set(df)
         acc_pred = TransformerBleuPredictor()
         acc_pred.train(features, labels)
 
     if args.latpred_path:
-       print('[Info] Loading pre-trained latency predictor.')
+       log.info('Loading pre-trained latency predictor.')
        lat_pred = TransformerLatencyPredictor()
        lat_pred.load(args.latpred_path)
     else:
-       print('[Info] Building Latency Predictor')
+       log.info('Building Latency Predictor')
        df = supernet_manager.import_csv(args.input_csv, config='config', objective='top1')
        features, labels = supernet_manager.create_training_set(df)
        lat_pred = TransformerLatencyPredictor()
@@ -314,8 +315,8 @@ if __name__ == '__main__':
     parser.add_argument('--population', default=50, type=int, help='population size for each generation')
     args = parser.parse_args()
 
-    print('\n'+'-'*40)
-    print('DyNAS-T Multi-Objective Search Starting')
-    print('-'*40)
+    log.info('\n'+'-'*40)
+    log.info('DyNAS-T Multi-Objective Search Starting')
+    log.info('-'*40)
 
     main(args)
