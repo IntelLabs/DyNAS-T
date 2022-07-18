@@ -1,11 +1,38 @@
 import os
+from typing import Tuple
+
+import torch
 
 from dynast.utils import get_hostname, samples_to_batch_multiply
 from dynast.utils.nn import validate_classification
 from dynast.utils.ov import load_openvino, save_openvino, save_ov_quantized
 
 
-def quantize_ov(model, img_size, experiment_name=None, quant_policy: str = 'DefaultQuantization', stat_subset_size: int = None):
+def quantize_ov(
+    model: torch.nn.Module,
+    img_size: Tuple[int, int, int, int],
+    experiment_name: str = None,
+    quant_policy: str = 'DefaultQuantization',
+    stat_subset_size: int = None,
+) -> None:
+    """Converts Torch model to OpenVINO Quantized model
+
+    Arguments:
+    ----------
+    * `model`: Torch model
+    * `img_size`: input tensor size (batch size, channels, resolution, resolution)
+    * `experiment_name`: name which will be used to identify results of this experiment. If `None`
+      it will be automatically sety to `${HOSTNAME}_dynast_eval`.
+    * `quant_policy`: identifies which quantization policy should be used. Please refer to
+      `dynast/quantization/policy.py` for the list of available options.
+    * `stat_subset_size`: how many samples to use when calibrating quantized model. It is encouraged to
+      set it to at least 300 and to `stat_subset_size` be divisable by batch size. If not set proper value
+      will be assigned automatically based on these two rules.
+
+    Returns:
+    --------
+    * None
+    """
     if not experiment_name:
         experiment_name = '{}_dynast_eval'.format(get_hostname())
     if not stat_subset_size:
@@ -29,7 +56,23 @@ def quantize_ov(model, img_size, experiment_name=None, quant_policy: str = 'Defa
     )
 
 
-def validate(experiment_name=None, test_size=None, batch_size=128):
+def validate(
+    experiment_name: str = None,
+    test_size: int = None,
+    batch_size: int = 128,
+) -> Tuple[float, float]:
+    """Evaluates quantized model.
+
+    Arguments:
+    * `experiment_name`: name which will be used to identify results of this experiment. If `None`
+      it will be automatically set to `${HOSTNAME}_dynast_eval`.
+    * `test_size`: How many batches of data to use when validaing. Set to `None` to use all data.
+    * `batch_size`: Input batch size for validation.
+
+    Returns:
+    --------
+    * Top1 accuracy, Top5 accuracy
+    """
 
     if not experiment_name:
         experiment_name = '{}_dynast_eval'.format(get_hostname())
