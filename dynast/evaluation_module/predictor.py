@@ -48,8 +48,14 @@ class Predictor:
             None
         '''
 
+        # Compute normalization factor
+        max_label = np.amax(np.abs(labels))
+        if (max_label > 0.0):
+            self.normalization_factor = 10 ** (np.floor(np.log10(max_label)) - 1.0)
+        else:
+            self.normalization_factor = 1.0
+
         # Compute normalized labels
-        self.normalization_factor = 10 ** (np.floor(np.log10(np.amax(labels))) - 1.0)
         normalized_labels = labels / self.normalization_factor
 
         # Train regressors with optimal parameters
