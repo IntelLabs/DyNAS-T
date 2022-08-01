@@ -79,7 +79,7 @@ class TorchVisionReference(Reference):
     ) -> Tuple[float, float, float]:
         model = self.model.to(device)
         loss, top1, top5 = validate_classification(
-            net=model,
+            model=model,
             device=device,
             is_openvino=False,
             batch_size=batch_size,

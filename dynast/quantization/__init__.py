@@ -4,6 +4,7 @@ from typing import Tuple
 import torch
 
 from dynast.utils import get_hostname, samples_to_batch_multiply
+from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import validate_classification
 from dynast.utils.ov import load_openvino, save_openvino, save_ov_quantized
 
@@ -83,9 +84,10 @@ def validate(
     subnet_ov_int8 = load_openvino(folder=ov_model_dir, name=experiment_name, is_quantized=True)
 
     loss_ov_quant, top1_ov_quant, top5_ov_quant = validate_classification(
-        net=subnet_ov_int8,
+        model=subnet_ov_int8,
         is_openvino=True,
         test_size=test_size,
         batch_size=batch_size,
+        data_loader=ImageNet.validation_dataloader(batch_size=batch_size),
     )
     return top1_ov_quant, top5_ov_quant

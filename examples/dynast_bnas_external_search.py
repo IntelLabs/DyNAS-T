@@ -78,13 +78,11 @@ def validate_subnet(
     )
 
     loss, top1, top5 = validate_classification(
-        net=subnet,
+        model=subnet,
         data_loader=validation_dataloader,
-        no_logs=False,
         is_openvino=False,
         device=device,
         batch_size=batch_size,
-        workers=16,
     )
 
     return loss, top1, top5

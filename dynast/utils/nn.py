@@ -9,14 +9,6 @@ from fvcore.nn import FlopCountAnalysis
 
 from dynast.utils import log, measure_time
 
-try:
-    import ofa
-    from ofa.imagenet_codebase.data_providers.imagenet import \
-        ImagenetDataProvider
-    from ofa.imagenet_codebase.run_manager import ImagenetRunConfig
-except ImportError as ie:
-    log.warn('{} - You can ignore this error if not using OFA supernetwork.'.format(ie))
-
 
 class AverageMeter(object):
     """ Computes and stores the average and current value
@@ -66,37 +58,25 @@ def accuracy(
 
 @measure_time
 def validate_classification(
+    model,
+    data_loader,
     epoch=0,
-    is_test=True,
-    run_str='',  # TODO(macsz) Drop?
-    net=None,
-    data_loader=None,
-    no_logs=False,
     test_size=None,
     is_openvino=False,
+    use_mkldnn=False,
     device='cpu',
     batch_size=128,
-    workers=8,
-    dataset_path='/datasets/imagenet-ilsvrc2012/',
 ):
-    is_onnx = isinstance(net, onnxruntime.InferenceSession)
+    # NOTE(macsz): if `use_mkldnn` is set to True and model is an OFA submodel,
+    # please refer to HANDI OFA and follow MKLDNN instructions there.
+
+    is_onnx = isinstance(model, onnxruntime.InferenceSession)
     test_criterion = nn.CrossEntropyLoss()
 
     if (not is_openvino) and (not is_onnx):
-        if (not isinstance(net, nn.DataParallel)):
-            net = nn.DataParallel(net)
-        net = net.eval()
-
-    ofa_use_mkldnn = False
-    if data_loader is None:
-        if ofa.config.USE_MKLDNN:
-            ofa_use_mkldnn = True
-        run_config = ImagenetRunConfig(test_batch_size=batch_size, n_worker=workers)
-        ImagenetDataProvider.DEFAULT_PATH = dataset_path
-        if is_test:
-            data_loader = run_config.test_loader
-        else:
-            data_loader = run_config.valid_loader
+        if (not isinstance(model, nn.DataParallel)):
+            model = nn.DataParallel(model)
+        model = model.eval()
 
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -114,10 +94,9 @@ def validate_classification(
         for i, (images, labels) in enumerate(data_loader):
             epoch += 1
             log.debug(
-                "Validate #{}/{} {} - {}".format(
+                "Validate #{}/{} {}".format(
                     epoch,
                     total,
-                    run_str,
                     {
                         "loss": losses.avg,
                         "top1": top1.avg,
@@ -128,18 +107,18 @@ def validate_classification(
             )
             images, labels = images.to(device), labels.to(device)
 
-            if ofa_use_mkldnn:
+            if use_mkldnn:
                 images = images.to_mkldnn()
 
             # compute output
             if is_onnx:
-                output = net.run(
-                    [net.get_outputs()[0].name],
-                    {net.get_inputs()[0].name: to_numpy(images)},
+                output = model.run(
+                    [model.get_outputs()[0].name],
+                    {model.get_inputs()[0].name: to_numpy(images)},
                 )
                 output = torch.from_numpy(output[0]).to(device)
             elif is_openvino:
-                expected_batch_size = net.inputs["input"].shape[0]
+                expected_batch_size = model.inputs["input"].shape[0]
                 img = to_numpy(images)
                 batch_size = len(img)
 
@@ -157,12 +136,12 @@ def validate_classification(
                     )
                     img = img.copy()
 
-                output = net.infer(inputs={"input": img})
+                output = model.infer(inputs={"input": img})
                 output = torch.Tensor(output["output"])[:batch_size]
             else:
-                output = net(images)
+                output = model(images)
 
-            if ofa_use_mkldnn:
+            if use_mkldnn:
                 output = output.to_dense()
 
             loss = test_criterion(output, labels)
