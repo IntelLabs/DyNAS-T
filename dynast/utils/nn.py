@@ -2,7 +2,6 @@ import time
 from typing import Tuple, Union
 
 import numpy as np
-import onnxruntime
 import torch
 import torch.nn as nn
 from fvcore.nn import FlopCountAnalysis
@@ -63,6 +62,7 @@ def validate_classification(
     epoch=0,
     test_size=None,
     is_openvino=False,
+    is_onnx=False,
     use_mkldnn=False,
     device='cpu',
     batch_size=128,
@@ -70,7 +70,6 @@ def validate_classification(
     # NOTE(macsz): if `use_mkldnn` is set to True and model is an OFA submodel,
     # please refer to HANDI OFA and follow MKLDNN instructions there.
 
-    is_onnx = isinstance(model, onnxruntime.InferenceSession)
     test_criterion = nn.CrossEntropyLoss()
 
     if (not is_openvino) and (not is_onnx):
