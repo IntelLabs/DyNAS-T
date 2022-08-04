@@ -8,7 +8,6 @@ from pymoo.core.problem import Problem
 from pymoo.factory import get_crossover, get_mutation, get_sampling
 from pymoo.optimize import minimize
 
-
 from dynast.utils import log
 
 
@@ -93,9 +92,13 @@ class SearchAlgoManager:
         if num_evals % population != 0:
             log.warning('Number of samples not divisible by population size')
 
-    def run_search(self, problem):
+    def run_search(
+        self,
+        problem: Problem,
+        save_history: bool = False,
+    ):
 
-        log.info('Running Search .', end='', flush=True)
+        log.info('Running Search')
         start_time = time.time()
 
         if self.algorithm == 'nsga2' and self.engine == 'pymoo':
@@ -103,7 +106,7 @@ class SearchAlgoManager:
                               self.algorithm_def,
                               ('n_gen', int(self.num_evals/self.population)),
                               seed=self.seed,
-                              save_history=True,
+                              save_history=save_history,
                               verbose=self.verbose)
         else:
             raise NotImplementedError
