@@ -1,0 +1,18 @@
+[tool.isort]
+profile = 'black'
+line_length = 120
+
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+
+[tool.mypy]
+python_version = '3.7'
+files = [
+    'dynast',
+    'tests',
+    'examples',
+]
+allow_redefinition = false
+ignore_missing_imports = false
+disallow_untyped_defs = true

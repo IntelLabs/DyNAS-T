@@ -267,8 +267,8 @@ if __name__ == '__main__':
                         help='Search tactic (e.g., full search, warm-start, concurrent.')
     args = parser.parse_args()
 
-    log.info(('\n'+'-'*40)
-    log.info(('DyNAS-T Multi-Objective Search Starting')
+    log.info('\n'+'-'*40)
+    log.info('DyNAS-T Multi-Objective Search Starting')
     log.info('-'*40)
 
     main(args)
