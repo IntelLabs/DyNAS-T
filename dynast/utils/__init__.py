@@ -6,6 +6,7 @@ import subprocess
 import time as _time
 
 import pandas as pd
+import requests
 
 
 def set_logger(level: int = logging.INFO):
@@ -89,3 +90,46 @@ def get_cores(num_cores: int):
     cores = df['cpu'].to_list()[:num_cores]
     cores = [str(c) for c in cores]
     return ','.join(cores)
+
+
+def get_remote_file(remote_url: str, model_dir: str, overwrite: bool = False) -> str:
+    """Download remote file and save it locally. Returns full path to saved file.
+
+    Note: If used to download OFA supernets set `model_dir` to `.torch/ofa_nets`. It's a default
+    path that OFA uses and it's hardcoded.
+
+    Arguments:
+    ----------
+    * remote_url: String with remote file's URL.
+    * model_dir: Directory to which the file will be saved.
+    * overwrite: Overwrite existing file if set and file exists .
+
+    Returns:
+    --------
+    * Absolute path to saved file
+    """
+
+    if not os.path.isdir(model_dir) or not os.path.exists(model_dir):
+        log.error(f"{model_dir} is not a directory")
+        raise NotADirectoryError(f"{model_dir} is not a directory")
+
+    fname = os.path.basename(remote_url)
+    save_path = os.path.join(os.path.abspath(model_dir), fname)
+
+    if os.path.exists(save_path) and not overwrite:
+        log.info(f'File {save_path} exists, skipping download of {remote_url}')
+        return save_path
+
+    log.info(f'Downloading {remote_url} to {save_path}')
+    data = requests.get(remote_url)
+
+    try:
+        data.raise_for_status()
+    except requests.exceptions.HTTPError as he:
+        log.error(f'Fetching {remote_url} failed. Return code: {data.status_code}')
+        raise he
+
+    with open(save_path, 'wb') as f:
+        f.write(data.content)
+
+    return save_path
