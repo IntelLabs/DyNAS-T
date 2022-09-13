@@ -73,7 +73,6 @@ def validate_subnet(
         model=subnet,
         train_dataloader=train_dataloader,
         num_samples=num_samples,
-        batch_size=batch_size,
         device=device,
     )
 

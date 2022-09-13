@@ -74,7 +74,6 @@ class BNASRunner:
         reset_bn(
             model=subnet,
             num_samples=samples_to_batch_multiply(self.bn_samples, self.batch_size),
-            batch_size=self.batch_size,
             train_dataloader=train_dataloader,
         )
 

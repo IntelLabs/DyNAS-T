@@ -176,15 +176,17 @@ def get_gflops(
 
 
 @measure_time
-def reset_bn(  # TODO(Maciej) This can be reupruposed/merged with training method - same thing.
+def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `model_train` and a new method for calibration should be added
     model: nn.Module,
     num_samples: int,
-    batch_size: int,
     train_dataloader: torch.utils.data.DataLoader,
     device: Union[str, torch.device] = 'cpu',
 ) -> None:
     model.train()
     model.to(device)
+
+    batch_size = train_dataloader.batch_size
+
     if num_samples / batch_size > len(train_dataloader):
         log.warn(
             "BN set stats: num of samples exceed the samples in loader. Using full loader"
