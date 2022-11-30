@@ -2,51 +2,105 @@
 
 # DyNAS-T
 
-DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a SuperNet NAS
-optimization package designed for finding the optimal Pareto front during neural architure
-search while minimizing the number of search validation measurements. It supports
-single-/multi-/many-objective problems for a variety of domains supported by the
-Intel AI Lab [HANDI framework](https://github.com/intel-innersource?q=handi&type=all&language=&sort=). The system currently heavily utilizes the [pymoo](https://pymoo.org/)
-optimization library. Some of the key DyNAS-T features are:
-* Automatic handling of supernetwork parameters for search and predictor training
-* Genetic Algorithm (e.g., NSGA-II) multi-objective subnetworks
-* ConcurrentNAS accelerated search using approximate predictors
-* Warm-start (transfer) search
-* Search population statistical analysis
+DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a super-network neural architecture
+search NAS optimization package designed for efficiently discovering optimal deep neural network (DNN)
+architectures for a variety of performance objectives such as accuracy, latency, multiply-and-accumulates,
+and model size.
 
-## Supported SuperNet Frameworks
+## Background
 
-DyNAS-T is intended to be used with existing standalone SuperNet frameworks suchs as Intel
-HANDI, [Intel BootstrapNAS](https://gitlab.devtools.intel.com/jpmunoz/bootstrapnas_poc_subnet_extraction), or external libraries such as [Once-for-All (OFA)](https://github.com/mit-han-lab/once-for-all).
+Neural architecture search, the study of automating the discovery of optimal deep neural network architectures for tasks in domains such as computer vision and natural language processing, has seen rapid growth in the machine learning research community. The computational overhead of evaluating DNN architectures during the neural architecture search process can be very costly due to the training and validation cycles. To address the training overhead, novel weight-sharing approaches known as one-shot or super-networks [1] have offered a way to mitigate the training overhead by reducing training times from thousands to a few GPU days. These approaches train a task-specific super-network architecture with a weight-sharing mechanism that allows the sub-networks to be treated as unique individual architectures. This enables sub-network model extraction and validation without a separate training cycle.
 
-* HANDI MobileNetV3 (supported)
-* HANDI ResNet50 (supported)
-* HANDI Transformer (supported)
-* HANDI Recommender (Q1'22)
-* BootstrapNAS ResNet50 torchvision (supported)
+To learn more about super-networks and how to define/train them, please see our [super-network tutorial](notebooks/Supernet_Tutorial.ipynb).
 
-## Getting Started
+## Algorithms
+
+Evolutionary algorithms, specifically genetic algorithms, have a history of usage in NAS and continue to gain popularity as a highly efficient way to explore the architecture objective space. DyNAS-T supports a wide range of evolutionary algorithms (EAs) such as NSGA-II [2] by leveraging the [pymoo](https://pymoo.org/) library.
+
+A unique capability of DyNAS-T is the Lightweight Iterative NAS (LINAS) that pairs evolutionary algorithms with lightly trained objective predictors in an iterative cycle to accelerate architectural exploration [3]. This technique is ~4x more sample efficient than typical one-shot predictor-based NAS approaches.
+
+![DyNAS-T Design Flow](docs/images/dynast_flow.png)
+
+The following number of optimization algorithms are supported by DyNAS-T in both standard and LINAS formats.
+
+| 1 Objective<br>(Single-Objective) | 2 Objectives<br>(Multi-Objective) | 3 Objectives<br>(Many-Objective) |
+|------------------|-----------------|----------------|
+| GA* `'ga'`   | NSGA-II* `'nsga2'` | UNSGA-II* `'unsga3'`     |
+| CMA-ES `'cmaes'` | AGE-MOEA `'age'` | CTAEA `'ctaea'`         |
+|        |          | MOEAD `'moead'`          |
+*Recommended for stability of search results
+
+## Super-networks
+DyNAS-T included support for the following super-network frameworks suchs as [Once-for-All (OFA)](https://github.com/mit-han-lab/once-for-all).
+
+| Super-Network | Model Name | Dataset | Objectives/Measurements Supported |
+|------------------|-----------------|-----------------|-----------------|
+|OFA MobileNetV3-w1.0 | ofa_mbv3_d234_e346_k357_w1.0 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
+|OFA MobileNetV3-w1.2 | ofa_mbv3_d234_e346_k357_w1.2 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
+|OFA ResNet50 | ofa_resnet50 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
+|OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
+|Transformer | ? | ? | `bleu` (BLEU Score), `macs`, `params`, `latency` |
+
+## Intel Library Support
+The following software libraries are compatible with DyNAS-T:
+* [Intel Neural Compressor (INC)](https://github.com/intel/neural-compressor/blob/master/examples/notebook/dynas/MobileNetV3_Supernet_NAS.ipynb)
+* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md) (Work-in-progress)
+
+# Getting Started
 
 To setup DyNAS-T run `pip install -e .` or make a local copy of the `dynast` subfolder in your
 local subnetwork repository with the `requirements.txt` dependencies installed.
 
-Examples of setting up DyNAS-T with various SuperNet frameworks are given in the
-./examples directory. We suggested using `dynast_mbnv3_full.py` as a starting point
-using the HANDI MobileNetV3 supernetwork.
 
-## Design Overview
+## Running DyNAS-T
+The `run_search.py` template provide a starting point for running the NAS process. An evaluation is the process of determining the fitness of an architectural candidate. A *validation* evaluation is the costly process of running the full validation set. A *predictor* evaluation uses a pre-trained performance predictor.
 
-DyNAS-T supplements existing SuperNet Training frameworks in the following ways.
+* `supernet` - Name of the pre-trained super-network. See list of supported super-networks. For a custom super-network, you will have to modify the code including the `dynast_manager.py` and `supernetwork_registry.py` files.
+* `optimization_metrics` - These are the metrics that the NAS process optimizes for. Note that the number of objectives you specify must be compatible with the supporting algorithm.
+* `measurements` - In addition to the optimization metrics, you can specify which measurements you would like to take during an full evaluation.
+* `search_tactic` - `linas` Lightweight iterative NAS (recommended) or `evolutionary` (good for benchmarking and testing new super-networks).
+* `search_algo` - Determines which evolutionary algorithm to run for the `linas` low-fidelity inner loop or the `evolutionary` search tactic.
+* `num_evals` - Number of evaluations (full validation measurements) to take. For example, if 1 validation measurement takes 5 minutes, 120 evaluations would take 10 hours.
+* `seed` - Random seed.
+* `population` - The size of the pool of candidates for each evolutionary generation. *50* is recommended for most cases, though this can be treated as a tunable hyperparameter.
+* `results_path` - The location of the csv file that store information of the DNN candidates during the search process. The csv file is used for plotting NAS results.
+* `dataset_path` - Location of the dataset used for training the super-network of interest.
 
-![DyNAS-T Design Flow](docs/images/dynast_design.png)
+**Single-Objective**
 
-## Release Notes
+*Example 1a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy using a simple evolutionary genetic algorithm (GA) approach.
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc --measurements acc macs params --results_path mbnv3w10_ga_acc.csv --search_tactic evolutionary --num_evals 250 --search_algo ga`
 
-0.1.0 - 0.3.0:
-* Updated to pymoo version 0.5.0
-* Added example templates for HANDI MobileNetV3, Transformer, ResNet50
-* Added ConcurrentNAS examples for HANDI MobileNetV3, BootstrapNAS
-* Added OpenVINO INT8 search example for HANDI MobileNetV3
-* Updated search results to be managed by pymoo results object.
-* New `ParameterManager` handles tranlation between dictionary, pymoo, and one-hot vector formats
+*Example 1b.* NAS process for the OFA MobileNetV3-w1.2 super-network that optimizes for ImageNet Top-1 accuracy using a LINAS + GA approach.
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.2 --optimization_metrics acc --measurements acc macs params --results_path mbnv3w12_linasga_acc.csv --search_tactic linas --num_evals 250 --search_algo ga`
 
+**Multi-Objective**
+
+*Example 2a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* multiply-and-accumulates (MACs) using a LINAS+NSGA-II approach.
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc macs --measurements acc macs params --results_path mbnv3w10_linasnsga2_acc_macs.csv --search_tactic evolutionary --num_evals 250 --search_algo nsga2`
+
+*Example 2b.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) using a evolutionary AGE-MOEA approach.
+`python run_search.py --supernet resnet50 --optimization_metrics acc params --measurements acc macs params --results_path resnet50_age_acc_params.csv --search_tactic evolutionary --num_evals 500 --search_algo age`
+
+**Many-Objective**
+
+*Example 3a.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a evolutionary unsga3 approach.
+`python run_search.py --supernet resnet50 --optimization_metrics acc macs params --measurements acc macs params --results_path resnet50_linasunsga3_acc_macs_params.csv --search_tactic evolutionary --num_evals 500 --search_algo unsga3`
+
+*Example 3b.* NAS process for the OFA MobileNetV3-w1.0 super-network super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a linas+unsga3 approach.
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc macs params --measurements acc macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
+
+An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
+![DyNAS-T Results](docs/images/search_results.png)
+
+
+### Release Notes
+
+1.0 (First public release):
+* pymoo 0.6.0 library support
+
+### References
+
+[1] Cai, H., Gan, C., & Han, S. (2020). Once for All: Train One Network and Specialize it for Efficient Deployment. ArXiv, abs/1908.09791.
+[2] K. Deb, A. Pratap, S. Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," in IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, April 2002, doi: 10.1109/4235.996017.
+[3] Cummings, D., Sarah, A., Sridhar, S.N., Szankin, M., MuÃƒÂ±oz, J.P., & Sundaresan, S. (2022). A Hardware-Aware Framework for Accelerating Neural Architecture Search Across Modalities. ArXiv, abs/2205.10358.

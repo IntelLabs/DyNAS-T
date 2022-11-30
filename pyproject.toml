@@ -16,3 +16,6 @@ files = [
 allow_redefinition = false
 ignore_missing_imports = false
 disallow_untyped_defs = true
+
+[tool.pylint]
+max-line-length = 120

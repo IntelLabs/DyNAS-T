@@ -1,15 +1,32 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import functools as _functools
 import json
 import logging
 import os
 import subprocess
 import time as _time
+from typing import List
 
 import pandas as pd
 import requests
 
 
-def set_logger(level: int = logging.INFO):
+def set_logger(
+    level: int = logging.INFO,
+    auxiliary_log_level: int = logging.ERROR,
+):
     """Create logger object and set the logging level to `level`."""
     global log
     log = logging.getLogger()
@@ -19,14 +36,15 @@ def set_logger(level: int = logging.INFO):
     console_handler.setLevel(level)
 
     formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)-8s %(filename)s:%(lineno)d - %(message)s",
+        "[%(asctime)s %(processName)s #%(process)d] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s",
         "%m-%d %H:%M:%S",
     )
     console_handler.setFormatter(formatter)
     log.addHandler(console_handler)
 
     # Disable PIL polluting logs with it's debug logs: https://github.com/camptocamp/pytest-odoo/issues/15
-    logging.getLogger('PIL').setLevel(logging.WARNING)
+    logging.getLogger('PIL').setLevel(auxiliary_log_level)
+    logging.getLogger('fvcore.nn.jit_analysis').setLevel(auxiliary_log_level)
 
 
 log = None
@@ -34,7 +52,7 @@ set_logger()
 
 
 def measure_time(func):
-    """ Decorator to measure elapsed time of a function call.
+    """Decorator to measure elapsed time of a function call.
 
     Usage:
 
@@ -50,33 +68,51 @@ def measure_time(func):
     # > Finished foo in 0.0004 s
     ```
     """
+
     @_functools.wraps(func)
     def wrapper_timer(*args, **kwargs):
         log.info("> Calling {}".format(func.__name__))
-        start_time = _time.perf_counter()    # 1
+        start_time = _time.perf_counter()  # 1
         value = func(*args, **kwargs)
-        end_time = _time.perf_counter()      # 2
-        run_time = end_time - start_time    # 3
+        end_time = _time.perf_counter()  # 2
+        run_time = end_time - start_time  # 3
         log.info('> Finished {} in {:.4f} s'.format(func.__name__, run_time))
         return value
+
     return wrapper_timer
 
 
 def samples_to_batch_multiply(base_samples, batch_size):
-    return (base_samples//batch_size+1)*batch_size
+    return (base_samples // batch_size + 1) * batch_size
 
 
 def get_hostname():
     return os.getenv('HOSTNAME', os.getenv('HOST', 'unnamed-host'))
 
 
-def get_cores(num_cores: int):
-    """ For a given number of cores, returns the core IDs that should be used.
+def get_cores(
+    num_cores: int = None,
+    sockets: List[int] = None,
+    use_ht: bool = True,
+) -> str:
+    """For a given number of cores, returns the core IDs that should be used in
+    a string format compatible with `taskset`.
 
     This script prioritizes using cores from the same socket first. e.g. for a
     two socket CLX 8280 system, that means using cores: 0-27, 56-83, 28-55, 84-111
     in that order, since [0-27, 56-83] belong to the same socket.
+
+    Arguments:
+    ----------
+    * `num_cores`: number of cores to use. Will prioritize physical cores from a single socket,
+      unless specified otherwise with other params.
+    * `sockets`: list of socket ids. If set to None no filtering will be applied.
+    * `use_ht`: if set to False only physical cores will be selected.
+    Returns:
+    --------
+    * Comma-separated string of core ids
     """
+
     cmd = ['lscpu', '--json', '--extended']
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     out, code = p.communicate()
@@ -87,7 +123,15 @@ def get_cores(num_cores: int):
         df[key] = df[key].astype(int)
 
     df = df.sort_values(['node', 'socket', 'cpu'])
-    cores = df['cpu'].to_list()[:num_cores]
+
+    if sockets:
+        df = df[df['socket'].isin(sockets)]
+
+    if not use_ht:
+        # List of cores is sorted, so physical cores come first.
+        df = df.drop_duplicates(subset=['core'])
+
+    cores = df['cpu'].to_list()[:num_cores] if num_cores is not None else df['cpu'].to_list()
     cores = [str(c) for c in cores]
     return ','.join(cores)
 

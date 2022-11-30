@@ -1,10 +1,23 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import json
 import os
 from typing import Any, Union
 
 
 class Cache(object):
-    """ Simple caching mechanism to speed-up experiments by re-using evaluated configurations
+    """Simple caching mechanism to speed-up experiments by re-using evaluated configurations
     and storing atomic results in separate files.
 
     Example:
@@ -21,6 +34,7 @@ class Cache(object):
         subnet_sample, date, latency, top1 = self.cache.get(key=cache_key)
     ```
     """
+
     _hits = 0
 
     def __init__(self, name: str, cache_dir: str = '/store/.torch/dynast_cache') -> None:
@@ -35,7 +49,7 @@ class Cache(object):
         os.makedirs(os.path.join(self.cache_dir, self.name), exist_ok=True)
 
     def update(self, key: str, payload: Any) -> None:
-        """ Update (add new or replace existing) cache stored under `key`.
+        """Update (add new or replace existing) cache stored under `key`.
 
         Params:
         - `key` - (str) key under which `payload` will be stored
@@ -46,7 +60,7 @@ class Cache(object):
             return json.dump(payload, f, indent=4)
 
     def get(self, key: str) -> Union[Any, None]:
-        """ Retrieve cache stored under `key`. Returns `None` if 'key` doesnt exist.
+        """Retrieve cache stored under `key`. Returns `None` if 'key` doesnt exist.
 
         Params:
         - `key` - (str) `key` to retrieve payload.
@@ -60,7 +74,7 @@ class Cache(object):
 
     @staticmethod
     def key(o: list) -> str:
-        """ Translate PyMoo vector of one-hot encoded configuration into a file-name friendly string.
+        """Translate PyMoo vector of one-hot encoded configuration into a file-name friendly string.
 
         Params:
         `o` - (list) Network's one-hot configuration
@@ -68,7 +82,7 @@ class Cache(object):
         return '_'.join([str(_) for _ in o])
 
     def exists(self, key: str) -> bool:
-        """ Checks if cache `key` exists.
+        """Checks if cache `key` exists.
 
         Params:
         - `key` - (str) `key` to retrieve payload.

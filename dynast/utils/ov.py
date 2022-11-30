@@ -1,3 +1,16 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import json
 import os
 import re
@@ -29,10 +42,7 @@ def load_openvino(
     ie = IECore()
     if is_quantized:
         folder = os.path.join(folder, 'optimized')
-    net = ie.read_network(
-        model=os.path.join(folder, name + '.xml'),
-        weights=os.path.join(folder, name + '.bin')
-    )
+    net = ie.read_network(model=os.path.join(folder, name + '.xml'), weights=os.path.join(folder, name + '.bin'))
 
     exec_net = ie.load_network(net, 'CPU')
     if return_net:
@@ -46,7 +56,7 @@ def save_ov_quantized(
     tmp_folder: str = '/store/.torch/',
     model_name: str = 'tmp',
     quant_policy: str = 'DefaultQuantization',
-    stat_subset_size: int = 3*128
+    stat_subset_size: int = 3 * 128,
 ) -> None:
 
     fp32_path_xml = os.path.join(tmp_folder, model_name + '.xml')
@@ -67,10 +77,13 @@ def save_ov_quantized(
         json.dump(policy_to_use, f, indent=4)
 
     cmd_pot = [
-        'python', '/opt/intel/openvino_2021/deployment_tools/tools/post_training_optimization_toolkit/main.py',
-        '-c', json_fname,
-        '--output-dir', q_path,
-        '-d'
+        'python',
+        '/opt/intel/openvino_2021/deployment_tools/tools/post_training_optimization_toolkit/main.py',
+        '-c',
+        json_fname,
+        '--output-dir',
+        q_path,
+        '-d',
     ]
     log.info('Running external command: {}'.format(' '.join(cmd_pot)))
     result = subprocess.run(cmd_pot)
@@ -91,9 +104,20 @@ def save_openvino(model, shape, tmp_folder='/store/.torch/', name='tmp', verbose
     OFA_OV_EXT_PATH = os.environ['OFA_OV_EXT_PATH']
 
     # convert from ONNX to openvino IR
-    cmd = ['python', OV_MODEL_OPTIMIZER_PATH,
-           '--input_model', onnx_path, '--input_shape', str(list(shape)),
-           '--output_dir', tmp_folder, '--model_name', name, '--extensions', OFA_OV_EXT_PATH]
+    cmd = [
+        'python',
+        OV_MODEL_OPTIMIZER_PATH,
+        '--input_model',
+        onnx_path,
+        '--input_shape',
+        str(list(shape)),
+        '--output_dir',
+        tmp_folder,
+        '--model_name',
+        name,
+        '--extensions',
+        OFA_OV_EXT_PATH,
+    ]
 
     if verbose is False:
         cmd += ['--silent']
@@ -104,13 +128,17 @@ def save_openvino(model, shape, tmp_folder='/store/.torch/', name='tmp', verbose
 
 
 @measure_time
-def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, cores=None, nstreams=1, is_quantized=False):
+def benchmark_openvino(
+    shape, experiment_name=None, perf_folder=None, time=20, cores=None, nstreams=1, is_quantized=False
+):
     # NOTE(Maciej) Model has to already be quentized and saved.
     if not experiment_name:
         experiment_name = '{}_dynast_eval'.format(get_hostname())
 
     if type(cores) == int:
-        log.info('Param `cores` is of type `int`. Converting to a list of cores: {} -> {}'.format(cores, get_cores(cores)))
+        log.info(
+            'Param `cores` is of type `int`. Converting to a list of cores: {} -> {}'.format(cores, get_cores(cores))
+        )
         cores = get_cores(cores)
 
     folder_name = os.path.expanduser('/store/.torch/{}'.format(experiment_name))
@@ -127,22 +155,16 @@ def benchmark_openvino(shape, experiment_name=None, perf_folder=None, time=20, c
         cmd = []
 
     cmd += ['python', OV_BENCHMARK_PATH, '-m', file_path]
-    cmd += ['-d', 'CPU',
-            '-b', str(shape[0]),
-            '-t', str(time),
-            '-nstreams', str(nstreams),
-            '-api', 'sync'
-            ]
+    cmd += ['-d', 'CPU', '-b', str(shape[0]), '-t', str(time), '-nstreams', str(nstreams), '-api', 'sync']
 
     if perf_folder is not None:
-        cmd += ['-report_type', 'detailed_counters', '-report_folder',
-                perf_folder]
+        cmd += ['-report_type', 'detailed_counters', '-report_folder', perf_folder]
 
     log.info('Running external command: {}'.format(' '.join(cmd)))
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     out, code = p.communicate()
 
-    if (code == 0):
+    if code == 0:
         log.error('FAILED')
         log.error(cmd)
     # parse output

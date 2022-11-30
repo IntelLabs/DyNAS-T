@@ -1,3 +1,16 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import argparse
 import logging
 from typing import Tuple
@@ -8,14 +21,19 @@ from torch import nn
 
 from dynast.utils import log, measure_time, set_logger
 from dynast.utils.datasets import Dataset, ImageNet
-from dynast.utils.nn import measure_latency, validate_classification
+from dynast.utils.nn import count_parameters, get_gflops, measure_latency, validate_classification
 
 
 def get_torchvision_model(
     model_name: str,
+    quantize: bool = True,
+    progress: bool = False,
 ) -> nn.Module:
     try:
-        model = getattr(models, model_name)(pretrained=True)
+        if not quantize:
+            model = getattr(models, model_name)(pretrained=True, progress=progress)
+        else:
+            model = getattr(models.quantization, model_name)(pretrained=True, quantize=quantize, progress=progress)
         model.eval()
         return model
     except AttributeError as ae:
@@ -58,16 +76,20 @@ class TorchVisionReference(Reference):
         self,
         model_name: str,
         dataset: Dataset = ImageNet,
+        quantize: bool = False,
     ) -> None:
         self.model_name = model_name
         self.dataset = dataset
+        self.quantize = quantize
 
-        log.info('{name} for \'{model_name}\' on \'{dataset_name}\' dataset'.format(
-            name=str(self),
-            model_name=self.model_name,
-            dataset_name=self.dataset.name(),
-        ))
-        self.model = get_torchvision_model(model_name=self.model_name)
+        log.info(
+            '{name} for \'{model_name}\' on \'{dataset_name}\' dataset'.format(
+                name=str(self),
+                model_name=self.model_name,
+                dataset_name=self.dataset.name(),
+            )
+        )
+        self.model = get_torchvision_model(model_name=self.model_name, quantize=self.quantize)
 
     @measure_time
     def validate(
@@ -89,13 +111,15 @@ class TorchVisionReference(Reference):
             ),
             test_size=test_size,
         )
-        log.info('\'{model_name}\' on \'{dataset_name}\' - top1 {top1} top5 {top5} loss {loss}'.format(
-            model_name=self.model_name,
-            dataset_name=self.dataset.name(),
-            top1=top1,
-            top5=top5,
-            loss=loss,
-        ))
+        log.info(
+            '\'{model_name}\' on \'{dataset_name}\' - top1 {top1} top5 {top5} loss {loss}'.format(
+                model_name=self.model_name,
+                dataset_name=self.dataset.name(),
+                top1=top1,
+                top5=top5,
+                loss=loss,
+            )
+        )
         return loss, top1, top5
 
     @measure_time
@@ -115,13 +139,31 @@ class TorchVisionReference(Reference):
             measure_steps=measure_steps,
             device=device,
         )
-        log.info('\'{model_name}\' (BS={batch_size}) mean latency {latency_mean} +/- {latency_std}'.format(
-            model_name=self.model_name,
-            batch_size=batch_size,
-            latency_mean=latency_mean,
-            latency_std=latency_std,
-        ))
+        log.info(
+            '\'{model_name}\' (BS={batch_size}) mean latency {latency_mean} +/- {latency_std}'.format(
+                model_name=self.model_name,
+                batch_size=batch_size,
+                latency_mean=latency_mean,
+                latency_std=latency_std,
+            )
+        )
         return latency_mean, latency_std
+
+    @measure_time
+    def get_gflops(
+        self,
+        device: str = 'cpu',
+        input_size: int = 224,
+    ):
+        return get_gflops(
+            model=self.model,
+            input_size=(1, 3, input_size, input_size),
+            device=device,
+        )
+
+    @measure_time
+    def get_params(self):
+        return count_parameters(model=self.model)
 
 
 if __name__ == '__main__':
@@ -129,12 +171,21 @@ if __name__ == '__main__':
 
     parser.add_argument('-m', '--model', type=str, required=True)
     parser.add_argument('-b', '--batch_size', type=int, default=128)
-    parser.add_argument('-t', '--test_size', type=int, default=None,
-                        help='How many batches should be used for validation.')
-    parser.add_argument('--warmup_steps', type=int, default=10,
-                        help='How many batches should be used to warm up latency measurement when benchmarking.')
-    parser.add_argument('--measure_steps', type=int, default=50,
-                        help='How many batches should be used for actual latency measurement when benchmarking.')
+    parser.add_argument(
+        '-t', '--test_size', type=int, default=None, help='How many batches should be used for validation.'
+    )
+    parser.add_argument(
+        '--warmup_steps',
+        type=int,
+        default=10,
+        help='How many batches should be used to warm up latency measurement when benchmarking.',
+    )
+    parser.add_argument(
+        '--measure_steps',
+        type=int,
+        default=50,
+        help='How many batches should be used for actual latency measurement when benchmarking.',
+    )
     parser.add_argument('--device', type=str, choices=['cpu', 'cuda'], default='cpu')
     parser.add_argument('--dataset', type=str, choices=['imagenet', 'imagenette', 'cifar10'], default='imagenet')
     parser.add_argument('--input_size', type=int, default=224)

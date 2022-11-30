@@ -1,3 +1,16 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import os
 from typing import Tuple
 
@@ -42,18 +55,13 @@ def quantize_ov(
     folder_name = os.path.expanduser('/store/.torch/{}'.format(experiment_name))
     ov_model_dir = os.path.join(folder_name, 'ov_model')
 
-    save_openvino(
-        model,
-        img_size,
-        ov_model_dir,
-        experiment_name
-    )
+    save_openvino(model, img_size, ov_model_dir, experiment_name)
 
     save_ov_quantized(
         tmp_folder=ov_model_dir,
         model_name=experiment_name,
         quant_policy=quant_policy,
-        stat_subset_size=stat_subset_size
+        stat_subset_size=stat_subset_size,
     )
 
 

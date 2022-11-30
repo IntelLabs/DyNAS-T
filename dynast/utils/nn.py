@@ -1,3 +1,16 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
 import time
 from typing import Tuple, Union
 
@@ -10,7 +23,7 @@ from dynast.utils import log, measure_time
 
 
 class AverageMeter(object):
-    """ Computes and stores the average and current value
+    """Computes and stores the average and current value
     Copied from: https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
 
@@ -33,13 +46,8 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def accuracy(
-    output,
-    target,
-    topk=(1,)
-):
-    """ Computes the accuracy over the k top predictions for the specified values of k
-    """
+def accuracy(output, target, topk=(1,)):
+    """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
         maxk = max(topk)
         batch_size = target.size(0)
@@ -73,7 +81,7 @@ def validate_classification(
     test_criterion = nn.CrossEntropyLoss()
 
     if (not is_openvino) and (not is_onnx):
-        if (not isinstance(model, nn.DataParallel)):
+        if not isinstance(model, nn.DataParallel):
             model = nn.DataParallel(model)
         model = model.eval()
 
@@ -124,15 +132,11 @@ def validate_classification(
                 # openvino cannot handle dynamic batch sizes, so for
                 # the last batch of dataset, zero pad the batch size
                 if batch_size != expected_batch_size:
-                    assert (
-                        batch_size < expected_batch_size
-                    ), "Assert batch_size:{} < expected_batch_size:{}".format(
+                    assert batch_size < expected_batch_size, "Assert batch_size:{} < expected_batch_size:{}".format(
                         batch_size, expected_batch_size
                     )
                     npad = expected_batch_size - batch_size
-                    img = np.pad(
-                        img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode="constant"
-                    )
+                    img = np.pad(img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode="constant")
                     img = img.copy()
 
                 output = model.infer(inputs={"input": img})
@@ -170,7 +174,7 @@ def get_gflops(
     input = torch.randn(*input_size, device=device)
     flops = FlopCountAnalysis(model, input)
     flop_batch_size = input_size[0]
-    gflops = flops.total()/(flop_batch_size*10**9)
+    gflops = flops.total() / (flop_batch_size * 10**9)
     log.info('Model\'s GFLOPs: {}'.format(gflops))
     return gflops
 
@@ -188,23 +192,17 @@ def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `mo
     batch_size = train_dataloader.batch_size
 
     if num_samples / batch_size > len(train_dataloader):
-        log.warn(
-            "BN set stats: num of samples exceed the samples in loader. Using full loader"
-        )
+        log.warn("BN set stats: num of samples exceed the samples in loader. Using full loader")
     for i, (images, _) in enumerate(train_dataloader):
-        log.debug(
-            "Calibrating BN statistics #{}/{}".format(i, num_samples // batch_size + 1)
-        )
+        log.debug("Calibrating BN statistics #{}/{}".format(i, num_samples // batch_size + 1))
         images = images.to(device)
         model(images)
         if i > num_samples / batch_size:
-            log.info(
-                f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}"
-            )
+            log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
             break
 
     if 'cuda' in str(device):
-        log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated()//1024//1024))
+        log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated() // 1024 // 1024))
 
     model.eval()
 
@@ -232,10 +230,13 @@ def measure_latency(
     `(mean latency; std latency)`
     """
     # TODO(macsz) Compare results with https://pytorch.org/tutorials/recipes/recipes/benchmark.html
+    # TODO(macsz) Should also consider setting `omp_num_threads` here.
     times = []
 
     inputs = torch.randn(*input_size, device=device)
     model = model.eval()
+
+    # TODO(macsz) Create model's copy before removing anything.
     rm_bn_from_net(model)
     model = model.to(device)
 
@@ -252,7 +253,7 @@ def measure_latency(
     for _ in range(measure_steps):
         if 'cuda' in str(device):
             torch.cuda.synchronize()
-        st = time.time()
+        st = time.time()  # TODO(macsz) Use timeit instead
         model(inputs)
         if 'cuda' in str(device):
             torch.cuda.synchronize()
@@ -260,7 +261,7 @@ def measure_latency(
         times.append(ed - st)
 
     # Convert to [ms] and round to 0.001
-    latency_mean = np.round(np.mean(times)*1000, 3)
-    latency_std = np.round(np.std(times)*1000, 3)
+    latency_mean = np.round(np.mean(times) * 1e3, 3)
+    latency_std = np.round(np.std(times) * 1e3, 3)
 
     return latency_mean, latency_std

@@ -8,7 +8,7 @@ numpy==1.19.2
 pandas==1.1.5
 progress==1.6
 py-cpuinfo==8.0.0
-pymoo==0.5.0
+pymoo==0.6.0
 thop==0.0.31.post2005241907
 scikit-learn==0.24.2
 scipy==1.5.4

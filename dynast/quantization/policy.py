@@ -1,3 +1,17 @@
+# INTEL CONFIDENTIAL
+# Copyright 2022 Intel Corporation. All rights reserved.
+
+# This software and the related documents are Intel copyrighted materials, and your use of them is governed by the
+# express license under which they were provided to you ("License"). Unless the License provides otherwise, you may
+# not use, modify, copy, publish, distribute, disclose or transmit this software or the related documents without
+# Intel's prior written permission.
+
+# This software and the related documents are provided as is, with no express or implied warranties, other than those
+# that are expressly stated in the License.
+
+# This software is subject to the terms and conditions entered into between the parties.
+
+
 class OVQuantizationPolicy(object):
     @staticmethod
     def _get_base_policy(
@@ -9,21 +23,10 @@ class OVQuantizationPolicy(object):
         input_size: int = 224,
     ) -> dict:
         return {
-            'model': {
-                'model_name': model_name,
-                'model': fp32_path_xml,
-                'weights': fp32_path_bin
-            },
+            'model': {'model_name': model_name, 'model': fp32_path_xml, 'weights': fp32_path_bin},
             'engine': {
-                'launchers':
-                [
-                    {
-                        'framework': 'dlsdk',
-                        'adapter': 'classification'
-                    }
-                ],
-                'datasets':
-                [
+                'launchers': [{'framework': 'dlsdk', 'adapter': 'classification'}],
+                'datasets': [
                     {
                         'name': 'imagenet_1000_classes',
                         'reader': 'pillow_imread',
@@ -38,37 +41,25 @@ class OVQuantizationPolicy(object):
                                 'size': 256,
                                 'aspect_ratio_scale': 'greater',
                                 'use_pillow': True,
-                                'interpolation': 'BILINEAR'
+                                'interpolation': 'BILINEAR',
                             },
-                            {
-                                'type': 'crop',
-                                'size': input_size,
-                                'use_pillow': True
-                            },
+                            {'type': 'crop', 'size': input_size, 'use_pillow': True},
                             {
                                 'type': 'normalization',
                                 'mean': [123.675, 116.28, 103.53],  # NOTE Valid only for ImageNet
-                                'std': [58.624, 57.12, 57.375]  # NOTE Valid only for ImageNet
-                            }
+                                'std': [58.624, 57.12, 57.375],  # NOTE Valid only for ImageNet
+                            },
                         ],
                         'metrics': [
-                            {
-                                'name': 'accuracy@top1',
-                                'type': 'accuracy',
-                                'top_k': 1
-                            },
-                            {
-                                'name': 'accuracy@top5',
-                                'type': 'accuracy',
-                                'top_k': 5
-                            }
-                        ]
+                            {'name': 'accuracy@top1', 'type': 'accuracy', 'top_k': 1},
+                            {'name': 'accuracy@top5', 'type': 'accuracy', 'top_k': 5},
+                        ],
                     }
-                ]
+                ],
             },
             'compression': {
                 'target_device': 'CPU',
-            }
+            },
         }
 
     @staticmethod
@@ -77,7 +68,7 @@ class OVQuantizationPolicy(object):
         fp32_path_xml: str,
         fp32_path_bin: str,
         quant_policy: str = 'DefaultQuantization',
-        stat_subset_size: int = 3*128,
+        stat_subset_size: int = 3 * 128,
     ) -> dict:
         assert quant_policy in ['DefaultQuantization', 'AccuracyAwareQuantization']
 
@@ -89,7 +80,7 @@ class OVQuantizationPolicy(object):
                     'params': {
                         'preset': 'performance',
                         'stat_subset_size': stat_subset_size,
-                    }
+                    },
                 }
             ]
         elif quant_policy == 'AccuracyAwareQuantization':
@@ -101,8 +92,8 @@ class OVQuantizationPolicy(object):
                         'stat_subset_size': stat_subset_size,
                         'max_iter_num': 30,
                         'maximal_drop': 0.01,
-                        'convert_to_mixed_preset': True
-                    }
+                        'convert_to_mixed_preset': True,
+                    },
                 }
             ]
         else:

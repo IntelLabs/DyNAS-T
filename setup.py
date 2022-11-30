@@ -11,9 +11,7 @@ def get_git_hash():
 def get_build_name():
     # TODO (Maciej): WW should be based on the commit date, not current date
     return 'ww{}.{}-{}'.format(
-        datetime.datetime.utcnow().strftime("%V"),
-        datetime.datetime.utcnow().isoweekday(),
-        get_git_hash()
+        datetime.datetime.utcnow().strftime("%V"), datetime.datetime.utcnow().isoweekday(), get_git_hash()
     )
 
 
@@ -42,15 +40,14 @@ setup(
     version=get_build_name(),
     description='DyNAS-T (Dynamic Neural Architecture Search Toolkit) - a SuperNet NAS optimization package',
     long_description='DyNAS-T (Dynamic Neural Architecture Search Toolkit) is a SuperNet NAS optimization package '
-                     'designed for finding the optimal Pareto front during neural architure search while minimizing '
-                     'the number of search validation measurements. It supports single-/multi-/many-objective '
-                     'problems for a variety of domains supported by the Intel AI Lab HANDI framework. The system '
-                     'currently heavily utilizes the pymoo optimization library.',
+    'designed for finding the optimal Pareto front during neural architure search while minimizing '
+    'the number of search validation measurements. It supports single-/multi-/many-objective '
+    'problems for a variety of domains supported by the Intel AI Lab HANDI framework. The system '
+    'currently heavily utilizes the pymoo optimization library.',
     long_description_content_type="text/markdown",
-    author='Cummings, Daniel J; Nittur Sridhar, Sharath; Sarah, Anthony; Sundaresan, Sairam; '
-           'Szankin, Maciej;',
+    author='Cummings, Daniel J; Nittur Sridhar, Sharath; Sarah, Anthony; Sundaresan, Sairam; ' 'Szankin, Maciej;',
     author_email='daniel.j.cummings@intel.com; sharath.nittur.sridhar@intel.com; anthony.sarah@intel.com; '
-                 'sairam.sundaresan@intel.com; maciej.szankin@intel.com;',
+    'sairam.sundaresan@intel.com; maciej.szankin@intel.com;',
     license='Intel Confidential',  # TODO(Maciej) Update license
     packages=find_packages(),
     install_requires=get_dependencies(),
@@ -59,8 +56,8 @@ setup(
     },
     zip_safe=False,
     entry_points={
-            'console_scripts': [
-                'dynast=dynast.cli:main',
-            ],
+        'console_scripts': [
+            'dynast=dynast.cli:main',
+        ],
     },
 )
