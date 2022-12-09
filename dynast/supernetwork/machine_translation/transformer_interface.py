@@ -14,10 +14,10 @@ from datetime import datetime
 
 import numpy as np
 import torch
+import torchprofile
 from fairseq import options, progress_bar, tasks, utils
 from fairseq.data import dictionary
 from fairseq.meters import StopwatchMeter, TimeMeter
-from fvcore.nn import FlopCountAnalysis
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
@@ -517,7 +517,6 @@ def compute_macs(config, dataset_path):
     args.target_lang = 'de'
     args.batch_size = 128  # TODO(macsz) Parameterize
     utils.import_user_module(args)
-    max_tokens = 12000
     args.latgpu = False  # TODO(macsz) Parameterize
     args.latcpu = True
     args.latiter = 100
@@ -531,15 +530,9 @@ def compute_macs(config, dataset_path):
     # Load dataset splits
     task = tasks.setup_task(args)
     task.load_dataset(args.gen_subset)
-    # Set dictionaries
-    try:
-        src_dict = getattr(task, 'source_dictionary', None)
-    except NotImplementedError:
-        src_dict = None
-    tgt_dict = task.target_dictionary
 
     # Load model
-    print('| loading model(s) from {}'.format(args.path))
+    log.info('Loading model(s) from {}'.format(args.path))
     model = TransformerSuperNetwork(task)
 
     # specify the length of the dummy input for profile
@@ -551,21 +544,22 @@ def compute_macs(config, dataset_path):
     dummy_src_tokens = [2] + [7] * (dummy_sentence_length - 1)
     dummy_prev = [7] * (dummy_sentence_length - 1) + [2]
 
-    model.set_sample_config(config)
-
+    model.eval()
     model.profile(mode=True)
-    macs = FlopCountAnalysis(
+    model.set_sample_config(config)
+    macs = torchprofile.profile_macs(
         model,
-        (
+        args=(
             torch.tensor([dummy_src_tokens], dtype=torch.long),
             torch.tensor([30]),
             torch.tensor([dummy_prev], dtype=torch.long),
         ),
     )
-    macs_tot = macs.total()
+
     model.profile(mode=False)
+
     params = model.get_sampled_params_numel(config)
-    return macs_tot, params
+    return macs, params
 
 
 class TransformerLTRunner:

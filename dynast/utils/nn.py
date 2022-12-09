@@ -11,13 +11,14 @@
 
 # This software is subject to the terms and conditions entered into between the parties.
 
+import copy
 import time
 from typing import Tuple, Union
 
 import numpy as np
 import torch
 import torch.nn as nn
-from fvcore.nn import FlopCountAnalysis
+import torchprofile
 
 from dynast.utils import log, measure_time
 
@@ -159,24 +160,32 @@ def validate_classification(
     return losses.avg, top1.avg, top5.avg
 
 
-def count_parameters(model: nn.Module) -> int:
+def get_parameters(
+    model: nn.Module,
+    device: str = 'cpu',
+) -> int:
+    model = copy.deepcopy(model)
+    rm_bn_from_net(model)
+    model = model.to(device)
+    model = model.eval()
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 @measure_time
-def get_gflops(
+def get_macs(
     model: nn.Module,
     input_size: tuple = (1, 3, 224, 224),
     device: str = 'cpu',
 ) -> float:
-    model.eval()
+    model = copy.deepcopy(model)
+    rm_bn_from_net(model)
     model = model.to(device)
-    input = torch.randn(*input_size, device=device)
-    flops = FlopCountAnalysis(model, input)
-    flop_batch_size = input_size[0]
-    gflops = flops.total() / (flop_batch_size * 10**9)
-    log.info('Model\'s GFLOPs: {}'.format(gflops))
-    return gflops
+    model = model.eval()
+
+    inputs = torch.randn(*input_size, device=device)
+    macs = torchprofile.profile_macs(model, inputs)
+
+    return macs
 
 
 @measure_time
@@ -236,7 +245,7 @@ def measure_latency(
     inputs = torch.randn(*input_size, device=device)
     model = model.eval()
 
-    # TODO(macsz) Create model's copy before removing anything.
+    model = copy.deepcopy(model)
     rm_bn_from_net(model)
     model = model.to(device)
 

@@ -13,15 +13,12 @@
 
 import copy
 import csv
-import time
 import uuid
 from datetime import datetime
 from typing import Tuple
 
-import numpy as np
 import ofa
 import torch
-from fvcore.nn import FlopCountAnalysis
 from ofa.imagenet_classification.data_providers.imagenet import ImagenetDataProvider
 from ofa.imagenet_classification.run_manager import ImagenetRunConfig, RunManager
 from ofa.tutorial.flops_table import rm_bn_from_net
@@ -29,7 +26,7 @@ from ofa.tutorial.flops_table import rm_bn_from_net
 from dynast.measure.latency import auto_steps
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
-from dynast.utils.nn import measure_latency
+from dynast.utils.nn import get_macs, get_parameters, measure_latency
 
 
 class OFARunner:
@@ -104,16 +101,19 @@ class OFARunner:
         device = self.device if not device else device
 
         model = self.get_subnet(subnet_cfg)
-        model = model.to(device)
-        inputs = torch.randn((1, 3, 224, 224), device=device)
-        rm_bn_from_net(model)
-        model.eval()
 
         # MACs=FLOPs in FVCore
-        macs = FlopCountAnalysis(model, inputs).total()
+        macs = get_macs(
+            model=model,
+            input_size=(1, 3, 224, 224),  # batch size does not matter for MACs (scales linearly).
+            device=device,
+        )
 
         # Get sum of model parameters
-        params = sum(param.numel() for param in model.parameters())
+        params = get_parameters(
+            model=model,
+            device=device,
+        )
 
         return macs, params
 

@@ -21,7 +21,7 @@ from torch import nn
 
 from dynast.utils import log, measure_time, set_logger
 from dynast.utils.datasets import Dataset, ImageNet
-from dynast.utils.nn import count_parameters, get_gflops, measure_latency, validate_classification
+from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
 
 
 def get_torchvision_model(
@@ -155,7 +155,7 @@ class TorchVisionReference(Reference):
         device: str = 'cpu',
         input_size: int = 224,
     ):
-        return get_gflops(
+        return get_macs(
             model=self.model,
             input_size=(1, 3, input_size, input_size),
             device=device,
@@ -163,7 +163,7 @@ class TorchVisionReference(Reference):
 
     @measure_time
     def get_params(self):
-        return count_parameters(model=self.model)
+        return get_parameters(model=self.model)
 
 
 if __name__ == '__main__':
