@@ -121,3 +121,4 @@ venv.bak/
 *.tar.gz
 *.meta
 cifar10/
+coverity_tmp/

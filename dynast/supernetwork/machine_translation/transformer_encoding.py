@@ -27,11 +27,10 @@ class TransformerLTEncoding(EncodingBase):
     def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
         super().__init__(param_dict, verbose, seed)
 
-    def onehot_custom(self, subnet_cfg, provide_onehot=True):
+    def onehot_custom(self, subnet_cfg, provide_onehot=True, encode_layer_num_int=6):
 
         features = []
         features.extend(subnet_cfg['encoder_embed_dim'])
-        encode_layer_num_int = 6
 
         # Encoder FFN Embed Dim
         encoder_ffn_embed_dim = subnet_cfg['encoder_ffn_embed_dim']

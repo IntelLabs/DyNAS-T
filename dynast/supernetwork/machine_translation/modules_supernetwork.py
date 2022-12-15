@@ -454,7 +454,13 @@ class MultiheadAttentionSuper(nn.Module):
                 else:
                     v = torch.cat((prev_value, v), dim=1)
             saved_state['prev_key'] = k.view(bsz, self.num_heads, -1, self.head_dim)
-            saved_state['prev_value'] = v.view(bsz, self.num_heads, -1, self.head_dim)
+            if v is not None:
+                # TODO(macsz) Static code analysis tool indicates variable `v` can be unitialized here.
+                # However, I do not see how it's possible with current flow. Just in case raising
+                # an error to indicate this code can be problematic.
+                saved_state['prev_value'] = v.view(bsz, self.num_heads, -1, self.head_dim)
+            else:
+                raise UnboundLocalError
 
             self._set_input_buffer(incremental_state, saved_state)
 
@@ -474,7 +480,13 @@ class MultiheadAttentionSuper(nn.Module):
         if self.add_zero_attn:
             src_len += 1
             k = torch.cat([k, k.new_zeros((k.size(0), 1) + k.size()[2:])], dim=1)
-            v = torch.cat([v, v.new_zeros((v.size(0), 1) + v.size()[2:])], dim=1)
+            if v is not None:
+                # TODO(macsz) Static code analysis tool indicates variable `v` can be unitialized here.
+                # However, I do not see how it's possible with current flow. Just in case raising
+                # an error to indicate this code can be problematic.
+                v = torch.cat([v, v.new_zeros((v.size(0), 1) + v.size()[2:])], dim=1)
+            else:
+                raise UnboundLocalError
             if attn_mask is not None:
                 attn_mask = torch.cat([attn_mask, attn_mask.new_zeros(attn_mask.size(0), 1)], dim=1)
             if key_padding_mask is not None:

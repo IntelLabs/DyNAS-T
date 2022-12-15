@@ -143,12 +143,9 @@ class Scorer(object):
         )
 
 
-def get_bleu_score(args, ref, sys):
+def get_bleu_score(args, ref, sys, sentence_bleu=False, ignore_case=False):
     dict = dictionary.Dictionary()
     order = 4
-    sacrebleu = False
-    sentence_bleu = False
-    ignore_case = False
 
     def readlines(fd):
         for line in fd.readlines():

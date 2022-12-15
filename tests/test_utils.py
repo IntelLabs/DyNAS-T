@@ -23,7 +23,7 @@ import requests
 from dynast.utils import get_cores, get_remote_file
 
 valid_remote_url = 'http://someurl.com/test.txt'
-valid_remote_url_file_not_exists = 'http://dynas.aipg-rancher-amr.intel.com/supernets/not_exists.txt'
+valid_remote_url_file_not_exists = 'http://example.com/supernets/not_exists.txt'
 existing_model_dir = '/tmp/'
 nonexisting_model_dir = '/sup23/123s_nets2'
 

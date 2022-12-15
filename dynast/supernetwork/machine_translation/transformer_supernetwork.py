@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 import math
 
 import torch
@@ -95,12 +96,12 @@ class TransformerSuperNetwork(BaseFairseqModel):
                 # a hacky way to skip the layers that exceed encoder-layer-num or decoder-layer-num
                 if (
                     name.split('.')[0] == 'encoder'
-                    and eval(name.split('.')[2]) >= config['encoder']['encoder_layer_num']
+                    and ast.literal_eval(name.split('.')[2]) >= config['encoder']['encoder_layer_num']
                 ):
                     continue
                 if (
                     name.split('.')[0] == 'decoder'
-                    and eval(name.split('.')[2]) >= config['decoder']['decoder_layer_num']
+                    and ast.literal_eval(name.split('.')[2]) >= config['decoder']['decoder_layer_num']
                 ):
                     continue
 
@@ -398,17 +399,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
             else None
         )
 
-        if False:  # args.adaptive_softmax_cutoff is not None:
-            self.adaptive_softmax = AdaptiveSoftmax(
-                len(dictionary),
-                self.output_embed_dim,
-                options.eval_str_list(args.adaptive_softmax_cutoff, type=int),
-                dropout=args.adaptive_softmax_dropout,
-                adaptive_inputs=embed_tokens if args.tie_adaptive_weights else None,
-                factor=args.adaptive_softmax_factor,
-                tie_proj=args.tie_adaptive_proj,
-            )
-        elif not self.share_input_output_embed:
+        if not self.share_input_output_embed:
             self.embed_out = nn.Parameter(torch.Tensor(len(dictionary), self.output_embed_dim))
             nn.init.normal_(self.embed_out, mean=0, std=self.output_embed_dim**-0.5)
 
@@ -552,26 +543,26 @@ class TransformerDecoder(FairseqIncrementalDecoder):
                 else:
                     raise NotImplementedError("arbitrary_ende_attn should in [-1, 1, 2]")
 
-            if encoder_out['encoder_padding_mask'] is not None:
-                if i >= self.sample_layer_num or self.sample_arbitrary_ende_attn[i] == -1:
-                    encoder_padding_mask_feed = encoder_out['encoder_padding_mask']
-                # concat one more
-                elif self.sample_arbitrary_ende_attn[i] == 1:
-                    encoder_padding_mask_feed = torch.cat(
-                        [encoder_out['encoder_padding_mask'], encoder_out['encoder_padding_mask']], dim=1
-                    )
-                # concat two more
-                elif self.sample_arbitrary_ende_attn[i] == 2:
-                    encoder_padding_mask_feed = torch.cat(
-                        [
-                            encoder_out['encoder_padding_mask'],
-                            encoder_out['encoder_padding_mask'],
-                            encoder_out['encoder_padding_mask'],
-                        ],
-                        dim=1,
-                    )
-                else:
-                    raise NotImplementedError("arbitrary_ende_attn should in [-1, 1, 2]")
+                if encoder_out['encoder_padding_mask'] is not None:
+                    if i >= self.sample_layer_num or self.sample_arbitrary_ende_attn[i] == -1:
+                        encoder_padding_mask_feed = encoder_out['encoder_padding_mask']
+                    # concat one more
+                    elif self.sample_arbitrary_ende_attn[i] == 1:
+                        encoder_padding_mask_feed = torch.cat(
+                            [encoder_out['encoder_padding_mask'], encoder_out['encoder_padding_mask']], dim=1
+                        )
+                    # concat two more
+                    elif self.sample_arbitrary_ende_attn[i] == 2:
+                        encoder_padding_mask_feed = torch.cat(
+                            [
+                                encoder_out['encoder_padding_mask'],
+                                encoder_out['encoder_padding_mask'],
+                                encoder_out['encoder_padding_mask'],
+                            ],
+                            dim=1,
+                        )
+                    else:
+                        raise NotImplementedError("arbitrary_ende_attn should in [-1, 1, 2]")
 
             x, attn = layer(
                 x,
@@ -610,9 +601,7 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         """Maximum output length supported by the decoder."""
         if self.embed_positions is None:
             return self.max_target_positions
-        import ipdb
 
-        ipdb.set_trace()
         return min(self.max_target_positions, self.embed_positions.max_positions())
 
     def buffered_future_mask(self, tensor):

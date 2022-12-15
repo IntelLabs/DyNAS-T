@@ -40,7 +40,7 @@ def frontier_builder(df, alpha=0, verbose=False):
     points = list(df.to_records(index=False))
     points = MultiPoint(list(points))
 
-    if len(points) < 4 or (alpha is not None and alpha <= 0):
+    if len(points) < 4 or alpha <= 0:
         if verbose:
             log.info('Alpha=0 -> convex hull')
         result = points.convex_hull
