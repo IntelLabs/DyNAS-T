@@ -35,11 +35,15 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 
 | Super-Network | Model Name | Dataset | Objectives/Measurements Supported |
 |------------------|-----------------|-----------------|-----------------|
-|OFA MobileNetV3-w1.0 | ofa_mbv3_d234_e346_k357_w1.0 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
-|OFA MobileNetV3-w1.2 | ofa_mbv3_d234_e346_k357_w1.2 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
-|OFA ResNet50 | ofa_resnet50 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
-|OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | ImageNet | `acc` (Top-1 Accuracy), `macs`, `params`, `latency` |
-|Transformer | ? | ? | `bleu` (BLEU Score), `macs`, `params`, `latency` |
+|OFA MobileNetV3-w1.0 | ofa_mbv3_d234_e346_k357_w1.0 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|OFA MobileNetV3-w1.2 | ofa_mbv3_d234_e346_k357_w1.2 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|OFA ResNet50 | ofa_resnet50 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|TransformerLT | transformer_lt_wmt_en_de | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
+
+> **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
+
+> **_WMT En-De:_** To obtain and prepare dataset please follow instructions available [here](https://github.com/mit-han-lab/hardware-aware-transformers).
 
 ## Intel Library Support
 The following software libraries are compatible with DyNAS-T:
@@ -69,35 +73,29 @@ The `run_search.py` template provide a starting point for running the NAS proces
 **Single-Objective**
 
 *Example 1a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy using a simple evolutionary genetic algorithm (GA) approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc --measurements acc macs params --results_path mbnv3w10_ga_acc.csv --search_tactic evolutionary --num_evals 250 --search_algo ga`
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 --measurements accuracy_top1 macs params --results_path mbnv3w10_ga_acc.csv --search_tactic evolutionary --num_evals 250 --search_algo ga`
 
 *Example 1b.* NAS process for the OFA MobileNetV3-w1.2 super-network that optimizes for ImageNet Top-1 accuracy using a LINAS + GA approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.2 --optimization_metrics acc --measurements acc macs params --results_path mbnv3w12_linasga_acc.csv --search_tactic linas --num_evals 250 --search_algo ga`
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.2 --optimization_metrics accuracy_top1 --measurements accuracy_top1 macs params --results_path mbnv3w12_linasga_acc.csv --search_tactic linas --num_evals 250 --search_algo ga`
 
 **Multi-Objective**
 
 *Example 2a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* multiply-and-accumulates (MACs) using a LINAS+NSGA-II approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc macs --measurements acc macs params --results_path mbnv3w10_linasnsga2_acc_macs.csv --search_tactic evolutionary --num_evals 250 --search_algo nsga2`
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs --measurements accuracy_top1 macs params --results_path mbnv3w10_linasnsga2_acc_macs.csv --search_tactic evolutionary --num_evals 250 --search_algo nsga2`
 
 *Example 2b.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) using a evolutionary AGE-MOEA approach.
-`python run_search.py --supernet resnet50 --optimization_metrics acc params --measurements acc macs params --results_path resnet50_age_acc_params.csv --search_tactic evolutionary --num_evals 500 --search_algo age`
+`python run_search.py --supernet resnet50 --optimization_metrics accuracy_top1 params --measurements accuracy_top1 macs params --results_path resnet50_age_acc_params.csv --search_tactic evolutionary --num_evals 500 --search_algo age`
 
 **Many-Objective**
 
 *Example 3a.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a evolutionary unsga3 approach.
-`python run_search.py --supernet resnet50 --optimization_metrics acc macs params --measurements acc macs params --results_path resnet50_linasunsga3_acc_macs_params.csv --search_tactic evolutionary --num_evals 500 --search_algo unsga3`
+`python run_search.py --supernet resnet50 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path resnet50_linasunsga3_acc_macs_params.csv --search_tactic evolutionary --num_evals 500 --search_algo unsga3`
 
 *Example 3b.* NAS process for the OFA MobileNetV3-w1.0 super-network super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a linas+unsga3 approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics acc macs params --measurements acc macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
+`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
 
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
 ![DyNAS-T Results](docs/images/search_results.png)
-
-
-### Release Notes
-
-1.0 (First public release):
-* pymoo 0.6.0 library support
 
 ### References
 
