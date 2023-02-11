@@ -47,9 +47,10 @@ setup(
     description='DyNAS-T (Dynamic Neural Architecture Search Toolkit) - a SuperNet NAS optimization package',
     long_description=open("README.md", "r", encoding='utf-8').read(),
     long_description_content_type="text/markdown",
-    author='Nittur Sridhar, Sharath; Sarah, Anthony; Sundaresan, Sairam; Szankin, Maciej;',
-    author_email='sharath.nittur.sridhar@intel.com; anthony.sarah@intel.com; '
-    'sairam.sundaresan@intel.com; maciej.szankin@intel.com;',
+    author='Maciej Szankin, Sharath Nittur Sridhar, Anthony Sarah, '
+    'Sairam Sundaresan',
+    author_email='maciej.szankin@intel.com, sharath.nittur.sridhar@intel.com, '
+    'anthony.sarah@intel.com, sairam.sundaresan@intel.com',
     license='Apache 2.0',
     packages=find_packages(),
     install_requires=get_dependencies(),
