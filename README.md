@@ -1,4 +1,4 @@
-![DyNAS-T Logo](docs/images/dynast_logo.png)
+![DyNAS-T Logo](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_logo.png?raw=true)
 
 # DyNAS-T
 
@@ -19,7 +19,7 @@ Evolutionary algorithms, specifically genetic algorithms, have a history of usag
 
 A unique capability of DyNAS-T is the Lightweight Iterative NAS (LINAS) that pairs evolutionary algorithms with lightly trained objective predictors in an iterative cycle to accelerate architectural exploration [3]. This technique is ~4x more sample efficient than typical one-shot predictor-based NAS approaches.
 
-![DyNAS-T Design Flow](docs/images/dynast_flow.png)
+![DyNAS-T Design Flow](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_flow.png?raw=true)
 
 The following number of optimization algorithms are supported by DyNAS-T in both standard and LINAS formats.
 
@@ -95,16 +95,18 @@ The `run_search.py` template provide a starting point for running the NAS proces
 `python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
 
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
-![DyNAS-T Results](docs/images/search_results.png)
+![DyNAS-T Results](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/search_results.png?raw=true)
 
 ### References
 
 [1] Cai, H., Gan, C., & Han, S. (2020). Once for All: Train One Network and Specialize it for Efficient Deployment. ArXiv, abs/1908.09791.
+
 [2] K. Deb, A. Pratap, S. Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," in IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, April 2002, doi: 10.1109/4235.996017.
-[3] Cummings, D., Sarah, A., Sridhar, S.N., Szankin, M., MuÃƒÂ±oz, J.P., & Sundaresan, S. (2022). A Hardware-Aware Framework for Accelerating Neural Architecture Search Across Modalities. ArXiv, abs/2205.10358.
+
+[3] Cummings, D., Sarah, A., Sridhar, S.N., Szankin, M., Muñoz, J.P., & Sundaresan, S. (2022). A Hardware-Aware Framework for Accelerating Neural Architecture Search Across Modalities. ArXiv, abs/2205.10358.
 
 ## Legal Disclaimer and Notices
 
-> This “research quality code”  is for Non-Commercial purposes provided by Intel “As Is” without any express or implied warranty of any kind. Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it. Intel does not warrant or assume responsibility for the accuracy or completeness of any information, text, graphics, links or other items within the code. A thorough security review has not been performed on this code. Additionally, this repository may contain components that are out of date or contain known security vulnerabilities. 
+> This “research quality code”  is for Non-Commercial purposes provided by Intel “As Is” without any express or implied warranty of any kind. Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it. Intel does not warrant or assume responsibility for the accuracy or completeness of any information, text, graphics, links or other items within the code. A thorough security review has not been performed on this code. Additionally, this repository may contain components that are out of date or contain known security vulnerabilities.
 
 > ImageNet: Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it.
