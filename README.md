@@ -100,8 +100,9 @@ An example of the search results for a Multi-Objective search using both LINAS+N
 ### References
 
 [1] Cai, H., Gan, C., & Han, S. (2020). Once for All: Train One Network and Specialize it for Efficient Deployment. ArXiv, abs/1908.09791.
+
 [2] K. Deb, A. Pratap, S. Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," in IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, April 2002, doi: 10.1109/4235.996017.
-[3] Cummings, D., Sarah, A., Sridhar, S.N., Szankin, M., MuÃƒÂ±oz, J.P., & Sundaresan, S. (2022). A Hardware-Aware Framework for Accelerating Neural Architecture Search Across Modalities. ArXiv, abs/2205.10358.
+
 
 ## Legal Disclaimer and Notices
 
