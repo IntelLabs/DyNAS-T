@@ -62,7 +62,7 @@ setup(
             'dynast=dynast.cli:main',
         ],
     },
-    python_requires='>=3.6.0',
+    python_requires='>=3.7.0',
     classifiers=[
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
