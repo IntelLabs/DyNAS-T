@@ -1,4 +1,4 @@
-![DyNAS-T Logo](docs/images/dynast_logo.png)
+![DyNAS-T Logo](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_logo.png?raw=true)
 
 # DyNAS-T
 
@@ -19,7 +19,7 @@ Evolutionary algorithms, specifically genetic algorithms, have a history of usag
 
 A unique capability of DyNAS-T is the Lightweight Iterative NAS (LINAS) that pairs evolutionary algorithms with lightly trained objective predictors in an iterative cycle to accelerate architectural exploration [3]. This technique is ~4x more sample efficient than typical one-shot predictor-based NAS approaches.
 
-![DyNAS-T Design Flow](docs/images/dynast_flow.png)
+![DyNAS-T Design Flow](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_flow.png?raw=true)
 
 The following number of optimization algorithms are supported by DyNAS-T in both standard and LINAS formats.
 
@@ -95,7 +95,7 @@ The `run_search.py` template provide a starting point for running the NAS proces
 `python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
 
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
-![DyNAS-T Results](docs/images/search_results.png)
+![DyNAS-T Results](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/search_results.png?raw=true)
 
 ### References
 
