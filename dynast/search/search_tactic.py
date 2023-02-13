@@ -154,6 +154,42 @@ class NASBaseConfig:
             param_dict=SUPERNET_PARAMETERS[self.supernet], seed=self.seed
         )
 
+    def _init_search(self):
+        if self.supernet in [
+            'ofa_resnet50',
+            'ofa_mbv3_d234_e346_k357_w1.0',
+            'ofa_mbv3_d234_e346_k357_w1.2',
+            'ofa_proxyless_d234_e346_k357_w1.3',
+        ]:
+            self.runner_validate = OFARunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                device=self.device,
+            )
+        elif self.supernet == 'transformer_lt_wmt_en_de':
+            self.runner_validate = TransformerLTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+            )
+        else:
+            log.error(f'Missing interface and runner for supernet: {self.supernet}!')
+            raise NotImplementedError
+
+        # Setup validation interface
+        self.validation_interface = EVALUATION_INTERFACE[self.supernet](
+            evaluator=self.runner_validate,
+            manager=self.supernet_manager,
+            optimization_metrics=self.optimization_metrics,
+            measurements=self.measurements,
+            csv_path=self.results_path,
+        )
+
+        # Clear csv file if one exists
+        self.validation_interface.format_csv(self.csv_header)
+
 
 class LINAS(NASBaseConfig):
     """The LINAS algorithm is a bi-objective optimization approach that explores the sub-networks
@@ -236,40 +272,7 @@ class LINAS(NASBaseConfig):
     def search(self):
         """Runs the LINAS search"""
 
-        if self.supernet in [
-            'ofa_resnet50',
-            'ofa_mbv3_d234_e346_k357_w1.0',
-            'ofa_mbv3_d234_e346_k357_w1.2',
-            'ofa_proxyless_d234_e346_k357_w1.3',
-        ]:
-            self.runner_validate = OFARunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                device=self.device,
-            )
-        elif self.supernet == 'transformer_lt_wmt_en_de':
-            self.runner_validate = TransformerLTRunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                checkpoint_path=self.supernet_ckpt_path,
-            )
-        else:
-            log.error(f'Missing interface and runner for supernet: {self.supernet}!')
-            raise NotImplementedError
-
-        # Setup validation interface
-        self.validation_interface = EVALUATION_INTERFACE[self.supernet](
-            evaluator=self.runner_validate,
-            manager=self.supernet_manager,
-            optimization_metrics=self.optimization_metrics,
-            measurements=self.measurements,
-            csv_path=self.results_path,
-        )
-
-        # Clear csv file if one exists
-        self.validation_interface.format_csv(self.csv_header)
+        self._init_search()
 
         # Randomly sample search space for initial population
         latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
@@ -455,40 +458,7 @@ class Evolutionary(NASBaseConfig):
 
     def search(self):
 
-        if self.supernet in [
-            'ofa_resnet50',
-            'ofa_mbv3_d234_e346_k357_w1.0',
-            'ofa_mbv3_d234_e346_k357_w1.2',
-            'ofa_proxyless_d234_e346_k357_w1.3',
-        ]:
-            self.runner_validate = OFARunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                device=self.device,
-            )
-        elif self.supernet == 'transformer_lt_wmt_en_de':
-            self.runner_validate = TransformerLTRunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                checkpoint_path=self.supernet_ckpt_path,
-            )
-        else:
-            log.error(f'Missing interface and runner for supernet: {self.supernet}!')
-            raise NotImplementedError
-
-        # Setup validation interface
-        self.validation_interface = EVALUATION_INTERFACE[self.supernet](
-            evaluator=self.runner_validate,
-            manager=self.supernet_manager,
-            optimization_metrics=self.optimization_metrics,
-            measurements=self.measurements,
-            csv_path=self.results_path,
-        )
-
-        # Clear csv file if one exists
-        self.validation_interface.format_csv(self.csv_header)
+        self._init_search()
 
         # Following sets up the algorithm based on number of objectives
         # Could be refractored at the expense of readability
@@ -618,40 +588,8 @@ class RandomSearch(NASBaseConfig):
         )
 
     def search(self):
-        if self.supernet in [
-            'ofa_resnet50',
-            'ofa_mbv3_d234_e346_k357_w1.0',
-            'ofa_mbv3_d234_e346_k357_w1.2',
-            'ofa_proxyless_d234_e346_k357_w1.3',
-        ]:
-            self.runner_validate = OFARunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                device=self.device,
-            )
-        elif self.supernet == 'transformer_lt_wmt_en_de':
-            self.runner_validate = TransformerLTRunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                checkpoint_path=self.supernet_ckpt_path,
-            )
-        else:
-            log.error(f'Missing interface and runner for supernet: {self.supernet}!')
-            raise NotImplementedError
 
-        # Setup validation interface
-        self.validation_interface = EVALUATION_INTERFACE[self.supernet](
-            evaluator=self.runner_validate,
-            manager=self.supernet_manager,
-            optimization_metrics=self.optimization_metrics,
-            measurements=self.measurements,
-            csv_path=self.results_path,
-        )
-
-        # Clear csv file if one exists
-        self.validation_interface.format_csv(self.csv_header)
+        self._init_search()
 
         # Randomly sample search space for initial population
         latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
