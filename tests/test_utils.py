@@ -20,7 +20,7 @@ from unittest.mock import mock_open, patch
 import pytest
 import requests
 
-from dynast.utils import get_cores, get_remote_file
+from dynast.utils import get_cores, get_remote_file, split_list
 
 valid_remote_url = 'http://someurl.com/test.txt'
 valid_remote_url_file_not_exists = 'http://example.com/supernets/not_exists.txt'
@@ -107,3 +107,15 @@ def test_get_cores(mock_subproc_popen):
     # Get first 20 physical cores from socket #1 only
     cores = [int(c) for c in get_cores(use_ht=False, sockets=[1], num_cores=20).split(',')]
     assert len(cores) == 20
+
+
+def test_split_list() -> None:
+    assert [[1, 3], [2, 4]] == split_list([1, 2, 3, 4], 2)
+
+    assert [[1, 2, 3, 4]] == split_list([1, 2, 3, 4], 1)
+
+    assert [[1], []] == split_list([1], 2)
+
+    assert [[1], [2], [3], [4], []] == split_list([1, 2, 3, 4], 5)
+
+    assert [[1, 4], [2], [3]] == split_list([1, 2, 3, 4], 3)

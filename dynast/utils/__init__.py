@@ -178,3 +178,29 @@ def get_remote_file(remote_url: str, model_dir: str, overwrite: bool = False) ->
         f.write(data.content)
 
     return save_path
+
+
+def split_list(lst: list, chunks: int) -> list:
+    """Split list into approximately equally sized chunks.
+
+    If list has less elements than requested chunks, the output list will be padded with empty list items.
+
+    For example:
+    ```
+    >>> split_list([1, 2, 3, 4], 2)
+    [[1, 3], [2, 4]]
+
+    >>> split_list([1, 2, 3, 4], 1)
+    [[1, 2, 3, 4]]
+
+    >>> split_list([1, 2, 3, 4], 5)
+    [[1], [2], [3], [4], []]
+    ```
+    """
+
+    out_lst = [[] for _ in range(chunks)]
+
+    for i in range(len(lst)):
+        out_lst[i % chunks].append(lst[i])
+
+    return out_lst
