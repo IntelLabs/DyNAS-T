@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+import pandas as pd
+import torch.distributed as dist
+
 from dynast.predictors.predictor_manager import PredictorManager
 from dynast.search.evolutionary import (
     EvolutionaryManager,
@@ -23,7 +26,8 @@ from dynast.search.evolutionary import (
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
-from dynast.utils import log
+from dynast.utils import log, split_list
+from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 
 
 class NASBaseConfig:
@@ -602,4 +606,91 @@ class RandomSearch(NASBaseConfig):
         output = list()
         for individual in latest_population:
             output.append(self.supernet_manager.translate2param(individual))
+        return output
+
+
+class LINASDistributed(LINAS):
+    pass
+
+
+class RandomSearchDistributed(RandomSearch):
+    def __init__(
+        self,
+        dataset_path,
+        supernet,
+        optimization_metrics,
+        measurements,
+        num_evals,
+        results_path,
+        seed=42,
+        population=50,
+        batch_size=1,
+        verbose=False,
+        search_algo='nsga2',
+        supernet_ckpt_path: str = None,
+        **kwargs,
+    ):
+        self.main_results_path = results_path
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        results_path = get_worker_results_path(results_path, WORLD_RANK)
+
+        super().__init__(
+            dataset_path,
+            supernet,
+            optimization_metrics,
+            measurements,
+            num_evals,
+            results_path,
+            seed,
+            population,
+            batch_size,
+            verbose,
+            search_algo,
+            supernet_ckpt_path,
+        )
+
+    def search(self):
+
+        self._init_search()
+
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+
+        if is_main_process():
+            log.info('Creating data')
+            # Randomly sample search space for initial population
+            latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+            data = split_list(latest_population, WORLD_SIZE)
+        else:
+            data = [None for _ in range(WORLD_SIZE)]
+
+        output_list = [None]
+        dist.scatter_object_list(output_list, data, src=0)
+
+        latest_population = output_list[0]
+
+        # High-Fidelity Validation measurements
+        for _, individual in enumerate(latest_population):
+            log.info(f'Evaluating subnetwork {_+1}/{self.population}')
+            self.validation_interface.eval_subnet(individual)
+
+        output = list()
+        for individual in latest_population:
+            output.append(self.supernet_manager.translate2param(individual))
+
+        data = {
+            'output': output,
+            'from': WORLD_RANK,
+            'results_path': self.results_path,
+        }
+
+        outputs = [None for _ in range(WORLD_SIZE)]
+        dist.all_gather_object(outputs, data)
+
+        if is_main_process():
+            output = [o['output'] for o in outputs]
+
+            worker_results_paths = [o['results_path'] for o in outputs]
+            combined_csv = pd.concat([pd.read_csv(f) for f in worker_results_paths])
+            combined_csv.to_csv(self.main_results_path, index=False)
+            log.info(f'Saving combined results to {self.main_results_path}')
         return output

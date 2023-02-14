@@ -2,6 +2,7 @@ import argparse
 
 from dynast.dynast_manager import DyNAS
 from dynast.utils import log, set_logger
+from dynast.utils.distributed import get_distributed_vars, init_processes
 
 
 def main(args):
@@ -72,8 +73,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--search_tactic',
         default='linas',
-        choices=['linas', 'evolutionary', 'random'],
-        help='Search tactic, currently supports: ["linas", "evolutionary" , "random"]',
+        choices=['linas', 'linas_dist', 'evolutionary', 'random', 'random_dist'],
+        help='Search tactic, currently supports: ["linas", "linas_dist", "evolutionary" , "random", "random_dist"]',
     )
     parser.add_argument(
         '--search_algo',
@@ -83,8 +84,19 @@ if __name__ == '__main__':
     )
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information.')
 
+    dist_parser = parser.add_argument_group('Distributed search options')
+    dist_parser.add_argument(
+        "--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility."
+    )
+    dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
+
     args = parser.parse_args()
 
     set_logger()
+
+    LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+    if DIST_METHOD:
+        init_processes(args.backend, WORLD_RANK, WORLD_SIZE)
+        args.seed += LOCAL_RANK  # TODO(macsz) Move to DyNAST object
 
     main(args)

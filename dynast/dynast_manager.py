@@ -14,7 +14,7 @@
 
 import sys
 
-from dynast.search.search_tactic import LINAS, Evolutionary, RandomSearch
+from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import log
 
 
@@ -74,5 +74,19 @@ class DyNAS:
             log.info('Initializing DyNAS random search algorithm object.')
             return RandomSearch(**kwargs)
 
+        # LINAS bi-level evolutionary algorithm search distributed to multiple workers
+        elif kwargs['search_tactic'] == 'linas_dist':
+            log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
+            return LINASDistributed(**kwargs)
+
+        # Uniform random sampling of the architectural space distributed to multiple workers
+        elif kwargs['search_tactic'] == 'random_dist':
+            log.info('Initializing DyNAS random (distributed) search algorithm object.')
+            return RandomSearchDistributed(**kwargs)
+
         else:
-            log.error("Invalid `--search_tactic` parameter (options: 'linas', 'evolutionary', 'random').")
+            error_message = "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'linas_dist', 'evolutionary', 'random', 'random_dist').".format(
+                kwargs['search_tactic']
+            )  # TODO(macsz) Un-hardcode options.
+            log.error(error_message)
+            raise NotImplementedError(error_message)
