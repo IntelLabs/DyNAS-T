@@ -64,7 +64,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--device', default='cpu', type=str, help='Target device to run measurements on.')
     parser.add_argument('--num_evals', default=250, type=int, help='Total number of evaluations during search.')
-    parser.add_argument('--batch_size', default=1, type=int, help='Batch size for latency measurement calculation.')
+    parser.add_argument('--batch_size', default=128, type=int, help='Batch size for latency measurement calculation.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
     parser.add_argument('--results_path', required=True, type=str, help='Path to store search results, csv format')
     parser.add_argument('--dataset_path', default='/datasets/imagenet-ilsvrc2012', type=str, help='')
