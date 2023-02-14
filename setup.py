@@ -44,12 +44,10 @@ def get_test_dependencies():
 setup(
     name='dynast',
     version=get_version(),
-    description='DyNAS-T (Dynamic Neural Architecture Search Toolkit) '
-    '- a SuperNet NAS optimization package',
+    description='DyNAS-T (Dynamic Neural Architecture Search Toolkit) - a SuperNet NAS optimization package',
     long_description=open("README.md", "r", encoding='utf-8').read(),
     long_description_content_type="text/markdown",
-    author='Maciej Szankin, Sharath Nittur Sridhar, Anthony Sarah, '
-    'Sairam Sundaresan',
+    author='Maciej Szankin, Sharath Nittur Sridhar, Anthony Sarah, Sairam Sundaresan',
     author_email='maciej.szankin@intel.com, sharath.nittur.sridhar@intel.com, '
     'anthony.sarah@intel.com, sairam.sundaresan@intel.com',
     license='Apache 2.0',
