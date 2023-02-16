@@ -681,7 +681,9 @@ class LINASDistributed(LINAS):
 
             # High-Fidelity Validation measurements
             for _, individual in enumerate(latest_population):
-                log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.population}] in loop {loop+1} of {num_loops}')
+                log.info(
+                    f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.population}] in loop {loop+1} of {num_loops}'
+                )
                 results = self.validation_interface.eval_subnet(individual)
 
             # This will act as `dist.barrier()`; plus, we get results paths from all workers.
