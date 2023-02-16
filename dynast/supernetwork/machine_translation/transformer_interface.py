@@ -597,7 +597,7 @@ class TransformerLTRunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
-        self.target = 'cpu'
+        self.device = 'cpu'  # TODO(macsz) It's not used anywhere
         self.test_size = None
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
