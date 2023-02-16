@@ -43,7 +43,7 @@ def get_distributed_vars() -> Tuple[int, int, int, str]:
     return local_rank, world_rank, world_size, dist_method
 
 
-def init_processes(backend: str, world_rank: int, world_size: int) -> None:
+def init_distributed(backend: str, world_rank: int, world_size: int) -> None:
     dist.init_process_group(backend, rank=world_rank, world_size=world_size)
 
 

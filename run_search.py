@@ -2,7 +2,7 @@ import argparse
 
 from dynast.dynast_manager import DyNAS
 from dynast.utils import log, set_logger
-from dynast.utils.distributed import get_distributed_vars, init_processes
+from dynast.utils.distributed import get_distributed_vars, init_distributed
 
 
 def main(args):
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
     if DIST_METHOD:
-        init_processes(args.backend, WORLD_RANK, WORLD_SIZE)
+        init_distributed(args.backend, WORLD_RANK, WORLD_SIZE)
         args.seed += LOCAL_RANK  # TODO(macsz) Move to DyNAST object
 
     main(args)
