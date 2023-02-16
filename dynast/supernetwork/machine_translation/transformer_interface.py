@@ -634,7 +634,7 @@ class TransformerLTRunner:
     def validate_macs(
         self,
         subnet_cfg: dict,
-    ) -> float:
+    ) -> Tuple[float, float]:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model
