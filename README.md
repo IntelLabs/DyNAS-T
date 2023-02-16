@@ -52,8 +52,14 @@ The following software libraries are compatible with DyNAS-T:
 
 # Getting Started
 
-To setup DyNAS-T run `pip install -e .` or make a local copy of the `dynast` subfolder in your
+To setup DyNAS-T from source code run `pip install -e .` or make a local copy of the `dynast` subfolder in your
 local subnetwork repository with the `requirements.txt` dependencies installed.
+
+You can also install DyNAS-T from PyPI:
+
+```bash
+pip install dynast
+```
 
 
 ## Running DyNAS-T
