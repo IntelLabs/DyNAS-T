@@ -87,6 +87,7 @@ SUPERNET_TYPE = {
         'ofa_proxyless_d234_e346_k357_w1.3',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
+    'recommendation': [],
 }
 
 SUPERNET_METRICS = {
