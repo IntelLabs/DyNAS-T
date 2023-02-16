@@ -48,6 +48,8 @@ class NASBaseConfig:
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         """Params:
@@ -77,6 +79,8 @@ class NASBaseConfig:
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
+        self.dataloader_workers = dataloader_workers
+        self.valid_size = valid_size
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -170,6 +174,8 @@ class NASBaseConfig:
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 device=self.device,
+                dataloader_workers=self.dataloader_workers,
+                valid_size=self.valid_size,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             self.runner_validate = TransformerLTRunner(
@@ -216,6 +222,8 @@ class LINAS(NASBaseConfig):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         """Params:
@@ -245,6 +253,8 @@ class LINAS(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
+            valid_size=valid_size,
+            dataloader_workers=dataloader_workers,
         )
 
     def train_predictors(self, results_path: str = None):
@@ -312,6 +322,8 @@ class LINAS(NASBaseConfig):
                     acc_predictor=self.predictor_dict['accuracy_top1'],
                     dataset_path=self.dataset_path,
                     device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    valid_size=self.valid_size,
                 )
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
@@ -447,21 +459,25 @@ class Evolutionary(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         super().__init__(
-            dataset_path,
-            supernet,
-            optimization_metrics,
-            measurements,
-            num_evals,
-            results_path,
-            seed,
-            population,
-            batch_size,
-            verbose,
-            search_algo,
-            supernet_ckpt_path,
+            dataset_path=dataset_path,
+            supernet=supernet,
+            optimization_metrics=optimization_metrics,
+            measurements=measurements,
+            num_evals=num_evals,
+            results_path=results_path,
+            seed=seed,
+            population=population,
+            batch_size=batch_size,
+            verbose=verbose,
+            search_algo=search_algo,
+            supernet_ckpt_path=supernet_ckpt_path,
+            valid_size=valid_size,
+            dataloader_workers=dataloader_workers,
         )
 
     def search(self):
@@ -578,21 +594,25 @@ class RandomSearch(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         super().__init__(
-            dataset_path,
-            supernet,
-            optimization_metrics,
-            measurements,
-            num_evals,
-            results_path,
-            seed,
-            population,
-            batch_size,
-            verbose,
-            search_algo,
-            supernet_ckpt_path,
+            dataset_path=dataset_path,
+            supernet=supernet,
+            optimization_metrics=optimization_metrics,
+            measurements=measurements,
+            num_evals=num_evals,
+            results_path=results_path,
+            seed=seed,
+            population=population,
+            batch_size=batch_size,
+            verbose=verbose,
+            search_algo=search_algo,
+            supernet_ckpt_path=supernet_ckpt_path,
+            valid_size=valid_size,
+            dataloader_workers=dataloader_workers,
         )
 
     def search(self):
@@ -629,6 +649,8 @@ class LINASDistributed(LINAS):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         self.main_results_path = results_path
@@ -649,6 +671,8 @@ class LINASDistributed(LINAS):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
+            valid_size=valid_size,
+            dataloader_workers=dataloader_workers,
         )
 
     def search(self):
@@ -718,6 +742,8 @@ class LINASDistributed(LINAS):
                         acc_predictor=self.predictor_dict['accuracy_top1'],
                         dataset_path=self.dataset_path,
                         device=self.device,
+                        dataloader_workers=self.dataloader_workers,
+                        valid_size=self.valid_size,
                     )
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
@@ -862,6 +888,8 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        valid_size: int = None,
+        dataloader_workers: int = 4,
         **kwargs,
     ):
         self.main_results_path = results_path
@@ -869,18 +897,20 @@ class RandomSearchDistributed(RandomSearch):
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
         super().__init__(
-            dataset_path,
-            supernet,
-            optimization_metrics,
-            measurements,
-            num_evals,
-            results_path,
-            seed,
-            population,
-            batch_size,
-            verbose,
-            search_algo,
-            supernet_ckpt_path,
+            dataset_path=dataset_path,
+            supernet=supernet,
+            optimization_metrics=optimization_metrics,
+            measurements=measurements,
+            num_evals=num_evals,
+            results_path=results_path,
+            seed=seed,
+            population=population,
+            batch_size=batch_size,
+            verbose=verbose,
+            search_algo=search_algo,
+            supernet_ckpt_path=supernet_ckpt_path,
+            valid_size=valid_size,
+            dataloader_workers=dataloader_workers,
         )
 
     def search(self):

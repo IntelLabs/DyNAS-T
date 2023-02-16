@@ -46,8 +46,9 @@ class OFARunner:
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
         batch_size: int = 1,
-        n_worker: int = 4,
+        dataloader_workers: int = 4,
         device: str = 'cpu',
+        valid_size: int = None,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -60,8 +61,10 @@ class OFARunner:
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
         self.ofa_network = ofa.model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
-            test_batch_size=64, n_worker=20
-        )  # TODO(macsz) `test_batch_size` and `n_worker` should be configurable
+            test_batch_size=batch_size,
+            n_worker=dataloader_workers,
+            valid_size=valid_size,
+        )
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
         top1 = self.acc_predictor.predict(subnet_cfg)
