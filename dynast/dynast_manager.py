@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import sys
 
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
-from dynast.utils import log
+from dynast.utils import log, set_logger
 
 
 class DyNAS:
@@ -26,6 +27,10 @@ class DyNAS:
     '''
 
     def __new__(self, **kwargs):
+        log_level = logging.INFO
+        if kwargs.get('verbose'):
+            log_level = logging.DEBUG
+        set_logger(level=log_level)
 
         log.info('=' * 40)
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')

@@ -1,7 +1,6 @@
 import argparse
 
 from dynast.dynast_manager import DyNAS
-from dynast.utils import log, set_logger
 from dynast.utils.distributed import get_distributed_vars, init_distributed
 
 
@@ -28,7 +27,7 @@ def main(args):
 
     results = agent.search()
 
-    log.info(results)
+    print('Search results: ', results)
 
 
 if __name__ == '__main__':
@@ -95,8 +94,6 @@ if __name__ == '__main__':
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 
     args = parser.parse_args()
-
-    set_logger()
 
     LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
     if DIST_METHOD:
