@@ -26,12 +26,11 @@ import time
 import warnings
 from datetime import datetime
 
+import fairseq
 import numpy as np
 import torch
 import torchprofile
-from fairseq import options, progress_bar, tasks, utils
 from fairseq.data import dictionary
-from fairseq.meters import StopwatchMeter, TimeMeter
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
@@ -143,50 +142,14 @@ class Scorer(object):
         )
 
 
-def get_bleu_score(args, ref, sys, sentence_bleu=False, ignore_case=False):
-    dict = dictionary.Dictionary()
-    order = 4
-
-    def readlines(fd):
-        for line in fd.readlines():
-            if ignore_case:
-                yield line.lower()
-            else:
-                yield line
-
-    if sentence_bleu:
-
-        def score(fdsys):
-            with open(ref) as fdref:
-                scorer = Scorer(dict.pad(), dict.eos(), dict.unk())
-                for i, (sys_tok, ref_tok) in enumerate(zip(readlines(fdsys), readlines(fdref))):
-                    scorer.reset(one_init=True)
-                    sys_tok = dict.encode_line(sys_tok)
-                    ref_tok = dict.encode_line(ref_tok)
-                    scorer.add(ref_tok, sys_tok)
-                    print(i, scorer.result_string(order))
-
-    else:
-
-        def score(fdsys):
-            with open(ref) as fdref:
-                scorer = Scorer(dict.pad(), dict.eos(), dict.unk())
-                for sys_tok, ref_tok in zip(readlines(fdsys), readlines(fdref)):
-                    sys_tok = dict.encode_line(sys_tok)
-                    ref_tok = dict.encode_line(ref_tok)
-                    scorer.add(ref_tok, sys_tok)
-                print(scorer.result_string(order))
-                return scorer.score(order)
-
-    if sys == '-':
-        score = score(sys.stdin)
-    else:
-        with open(sys, 'r') as f:
-            score = score(f)
-    return score
-
-
 def compute_bleu(config, dataset_path, checkpoint_path):
+    """Measure BLEU score of the Transformer-based model."""
+    options = fairseq.options
+    utils = fairseq.utils
+    tasks = fairseq.tasks
+    MosesTokenizer = fairseq.data.encoders.moses_tokenizer.MosesTokenizer
+    StopwatchMeter = fairseq.meters.StopwatchMeter
+    progress_bar = fairseq.progress_bar
 
     parser = options.get_generation_parser()
 
@@ -200,8 +163,10 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     args.source_lang = 'en'
     args.target_lang = 'de'
     args.batch_size = 128
+    args.eval_bleu_remove_bpe = '@@ '
+    args.eval_bleu_detok = 'moses'
+
     utils.import_user_module(args)
-    max_tokens = 12000
 
     use_cuda = torch.cuda.is_available() and not args.cpu
 
@@ -215,6 +180,9 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     # Load dataset splits
     task = tasks.setup_task(args)
     task.load_dataset(args.gen_subset)
+
+    tokenizer = MosesTokenizer(args)
+    task.tokenizer = tokenizer
     # Set dictionaries
     try:
         src_dict = getattr(task, 'source_dictionary', None)
@@ -223,7 +191,6 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     tgt_dict = task.target_dictionary
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(args.path))
     model = TransformerSuperNetwork(task)
     state = torch.load(checkpoint_path, map_location=torch.device('cpu'))
 
@@ -231,7 +198,6 @@ def compute_bleu(config, dataset_path, checkpoint_path):
 
     if use_cuda:
         model.cuda()
-    print(config)
     model.set_sample_config(config)
     model.make_generation_fast_(
         beamable_mm_beam_size=None if args.no_beamable_mm else args.beam,
@@ -242,8 +208,6 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     if use_cuda:
         model.cuda()
 
-    print(args.path, file=sys.stderr)
-
     # Load alignment dictionary for unknown word replacement
     # (None if no unknown word replacement, empty if no path to align dictionary)
     align_dict = utils.load_align_dict(args.replace_unk)
@@ -252,7 +216,7 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     itr = task.get_batch_iterator(
         dataset=task.dataset(args.gen_subset),
         max_tokens=args.max_tokens,
-        max_sentences=128,  # TODO(macsz) Parameterize
+        max_sentences=128,
         max_positions=utils.resolve_max_positions(task.max_positions(), *[model.max_positions()]),
         ignore_invalid_inputs=args.skip_invalid_size_inputs_valid_test,
         required_batch_size_multiple=args.required_batch_size_multiple,
@@ -266,108 +230,28 @@ def compute_bleu(config, dataset_path, checkpoint_path):
     generator = task.build_generator([model], args)
 
     num_sentences = 0
-    has_target = True
-    decoder_times_all = []
-    input_len_all = []
-    with open('translations_out.txt', 'a') as fname_translations:
-        with progress_bar.build_progress_bar(args, itr) as t:
-            wps_meter = TimeMeter()
-            for sample in t:
+    bleu_list = []
+    with progress_bar.build_progress_bar(args, itr) as t:
+        for sample in t:
+            sample = utils.move_to_cuda(sample) if use_cuda else sample
+            if 'net_input' not in sample:
+                continue
 
-                sample = utils.move_to_cuda(sample) if use_cuda else sample
-                if 'net_input' not in sample:
-                    continue
+            bleu = task._inference_with_bleu(generator, sample, model)
+            bleu_list.append(bleu.score)
 
-                prefix_tokens = None
-                if args.prefix_size > 0:
-                    prefix_tokens = sample['target'][:, : args.prefix_size]
+            num_sentences += sample['nsentences']
 
-                gen_timer.start()
-                hypos = task.inference_step(generator, [model], sample, prefix_tokens)
-                input_len_all.append(np.mean(sample['net_input']['src_lengths'].cpu().numpy()))
-                num_generated_tokens = sum(len(h[0]['tokens']) for h in hypos)
-                gen_timer.stop(num_generated_tokens)
-
-                for i, sample_id in enumerate(sample['id'].tolist()):
-                    has_target = sample['target'] is not None
-
-                    # Remove padding
-                    src_tokens = utils.strip_pad(sample['net_input']['src_tokens'][i, :], tgt_dict.pad())
-                    target_tokens = None
-                    if has_target:
-                        target_tokens = utils.strip_pad(sample['target'][i, :], tgt_dict.pad()).int().cpu()
-
-                    # Either retrieve the original sentences or regenerate them from tokens.
-                    if align_dict is not None:
-                        src_str = task.dataset(args.gen_subset).src.get_original_text(sample_id)
-                        target_str = task.dataset(args.gen_subset).tgt.get_original_text(sample_id)
-                    else:
-                        if src_dict is not None:
-                            src_str = src_dict.string(src_tokens, args.remove_bpe)
-                        else:
-                            src_str = ""
-                        if has_target:
-                            target_str = tgt_dict.string(target_tokens, args.remove_bpe, escape_unk=True)
-
-                    if not args.quiet:
-                        if src_dict is not None:
-                            fname_translations.write('S-{}\t{}'.format(sample_id, src_str))
-                            fname_translations.write('\n')
-
-                        if has_target:
-                            fname_translations.write('T-{}\t{}'.format(sample_id, target_str))
-                            fname_translations.write('\n')
-
-                    # Process top predictions
-                    for j, hypo in enumerate(hypos[i][: args.nbest]):
-                        hypo_tokens, hypo_str, alignment = utils.post_process_prediction(
-                            hypo_tokens=hypo['tokens'].int().cpu(),
-                            src_str=src_str,
-                            alignment=hypo['alignment'].int().cpu() if hypo['alignment'] is not None else None,
-                            align_dict=align_dict,
-                            tgt_dict=tgt_dict,
-                            remove_bpe=args.remove_bpe,
-                        )
-
-                        if not args.quiet:
-
-                            fname_translations.write('H-{}\t{}\t{}'.format(sample_id, hypo['score'], hypo_str))
-                            fname_translations.write('\n')
-                            fname_translations.write(
-                                'P-{}\t{}'.format(
-                                    sample_id,
-                                    ' '.join(
-                                        map(
-                                            lambda x: '{:.4f}'.format(x),
-                                            hypo['positional_scores'].tolist(),
-                                        )
-                                    ),
-                                )
-                            )
-                            fname_translations.write('\n')
-
-                            if args.print_alignment:
-                                fname_translations.write(
-                                    'A-{}\t{}'.format(sample_id, ' '.join(map(lambda x: str(utils.item(x)), alignment)))
-                                )
-                                fname_translations.write('\n')
-
-                wps_meter.update(num_generated_tokens)
-                t.log({'wps': round(wps_meter.avg)})
-                num_sentences += sample['nsentences']
-
-    os.system("grep ^H translations_out.txt | cut -f3- | perl -ple 's{(\S)-(\S)}{$1 ##AT##-##AT## $2}g' > sys.txt")
-    os.system("grep ^T translations_out.txt | cut -f2- | perl -ple 's{(\S)-(\S)}{$1 ##AT##-##AT## $2}g' > ref.txt")
-    bleu_score = get_bleu_score(args, "ref.txt", "sys.txt")
-    print(bleu_score)
-
-    os.system("rm ref.txt")
-    os.system("rm sys.txt")
-    os.system("rm translations_out.txt")
+    bleu_score = np.mean(np.array(bleu_list))
     return bleu_score
 
 
-def compute_latency(config, dataset_path, get_model_parameters=False):
+def compute_latency(config, dataset_path, batch_size=128, get_model_parameters=False):
+    """Measure latency of the Transformer-based model."""
+    options = fairseq.options
+    utils = fairseq.utils
+    tasks = fairseq.tasks
+
     parser = options.get_generation_parser()
 
     args = options.parse_args_and_arch(parser, [dataset_path])
@@ -379,11 +263,10 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
     args.lenpen = 0.6
     args.source_lang = 'en'
     args.target_lang = 'de'
-    args.batch_size = 128  # TODO(macsz) Parameterize
+    args.batch_size = batch_size
     utils.import_user_module(args)
-    max_tokens = 12000
     args.latgpu = False
-    args.latcpu = True  # TODO(macsz) Parameterize
+    args.latcpu = True
     args.latiter = 100
 
     # Initialize CUDA and distributed training
@@ -395,15 +278,8 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
     # Load dataset splits
     task = tasks.setup_task(args)
     task.load_dataset(args.gen_subset)
-    # Set dictionaries
-    try:
-        src_dict = getattr(task, 'source_dictionary', None)
-    except NotImplementedError:
-        src_dict = None
-    tgt_dict = task.target_dictionary
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(args.path))
     model = TransformerSuperNetwork(task)
 
     # specify the length of the dummy input for profile
@@ -415,20 +291,20 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
     dummy_src_tokens = [2] + [7] * (dummy_sentence_length - 1)
     dummy_prev = [7] * (dummy_sentence_length - 1) + [2]
 
-    src_tokens_test = torch.tensor([dummy_src_tokens], dtype=torch.long)  # .cuda()
-    src_lengths_test = torch.tensor([dummy_sentence_length])  # .cuda()
-    prev_output_tokens_test_with_beam = torch.tensor([dummy_prev] * args.beam, dtype=torch.long)  # .cuda()
+    src_tokens_test = torch.tensor([dummy_src_tokens], dtype=torch.long)
+    src_lengths_test = torch.tensor([dummy_sentence_length])
+    prev_output_tokens_test_with_beam = torch.tensor([dummy_prev] * args.beam, dtype=torch.long)
     bsz = 1
-    new_order = torch.arange(bsz).view(-1, 1).repeat(1, args.beam).view(-1).long()  # .cuda()
+    new_order = torch.arange(bsz).view(-1, 1).repeat(1, args.beam).view(-1).long()
     if args.latcpu:
         model.cpu()
-        print('Measuring model latency on CPU for dataset generation...')
+        log.info('Measuring model latency on CPU for dataset generation...')
     elif args.latgpu:
         model.cuda()
-        src_tokens_test = src_tokens_test  # .cuda()
-        src_lengths_test = src_lengths_test  # .cuda()
-        prev_output_tokens_test_with_beam = prev_output_tokens_test_with_beam  # .cuda()
-        print('Measuring model latency on GPU for dataset generation...')
+        src_tokens_test = src_tokens_test
+        src_lengths_test = src_lengths_test
+        prev_output_tokens_test_with_beam = prev_output_tokens_test_with_beam
+        log.info('Measuring model latency on GPU for dataset generation...')
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
 
@@ -443,10 +319,9 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
             encoder_out_test = model.encoder(src_tokens=src_tokens_test, src_lengths=src_lengths_test)
 
         encoder_latencies = []
-        print('Measuring encoder for dataset generation...')
+        log.info('Measuring encoder for dataset generation...')
         for _ in range(args.latiter):
             if args.latgpu:
-                # start.record()
                 start = time.time()
             elif args.latcpu:
                 start = time.time()
@@ -462,8 +337,9 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
 
         encoder_latencies.sort()
         encoder_latencies = encoder_latencies[int(args.latiter * 0.1) : -max(1, int(args.latiter * 0.1))]
-        print(
-            f'Encoder latency for dataset generation: Mean: {np.mean(encoder_latencies)} ms; \t Std: {np.std(encoder_latencies)} ms'
+        log.info(
+            f'Encoder latency for dataset generation: Mean: '
+            '{np.mean(encoder_latencies)} ms; Std: {np.std(encoder_latencies)} ms'
         )
 
         encoder_out_test_with_beam = model.encoder.reorder_encoder_out(encoder_out_test, new_order)
@@ -476,13 +352,12 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
         decoder_iterations_dict = {'iwslt': 23, 'wmt': 30}
 
         decoder_iterations = decoder_iterations_dict['wmt']
-        print(decoder_iterations)
         decoder_latencies = []
-        print('Measuring decoder for dataset generation...')
+
+        log.info('Measuring decoder for dataset generation...')
         for _ in range(args.latiter):
             if args.latgpu:
                 start = time.time()
-                # start.record()
             elif args.latcpu:
                 start = time.time()
             incre_states = {}
@@ -504,8 +379,7 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
         decoder_latencies.sort()
         decoder_latencies = decoder_latencies[int(args.latiter * 0.1) : -max(1, int(args.latiter * 0.1))]
 
-    print(decoder_latencies)
-    print(
+    log.info(
         f'Decoder latency for dataset generation: Mean: {np.mean(decoder_latencies)} ms; \t Std: {np.std(decoder_latencies)} ms'
     )
 
@@ -515,6 +389,11 @@ def compute_latency(config, dataset_path, get_model_parameters=False):
 
 
 def compute_macs(config, dataset_path):
+    """Calculate MACs for Transformer-based models."""
+    options = fairseq.options
+    utils = fairseq.utils
+    tasks = fairseq.tasks
+
     parser = options.get_generation_parser()
 
     args = options.parse_args_and_arch(parser, [dataset_path])
@@ -526,9 +405,9 @@ def compute_macs(config, dataset_path):
     args.lenpen = 0.6
     args.source_lang = 'en'
     args.target_lang = 'de'
-    args.batch_size = 128  # TODO(macsz) Parameterize
+    args.batch_size = 128
     utils.import_user_module(args)
-    args.latgpu = False  # TODO(macsz) Parameterize
+    args.latgpu = False
     args.latcpu = True
     args.latiter = 100
 
