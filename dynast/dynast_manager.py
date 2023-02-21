@@ -17,6 +17,7 @@ import sys
 
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import log, set_logger
+from dynast.utils.distributed import get_distributed_vars, init_distributed
 
 
 class DyNAS:
@@ -31,6 +32,14 @@ class DyNAS:
         if kwargs.get('verbose'):
             log_level = logging.DEBUG
         set_logger(level=log_level)
+
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        if DIST_METHOD:
+            backend = kwargs.get('backend', 'gloo')
+            init_distributed(backend, WORLD_RANK, WORLD_SIZE)
+            seed = kwargs.get('seed', None)
+            if seed:
+                kwargs['seed'] = seed + WORLD_RANK
 
         log.info('=' * 40)
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')

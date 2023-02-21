@@ -1,7 +1,6 @@
 import argparse
 
 from dynast.dynast_manager import DyNAS
-from dynast.utils.distributed import get_distributed_vars, init_distributed
 
 
 def main(args):
@@ -94,10 +93,5 @@ if __name__ == '__main__':
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 
     args = parser.parse_args()
-
-    LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
-    if DIST_METHOD:
-        init_distributed(args.backend, WORLD_RANK, WORLD_SIZE)
-        args.seed += LOCAL_RANK  # TODO(macsz) Move to DyNAST object
 
     main(args)
