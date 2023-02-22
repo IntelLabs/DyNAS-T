@@ -27,6 +27,7 @@ SUPERNET_ENCODING = {
     'ofa_mbv3_d234_e346_k357_w1.2': OFAMobileNetV3Encoding,
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
+    'bert_base_sst2': BertBaseEncoding,
 }
 
 SUPERNET_PARAMETERS = {
@@ -61,6 +62,14 @@ SUPERNET_PARAMETERS = {
         'decoder_ende_attention_heads': {'count': 6, 'vars': [8, 4]},
         'decoder_arbitrary_ende_attn': {'count': 6, 'vars': [-1, 1, 2]},
     },
+
+    'bert_base_sst2': {
+        'bert_embedding_sizes': {'count':1, 'vars':[512]},
+        'bert_hidden_sizes': {'count':1, 'vars': [768]},
+        'num_layers': {'count':1, 'vars': [6,7,8,9,10,11,12]},
+        'num_attention_heads': {'count':12, 'vars': [6,8,10,12]},
+        'bert_intermediate_sizes': {'count':12, 'vars': [1024,2048,3072]}
+     }
 }
 
 EVALUATION_INTERFACE = {
@@ -69,6 +78,7 @@ EVALUATION_INTERFACE = {
     'ofa_mbv3_d234_e346_k357_w1.2': EvaluationInterfaceOFAMobileNetV3,
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
+    'bert_base_sst2': EvaluationInterfaceBert, 
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -77,6 +87,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_mbv3_d234_e346_k357_w1.2': 20000,
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
+    'bert_base_sst2': 10000,
 }
 
 SUPERNET_TYPE = {
@@ -87,6 +98,7 @@ SUPERNET_TYPE = {
         'ofa_proxyless_d234_e346_k357_w1.3',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
+    'text_classification': ['bert_base_sst2'],
 }
 
 SUPERNET_METRICS = {
@@ -95,6 +107,7 @@ SUPERNET_METRICS = {
     'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
+    'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy'],
 }
 
 
