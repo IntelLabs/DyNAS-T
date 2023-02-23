@@ -123,7 +123,7 @@ python run_search.py \
 
 ```bash
 python run_search.py \
-    --supernet resnet50 \
+    --supernet ofa_resnet50 \
     --optimization_metrics accuracy_top1 params \
     --measurements accuracy_top1 macs params \
     --results_path resnet50_age_acc_params.csv \
@@ -138,7 +138,7 @@ python run_search.py \
 
 ```bash
 python run_search.py \
-    --supernet resnet50 \
+    --supernet ofa_resnet50 \
     --optimization_metrics accuracy_top1 macs params \
     --measurements accuracy_top1 macs params \
     --results_path resnet50_linasunsga3_acc_macs_params.csv \
