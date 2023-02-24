@@ -15,6 +15,7 @@
 
 import ast
 import random
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -35,10 +36,8 @@ class EncodingBase:
         self.set_seed(seed)
         self.inv_mapper = self.create_inv_mapper()
 
-    def process_param_dict(self):
-        '''
-        Builds a parameter mapping arrays and an upper-bound vector for PyMoo.
-        '''
+    def process_param_dict(self) -> Tuple[List[Dict[int, Union[int, float]]], List[int], int]:
+        """Builds a parameter mapping arrays and an upper-bound vector for PyMoo."""
         parameter_count = 0
         parameter_bound = list()
         parameter_upperbound = list()
@@ -69,10 +68,8 @@ class EncodingBase:
 
         return parameter_mapper, parameter_upperbound, parameter_count
 
-    def create_inv_mapper(self):
-        '''
-        Builds inverse of self.mapper
-        '''
+    def create_inv_mapper(self) -> List[Dict[int, int]]:
+        """Builds inverse of self.mapper."""
         inv_parameter_mapper = list()
 
         for value in self.mapper:
@@ -81,15 +78,15 @@ class EncodingBase:
 
         return inv_parameter_mapper
 
-    def onehot_generic(self, in_array):
-        '''
-        This is a generic approach to one-hot vectorization for predictor training
-        and testing. It does not account for unused parameter mapping (e.g. block depth).
+    def onehot_generic(self, in_array: List[int]) -> np.ndarray:
+        """This is a generic approach to one-hot vectorization for predictor training and testing.
+
+        It does not account for unused parameter mapping (e.g. block depth).
         For unused parameter mapping, the end user will need to provide a custom solution.
 
         input_array - the pymoo individual 1-D vector
         mapper - the map for elastic parameters of the supernetwork
-        '''
+        """
         # Insure compatible array and mapper
         assert len(in_array) == len(self.mapper)
 
@@ -103,10 +100,9 @@ class EncodingBase:
 
         return np.array(onehot)
 
-    def random_sample(self):
-        '''
-        Generates a random subnetwork from the possible elastic parameter range
-        '''
+    def random_sample(self) -> List[int]:
+        """Generates a random subnetwork from the possible elastic parameter range."""
+
         pymoo_vector = list()
         for i in range(len(self.mapper)):
             options = [x for x in range(len(self.mapper[i]))]
@@ -114,11 +110,9 @@ class EncodingBase:
 
         return pymoo_vector
 
-    def random_samples(self, size=100, trial_limit=100000):
-        '''
-        Generates a list of random subnetworks from the possible elastic parameter range
-        '''
-        pymoo_vector_list = list()
+    def random_samples(self, size: int = 100, trial_limit: int = 100000) -> List[List[int]]:
+        """Generates a list of random subnetworks from the possible elastic parameter range."""
+        pymoo_vector_list: List[List[int]] = list()
 
         trials = 0
         while len(pymoo_vector_list) < size and trials < trial_limit:
@@ -132,11 +126,9 @@ class EncodingBase:
 
         return pymoo_vector_list
 
-    def translate2param(self, pymoo_vector):
-        '''
-        Translate a PyMoo 1-D parameter vector back to the elastic parameter dictionary format
-        '''
-        output = dict()
+    def translate2param(self, pymoo_vector: List[int]) -> Dict['str', List[int]]:
+        """Translate a PyMoo 1-D parameter vector back to the elastic parameter dictionary format."""
+        output: Dict['str', List[int]] = dict()
 
         # Assign (and map) each vector element to the appropriate parameter dictionary key
         counter = 0
@@ -152,10 +144,8 @@ class EncodingBase:
 
         return output
 
-    def translate2pymoo(self, parameters):
-        '''
-        Translate a single parameter dict to pymoo vector
-        '''
+    def translate2pymoo(self, parameters: Dict['str', List[int]]):
+        """Translate a single parameter dict to pymoo vector."""
 
         output = list()
 
@@ -169,18 +159,28 @@ class EncodingBase:
 
         return output
 
-    def import_csv(self, filepath, config, objective, column_names=None, drop_duplicates=True):
-        '''
-        Import a csv file generated from a supernetwork search for the purpose
-        of training a predictor.
+    def import_csv(
+        self,
+        filepath: str,
+        config: str,
+        objective: str,
+        column_names: Optional[List[str]] = None,
+        drop_duplicates: bool = True,
+    ) -> pd.DataFrame:
+        """Import a csv file generated from a supernetwork search for the purpose of training a predictor.
 
-        filepath - path of the csv to be imported.
-        config - the subnetwork configuration
-        objective - target/label for the subnet configuration (e.g. accuracy, latency)
-        column_names - a list of column names for the dataframe
-        df - the output dataframe that contains the original config dict, pymoo, and 1-hot
-             equivalent vector for training.
-        '''
+        Parameters
+        ----------
+        * filepath - path of the csv to be imported.
+        * config - column name with the subnetwork configuration.
+        * objective - target/label for the subnet configuration (e.g. accuracy, latency).
+        * column_names - a list of column names for the dataframe.
+        * drop_duplicates - whether to drop duplicate entries.
+
+        Returns
+        -------
+        * df - the output dataframe that contains the original config dict, pymoo, and 1-hot equivalent vector for training.
+        """
 
         if column_names == None:
             df = pd.read_csv(filepath)
@@ -216,19 +216,22 @@ class EncodingBase:
 
         return df
 
-    def set_seed(self, seed):
-        '''
-        Set the random seed for randomized subnet generation and test/train split
-        '''
+    def set_seed(self, seed: int) -> None:
+        """Set the random seed for randomized subnet generation and test/train split"""
         self.seed = seed
         random.seed(seed)
 
     @staticmethod
-    def create_training_set(dataframe, config='subnet', train_with_all=True, split=0.33, seed=None):
-        '''
-        Create a sklearn compatible test/train set from an imported results csv
+    def create_training_set(
+        dataframe: pd.DataFrame,
+        config: str = 'subnet',
+        train_with_all: bool = True,
+        split: float = 0.33,
+        seed: Optional[int] = None,
+    ):
+        """Create a sklearn compatible test/train set from an imported results csv
         after "import_csv" method is run.
-        '''
+        """
 
         collect_rows = list()
         for i in range(len(dataframe)):
