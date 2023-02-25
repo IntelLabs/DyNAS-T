@@ -204,3 +204,47 @@ def split_list(lst: list, chunks: int) -> list:
         out_lst[i % chunks].append(lst[i])
 
     return out_lst
+
+
+def check_kwargs_deprecated(**kwargs) -> dict:
+    def _deprecated_metric_names(metrics, supernetwork: str):
+        def _rename_deprecated_metrics(update_metrics):
+            for i in range(len(metrics)):
+                try:
+                    old_metric = metrics[i]
+                    metrics[i] = update_metrics[metrics[i]]
+                    _log_deprecated_metric(old_metric, metrics[i])
+                except:
+                    pass
+
+        def _log_deprecated_metric(old_name, new_name):
+            log.warning(
+                'Use of `{old_name}` as a metric has been deprecated. '
+                'Automatically updating to `{new_name}`.'.format(old_name=old_name, new_name=new_name)
+            )
+
+        # General cases
+        update_metrics = {
+            'lat': 'latency',
+            'acc': 'accuracy_top1',
+        }
+        _rename_deprecated_metrics(update_metrics)
+
+        # Special cases
+        # `acc`:
+        #   - Image classification -> `accuracy_top1`
+        #   - Language Translation -> `bleu`
+
+        if supernetwork == 'transformer_lt_wmt_en_de':
+            update_metrics = {
+                'acc': 'bleu',
+                'accuracy_top1': 'bleu',
+            }
+            _rename_deprecated_metrics(update_metrics)
+
+        return metrics
+
+    for key, value in kwargs.items():
+        if key in ['optimization_metrics', 'measurements']:
+            key = _deprecated_metric_names(value, kwargs['supernet'])
+    return kwargs
