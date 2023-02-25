@@ -76,34 +76,94 @@ The `run_search.py` template provide a starting point for running the NAS proces
 * `results_path` - The location of the csv file that store information of the DNN candidates during the search process. The csv file is used for plotting NAS results.
 * `dataset_path` - Location of the dataset used for training the super-network of interest.
 
-**Single-Objective**
+### Single-Objective
 
 *Example 1a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy using a simple evolutionary genetic algorithm (GA) approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 --measurements accuracy_top1 macs params --results_path mbnv3w10_ga_acc.csv --search_tactic evolutionary --num_evals 250 --search_algo ga`
+
+```bash
+python run_search.py \
+    --supernet ofa_mbv3_d234_e346_k357_w1.0 \
+    --optimization_metrics accuracy_top1 \
+    --measurements accuracy_top1 macs params \
+    --results_path mbnv3w10_ga_acc.csv \
+    --search_tactic evolutionary \
+    --num_evals 250 \
+    --search_algo ga
+```
 
 *Example 1b.* NAS process for the OFA MobileNetV3-w1.2 super-network that optimizes for ImageNet Top-1 accuracy using a LINAS + GA approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.2 --optimization_metrics accuracy_top1 --measurements accuracy_top1 macs params --results_path mbnv3w12_linasga_acc.csv --search_tactic linas --num_evals 250 --search_algo ga`
 
-**Multi-Objective**
+```bash
+python run_search.py \
+    --supernet ofa_mbv3_d234_e346_k357_w1.2 \
+    --optimization_metrics accuracy_top1 \
+    --measurements accuracy_top1 macs params \
+    --results_path mbnv3w12_linasga_acc.csv \
+    --search_tactic linas \
+    --num_evals 250 \
+    --search_algo ga
+```
+
+### Multi-Objective
 
 *Example 2a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* multiply-and-accumulates (MACs) using a LINAS+NSGA-II approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs --measurements accuracy_top1 macs params --results_path mbnv3w10_linasnsga2_acc_macs.csv --search_tactic evolutionary --num_evals 250 --search_algo nsga2`
+
+```bash
+python run_search.py \
+    --supernet ofa_mbv3_d234_e346_k357_w1.0 \
+    --optimization_metrics accuracy_top1 macs \
+    --measurements accuracy_top1 macs params \
+    --results_path mbnv3w10_linasnsga2_acc_macs.csv \
+    --search_tactic evolutionary \
+    --num_evals 250 \
+    --search_algo nsga2
+```
 
 *Example 2b.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) using a evolutionary AGE-MOEA approach.
-`python run_search.py --supernet resnet50 --optimization_metrics accuracy_top1 params --measurements accuracy_top1 macs params --results_path resnet50_age_acc_params.csv --search_tactic evolutionary --num_evals 500 --search_algo age`
 
-**Many-Objective**
+```bash
+python run_search.py \
+    --supernet ofa_resnet50 \
+    --optimization_metrics accuracy_top1 params \
+    --measurements accuracy_top1 macs params \
+    --results_path resnet50_age_acc_params.csv \
+    --search_tactic evolutionary \
+    --num_evals 500 \
+    --search_algo age
+```
+
+### Many-Objective
 
 *Example 3a.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a evolutionary unsga3 approach.
-`python run_search.py --supernet resnet50 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path resnet50_linasunsga3_acc_macs_params.csv --search_tactic evolutionary --num_evals 500 --search_algo unsga3`
 
-*Example 3b.* NAS process for the OFA MobileNetV3-w1.0 super-network super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a linas+unsga3 approach.
-`python run_search.py --supernet ofa_mbv3_d234_e346_k357_w1.0 --optimization_metrics accuracy_top1 macs params --measurements accuracy_top1 macs params --results_path mbnv3w10_linasunsga3_acc_macs_params.csv --search_tactic linas --num_evals 500 --search_algo unsga3`
+```bash
+python run_search.py \
+    --supernet ofa_resnet50 \
+    --optimization_metrics accuracy_top1 macs params \
+    --measurements accuracy_top1 macs params \
+    --results_path resnet50_linasunsga3_acc_macs_params.csv \
+    --search_tactic evolutionary \
+    --num_evals 500 \
+    --search_algo unsga3
+```
+
+*Example 3b.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a linas+unsga3 approach.
+
+```bash
+python run_search.py \
+    --supernet ofa_mbv3_d234_e346_k357_w1.0 \
+    --optimization_metrics accuracy_top1 macs params \
+    --measurements accuracy_top1 macs params \
+    --results_path mbnv3w10_linasunsga3_acc_macs_params.csv \
+    --search_tactic linas \
+    --num_evals 500 \
+    --search_algo unsga3
+```
 
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
 ![DyNAS-T Results](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/search_results.png?raw=true)
 
-### References
+## References
 
 [1] Cai, H., Gan, C., & Han, S. (2020). Once for All: Train One Network and Specialize it for Efficient Deployment. ArXiv, abs/1908.09791.
 
