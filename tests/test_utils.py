@@ -20,7 +20,7 @@ from unittest.mock import mock_open, patch
 import pytest
 import requests
 
-from dynast.utils import get_cores, get_remote_file
+from dynast.utils import check_kwargs_deprecated, get_cores, get_remote_file, split_list
 
 valid_remote_url = 'http://someurl.com/test.txt'
 valid_remote_url_file_not_exists = 'http://example.com/supernets/not_exists.txt'
@@ -107,3 +107,72 @@ def test_get_cores(mock_subproc_popen):
     # Get first 20 physical cores from socket #1 only
     cores = [int(c) for c in get_cores(use_ht=False, sockets=[1], num_cores=20).split(',')]
     assert len(cores) == 20
+
+
+def test_split_list() -> None:
+    assert [[1, 3], [2, 4]] == split_list([1, 2, 3, 4], 2)
+
+    assert [[1, 2, 3, 4]] == split_list([1, 2, 3, 4], 1)
+
+    assert [[1], []] == split_list([1], 2)
+
+    assert [[1], [2], [3], [4], []] == split_list([1, 2, 3, 4], 5)
+
+    assert [[1, 4], [2], [3]] == split_list([1, 2, 3, 4], 3)
+
+
+def test_check_kwargs_deprecated_acc_accuracy_lat_latency() -> None:
+    # For Image Classification task the correct metric name is `bleu` instead of `acc` that was used in the past.
+    old = {
+        'supernet': 'ofa_resnet50',
+        'optimization_metrics': ['lat', 'acc', 'macs', 'params'],
+        'measurements': ['lat', 'acc', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+
+    new = {
+        'supernet': 'ofa_resnet50',
+        'optimization_metrics': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'measurements': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+    updated_old = check_kwargs_deprecated(**old)
+
+    assert new == updated_old
+
+    same_1 = {
+        'supernet': 'ofa_resnet50',
+        'optimization_metrics': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'measurements': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+
+    same_2 = {
+        'supernet': 'ofa_resnet50',
+        'optimization_metrics': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'measurements': ['latency', 'accuracy_top1', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+    same_2_updated = check_kwargs_deprecated(**same_1)
+
+    assert same_2_updated == same_2
+
+
+def test_check_kwargs_deprecated_acc_bleu() -> None:
+    # For Language Translation task the correct metric name is `bleu` instead of `acc` that was used in the past.
+    old = {
+        'supernet': 'transformer_lt_wmt_en_de',
+        'optimization_metrics': ['lat', 'acc', 'macs', 'params'],
+        'measurements': ['lat', 'acc', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+
+    new = {
+        'supernet': 'transformer_lt_wmt_en_de',
+        'optimization_metrics': ['latency', 'bleu', 'macs', 'params'],
+        'measurements': ['latency', 'bleu', 'macs', 'params'],
+        'random_param': ['lat', 'acc', 'macs', 'params'],
+    }
+    updated_old = check_kwargs_deprecated(**old)
+
+    assert new == updated_old
