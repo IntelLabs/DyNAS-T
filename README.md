@@ -165,7 +165,7 @@ An example of the search results for a Multi-Objective search using both LINAS+N
 
 ### Distributed Search
 
-Search can be performed with multiple workers using the `MPI` / `torch.distributed` library. Currently this functionality is implemented within separate search tactics, namely `LINASDistributed` (`--search_tactic linas_dist`) and `RandomSearchDistributed` (`--search_tactic random_dist`).
+Search can be performed with multiple workers using the `MPI` / `torch.distributed` library. To use this functionality, your script should be called with `mpirun`/`mpiexec` command and an additional `--distributed` param has to be set (`DyNAS([...], distributed=True`).
 
 > Note: `torch.distributed`, unless explicitly specified, uses `OMP_NUM_THREADS=1` which may result in slow evaluation time. Good practice is to explicitly set `OMP_NUM_THREADS`  to `(total_core_count)/(num_workers)`.
 
@@ -183,7 +183,8 @@ OMP_NUM_THREADS=28 mpirun \
         --supernet ofa_mbv3_d234_e346_k357_w1.0 \
          --optimization_metrics accuracy_top1 macs \
         --results_path results.csv \
-        --search_tactic linas_dist \
+        --search_tactic linas \
+        --distributed \
         --population 50 \
         --num_evals 250
 ```

@@ -22,6 +22,7 @@ def main(args):
         device=args.device,
         valid_size=args.valid_size,
         dataloader_workers=args.dataloader_workers,
+        distributed=args.distributed,
     )
 
     results = agent.search()
@@ -81,7 +82,7 @@ if __name__ == '__main__':
         '--search_tactic',
         default='linas',
         choices=['linas', 'linas_dist', 'evolutionary', 'random', 'random_dist'],
-        help='Search tactic, currently supports: ["linas", "linas_dist", "evolutionary" , "random", "random_dist"]',
+        help='Search tactic, currently supports: ["linas", "evolutionary" , "random"]',
     )
     parser.add_argument(
         '--search_algo',
@@ -92,6 +93,11 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information.')
 
     dist_parser = parser.add_argument_group('Distributed search options')
+    parser.add_argument(
+        '--distributed',
+        action='store_true',
+        help='If set, a distributed implementation of the search algorithm will be used.',
+    )
     dist_parser.add_argument(
         "--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility."
     )

@@ -75,6 +75,17 @@ class DyNAS:
             log.info(f'{key}: {value}')
         log.info('-' * 40)
 
+        if kwargs.get('distributed', False):
+            # LINAS bi-level evolutionary algorithm search distributed to multiple workers
+            if kwargs['search_tactic'] == 'linas':
+                log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
+                return LINASDistributed(**kwargs)
+
+                # Uniform random sampling of the architectural space distributed to multiple workers
+            elif kwargs['search_tactic'] == 'random':
+                log.info('Initializing DyNAS random (distributed) search algorithm object.')
+                return RandomSearchDistributed(**kwargs)
+
         # LINAS bi-level evolutionary algorithm search
         if kwargs['search_tactic'] == 'linas':
             log.info('Initializing DyNAS LINAS algorithm object.')
@@ -90,18 +101,8 @@ class DyNAS:
             log.info('Initializing DyNAS random search algorithm object.')
             return RandomSearch(**kwargs)
 
-        # LINAS bi-level evolutionary algorithm search distributed to multiple workers
-        elif kwargs['search_tactic'] == 'linas_dist':
-            log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
-            return LINASDistributed(**kwargs)
-
-        # Uniform random sampling of the architectural space distributed to multiple workers
-        elif kwargs['search_tactic'] == 'random_dist':
-            log.info('Initializing DyNAS random (distributed) search algorithm object.')
-            return RandomSearchDistributed(**kwargs)
-
         else:
-            error_message = "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'linas_dist', 'evolutionary', 'random', 'random_dist').".format(
+            error_message = "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
                 kwargs['search_tactic']
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)
