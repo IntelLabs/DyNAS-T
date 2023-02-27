@@ -22,6 +22,7 @@ from dynast.search.evolutionary import (
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
+from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.utils import log
 
@@ -108,9 +109,12 @@ class NASBaseConfig:
         elif self.supernet in SUPERNET_TYPE['machine_translation']:
             pass
 
-        elif self.supernet in SUPERNET_TYPE['recommendation']:
+        elif self.supernet in SUPERNET_TYPE['text_classification']:
             pass
 
+        elif self.supernet in SUPERNET_TYPE['recommendation']:
+            pass
+        
         else:
             log.error(f'Invalid supernet specified. Choose from the following: {SUPERNET_TYPE}')
 
@@ -132,6 +136,15 @@ class NASBaseConfig:
                 'Latency (ms)',
                 'MACs',
                 'BLEU Score',
+            ]  # TODO(macsz) Should be based on specified measurements
+        elif self.supernet in SUPERNET_TYPE['text_classification']:
+            self.csv_header = [
+                'Sub-network',
+                'Date',
+                'Model Parameters',
+                'Latency (ms)',
+                'MACs',
+                'SST-2 Acc',
             ]  # TODO(macsz) Should be based on specified measurements
         elif self.supernet in SUPERNET_TYPE['recommendation']:
             self.csv_header = [
@@ -255,6 +268,13 @@ class LINAS(NASBaseConfig):
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
             )
+        elif  self.supernet == 'bert_base_sst2':
+            self.runner_validate = BertSST2Runner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+            )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
             raise NotImplementedError
@@ -312,7 +332,18 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                 )
-
+            
+            elif self.supernet == 'bert_base_sst2':
+                runner_predict = BertSST2Runner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                )
+             
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -469,6 +500,14 @@ class Evolutionary(NASBaseConfig):
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             self.runner_validate = TransformerLTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+            )
+        
+        elif  self.supernet == 'bert_base_sst2':
+            self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
@@ -632,6 +671,13 @@ class RandomSearch(NASBaseConfig):
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             self.runner_validate = TransformerLTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+            )
+        elif self.supernet == 'bert_base_sst2':
+            self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,

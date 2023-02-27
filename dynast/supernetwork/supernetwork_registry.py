@@ -20,6 +20,8 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
 )
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
+from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
+from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -27,7 +29,7 @@ SUPERNET_ENCODING = {
     'ofa_mbv3_d234_e346_k357_w1.2': OFAMobileNetV3Encoding,
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
-    'bert_base_sst2': BertBaseEncoding,
+    'bert_base_sst2': BertSST2Encoding,
 }
 
 SUPERNET_PARAMETERS = {
@@ -64,12 +66,10 @@ SUPERNET_PARAMETERS = {
     },
 
     'bert_base_sst2': {
-        'bert_embedding_sizes': {'count':1, 'vars':[512]},
-        'bert_hidden_sizes': {'count':1, 'vars': [768]},
         'num_layers': {'count':1, 'vars': [6,7,8,9,10,11,12]},
         'num_attention_heads': {'count':12, 'vars': [6,8,10,12]},
-        'bert_intermediate_sizes': {'count':12, 'vars': [1024,2048,3072]}
-     }
+        'intermediate_size': {'count':12, 'vars': [1024,2048,3072]},
+    },
 }
 
 EVALUATION_INTERFACE = {
@@ -78,7 +78,7 @@ EVALUATION_INTERFACE = {
     'ofa_mbv3_d234_e346_k357_w1.2': EvaluationInterfaceOFAMobileNetV3,
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
-    'bert_base_sst2': EvaluationInterfaceBert, 
+    'bert_base_sst2': EvaluationInterfaceBertSST2, 
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -107,7 +107,7 @@ SUPERNET_METRICS = {
     'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
-    'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy'],
+    'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
 }
 
 

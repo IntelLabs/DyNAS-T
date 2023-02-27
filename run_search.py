@@ -41,6 +41,7 @@ if __name__ == '__main__':
             'ofa_mbv3_d234_e346_k357_w1.2',
             'ofa_proxyless_d234_e346_k357_w1.3',
             'transformer_lt_wmt_en_de',
+            'bert_base_sst2',
         ],
     )
     parser.add_argument('--seed', default=42, type=int, help='Random Seed')
