@@ -368,7 +368,7 @@ class EvolutionarySingleObjective(Problem):
     '''
 
     def __init__(self, evaluation_interface, param_count, param_upperbound):
-        super().__init__(n_var=param_count, n_obj=1, n_constr=0, xl=0, xu=param_upperbound, type_var=np.int)
+        super().__init__(n_var=param_count, n_obj=1, n_constr=0, xl=0, xu=param_upperbound, type_var=int)
 
         self.evaluation_interface = evaluation_interface
 
@@ -405,7 +405,7 @@ class EvolutionaryMultiObjective(Problem):
     '''
 
     def __init__(self, evaluation_interface, param_count, param_upperbound):
-        super().__init__(n_var=param_count, n_obj=2, n_constr=0, xl=0, xu=param_upperbound, type_var=np.int)
+        super().__init__(n_var=param_count, n_obj=2, n_constr=0, xl=0, xu=param_upperbound, type_var=int)
 
         self.evaluation_interface = evaluation_interface
 
@@ -443,7 +443,7 @@ class EvolutionaryManyObjective(Problem):
     '''
 
     def __init__(self, evaluation_interface, param_count, param_upperbound):
-        super().__init__(n_var=param_count, n_obj=3, n_constr=0, xl=0, xu=param_upperbound, type_var=np.int)
+        super().__init__(n_var=param_count, n_obj=3, n_constr=0, xl=0, xu=param_upperbound, type_var=int)
 
         self.evaluation_interface = evaluation_interface
 
