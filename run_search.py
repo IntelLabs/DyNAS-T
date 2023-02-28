@@ -81,7 +81,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--search_tactic',
         default='linas',
-        choices=['linas', 'linas_dist', 'evolutionary', 'random', 'random_dist'],
+        choices=['linas', 'evolutionary', 'random'],
         help='Search tactic, currently supports: ["linas", "evolutionary" , "random"]',
     )
     parser.add_argument(
