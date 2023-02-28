@@ -188,6 +188,7 @@ class LINAS(NASBaseConfig):
         seed: int = 42,
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         **kwargs,
     ):
         """Params:
@@ -216,6 +217,7 @@ class LINAS(NASBaseConfig):
             verbose,
             search_algo,
             supernet_ckpt_path,
+            device,
         )
 
     def train_predictors(self):
@@ -274,6 +276,7 @@ class LINAS(NASBaseConfig):
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -342,6 +345,7 @@ class LINAS(NASBaseConfig):
                     acc_predictor=self.predictor_dict['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
                 )
 
             # Setup validation interface
@@ -467,6 +471,7 @@ class Evolutionary(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
+        device: str = 'cpu',
         **kwargs,
     ):
         super().__init__(
@@ -482,6 +487,7 @@ class Evolutionary(NASBaseConfig):
             verbose,
             search_algo,
             supernet_ckpt_path,
+            device,
         )
 
     def search(self):
@@ -512,6 +518,7 @@ class Evolutionary(NASBaseConfig):
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -639,6 +646,7 @@ class RandomSearch(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         **kwargs,
     ):
         super().__init__(
@@ -654,6 +662,7 @@ class RandomSearch(NASBaseConfig):
             verbose,
             search_algo,
             supernet_ckpt_path,
+            device,
         )
 
     def search(self):
@@ -682,6 +691,7 @@ class RandomSearch(NASBaseConfig):
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')

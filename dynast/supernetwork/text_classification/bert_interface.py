@@ -129,19 +129,21 @@ def load_supernet(checkpoint_path):
         torch.load(checkpoint_path, map_location='cpu')["model"],
         strict=True,
     )
-    return model
+    return model, bert_config
 
 
 def compute_accuracy_sst2(
     config,
     eval_dataloader,
     model,
+    device: str = 'cpu',
 ):
     """Measure SST-2 Accuracy score of the BERT based model."""
 
     model.eval()
+    model.to(device)
     model.set_sample_config(config)
-    device = 'cpu'
+
     preds = None
     out_label_ids = None
 
@@ -172,18 +174,58 @@ def compute_accuracy_sst2(
     return accuracy_sst2
 
 
-def compute_latency(config, dataset_path, batch_size=128, get_model_parameters=False):
-    """Measure latency of the Transformer-based model."""
+def compute_latency(
+    config,
+    model,
+    eval_batch_size=4,
+    device: str = 'cpu',
+    warmup_steps: int = 10,
+    measure_steps: int = 100,
+):
+    """Measure latency of the BERT-based model."""
 
-    return None
+    model.eval()
+    model.to(device)
+    model.set_sample_config(config)
+
+    input_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
+    segment_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
+    input_mask = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
+
+    latencies = []
+
+    with torch.no_grad():
+        for i in range(warmup_steps):
+            model(input_ids, input_mask, segment_ids)
+
+        for i in range(measure_steps):
+            if 'cuda' in str(device):
+                torch.cuda.synchronize()
+            start = time.time()
+            model(input_ids, input_mask, segment_ids)
+            if 'cuda' in str(device):
+                torch.cuda.synchronize()
+            end = time.time()
+            latencies.append((end - start) * 1e3)
+
+    # Drop the first and last 5% latency numbers
+    truncated_latency = np.array(latencies)[int(measure_steps * 0.05) : int(measure_steps * 0.95)]
+
+    latency_mean = np.round(np.mean(truncated_latency), 3)
+    latency_std = np.round(np.std(truncated_latency), 3)
+
+    return latency_mean, latency_std
 
 
-def compute_macs(config, model):
+def compute_macs(config, model, base_config, device: str = 'cpu'):
     """Calculate MACs for BERT-based models."""
 
     model.eval()
+    model.to(device)
+
     model.set_sample_config(config)
 
+    # Compute MACS
     for module in model.modules():
         if hasattr(module, 'profile') and model != module:
             module.profile(True)
@@ -193,7 +235,31 @@ def compute_macs(config, model):
     input_mask = torch.zeros([1, 128], dtype=torch.long)
 
     macs = torchprofile.profile_macs(model, args=(input_ids, segment_ids, input_mask))
-    params = 0
+
+    for module in model.modules():
+        if hasattr(module, 'profile') and model != module:
+            module.profile(False)
+
+    # Compute Params
+    base_hidden_size = base_config.hidden_size
+    embedding_params = (
+        base_config.vocab_size * base_hidden_size
+        + base_config.max_position_embeddings * base_hidden_size
+        + base_config.type_vocab_size * base_hidden_size
+    )
+    numels = []
+
+    for module_name, module in model.named_modules():
+        if hasattr(module, 'calc_sampled_param_num'):
+            if module_name == 'classifier':
+                continue
+            if module_name.split('.')[1] == 'encoder':
+                if int(module_name.split('.')[3]) > (config['num_layers'] - 1):
+                    continue
+
+            numels.append(module.calc_sampled_param_num())
+
+    params = sum(numels) + embedding_params
 
     return macs, params
 
@@ -212,8 +278,9 @@ class BertSST2Runner:
         macs_predictor=None,
         latency_predictor=None,
         params_predictor=None,
-        batch_size=1,
+        batch_size: int = 16,
         checkpoint_path=None,
+        device: str = 'cpu',
     ):
 
         self.supernet = supernet
@@ -222,13 +289,11 @@ class BertSST2Runner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
-        self.target = 'cpu'
-        self.test_size = None
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
-
+        self.device = device
         self.eval_dataloader = prepare_data_loader(self.dataset_path)
-        self.supernet_model = load_supernet(self.checkpoint_path)
+        self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
 
     def estimate_accuracy_sst2(
         self,
@@ -256,7 +321,7 @@ class BertSST2Runner:
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
 
-        accuracy_sst2 = compute_accuracy_sst2(subnet_cfg, self.eval_dataloader, self.supernet_model)
+        accuracy_sst2 = compute_accuracy_sst2(subnet_cfg, self.eval_dataloader, self.supernet_model, device=self.device)
         return accuracy_sst2
 
     def validate_macs(
@@ -269,7 +334,7 @@ class BertSST2Runner:
         Returns:
             `macs`
         """
-        macs, params = compute_macs(subnet_cfg, self.supernet_model)
+        macs, params = compute_macs(subnet_cfg, self.supernet_model, self.base_config)
         logging.info('Model\'s macs: {}'.format(macs))
         return macs, params
 
@@ -277,10 +342,9 @@ class BertSST2Runner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        input_size: tuple = (1, 3, 224, 224),
+        eval_batch_size=4,
         warmup_steps: int = 10,
-        measure_steps: int = 50,
-        device: str = 'cpu',
+        measure_steps: int = 100,
     ):
         """Measure Torch model's latency.
         Args:
@@ -294,8 +358,7 @@ class BertSST2Runner:
              Measure steps = {measure_steps}'
         )
 
-        times = []
-        lat_mean, lat_std = 0, 0
+        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, eval_batch_size, device=self.device)
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
