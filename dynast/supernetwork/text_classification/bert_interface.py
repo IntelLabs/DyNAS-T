@@ -25,7 +25,7 @@ from datetime import datetime
 
 import numpy as np
 import torch
-from fvcore.nn import FlopCountAnalysis
+import torchprofile
 from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
 from transformers import BertConfig
 from transformers.data.processors.glue import glue_processors
@@ -192,11 +192,10 @@ def compute_macs(config, model):
     segment_ids = torch.zeros([1, 128], dtype=torch.long)
     input_mask = torch.zeros([1, 128], dtype=torch.long)
 
-    macs = FlopCountAnalysis(model, (input_ids, segment_ids, input_mask))
-    macs_total = macs.total()
+    macs = torchprofile.profile_macs(model, args=(input_ids, segment_ids, input_mask))
     params = 0
 
-    return macs_total, params
+    return macs, params
 
 
 class BertSST2Runner:
