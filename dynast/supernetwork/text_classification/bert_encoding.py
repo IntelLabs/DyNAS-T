@@ -31,10 +31,10 @@ class BertSST2Encoding(EncodingBase):
         features = []
         num_layers = subnet_cfg['num_layers'][0]
 
-        attn_head_list =  subnet_cfg['num_attention_heads'][:num_layers] + [0]* (max_layers-num_layers)
-        intermediate_size_list = subnet_cfg['intermediate_size'][:num_layers] + [0]* (max_layers-num_layers)
+        attn_head_list = subnet_cfg['num_attention_heads'][:num_layers] + [0] * (max_layers - num_layers)
+        intermediate_size_list = subnet_cfg['intermediate_size'][:num_layers] + [0] * (max_layers - num_layers)
         features = [num_layers] + attn_head_list + intermediate_size_list
-        
+
         if provide_onehot == True:
             examples = np.array([features])
             one_hot_count = 0

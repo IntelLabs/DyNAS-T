@@ -22,8 +22,8 @@ from dynast.search.evolutionary import (
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
-from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.supernetwork.supernetwork_registry import *
+from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.utils import log
 
 
@@ -114,7 +114,7 @@ class NASBaseConfig:
 
         elif self.supernet in SUPERNET_TYPE['recommendation']:
             pass
-        
+
         else:
             log.error(f'Invalid supernet specified. Choose from the following: {SUPERNET_TYPE}')
 
@@ -268,7 +268,7 @@ class LINAS(NASBaseConfig):
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
             )
-        elif  self.supernet == 'bert_base_sst2':
+        elif self.supernet == 'bert_base_sst2':
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -332,7 +332,7 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                 )
-            
+
             elif self.supernet == 'bert_base_sst2':
                 runner_predict = BertSST2Runner(
                     supernet=self.supernet,
@@ -343,7 +343,7 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                 )
-             
+
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -505,8 +505,8 @@ class Evolutionary(NASBaseConfig):
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
             )
-        
-        elif  self.supernet == 'bert_base_sst2':
+
+        elif self.supernet == 'bert_base_sst2':
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,

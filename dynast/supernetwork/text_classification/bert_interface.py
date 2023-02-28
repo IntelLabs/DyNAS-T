@@ -23,25 +23,23 @@ import time
 import warnings
 from datetime import datetime
 
-
 import numpy as np
 import torch
 from fvcore.nn import FlopCountAnalysis
+from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
+from transformers import BertConfig
+from transformers.data.processors.glue import glue_processors
+from transformers.models.bert.tokenization_bert import BertTokenizer
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 
 from .bert_supernetwork import BertSupernetForSequenceClassification
-from transformers.models.bert.tokenization_bert import BertTokenizer
-from transformers.data.processors.glue import glue_processors
-from transformers import BertConfig
-from torch.utils.data import (DataLoader, SequentialSampler,
-                              TensorDataset)
+
 warnings.filterwarnings("ignore")
 
 
-def convert_examples_to_features(examples, label_list, max_seq_length,
-                                 tokenizer):
+def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer):
     """Loads a data file into a list of dictionaries."""
 
     label_map = {label: i for i, label in enumerate(label_list)}
@@ -51,7 +49,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
         tokens_a = tokenizer.tokenize(example.text_a)
         # Account for [CLS] and [SEP] with "- 2"
         if len(tokens_a) > max_seq_length - 2:
-            tokens_a = tokens_a[:(max_seq_length - 2)]
+            tokens_a = tokens_a[: (max_seq_length - 2)]
 
         tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
         segment_ids = [0] * len(tokens)
@@ -71,16 +69,14 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
 
         label_id = label_map[example.label]
         features.append(
-                       {"input_ids":input_ids,
-                        "input_mask":input_mask,
-                        "segment_ids":segment_ids,
-                        "label_id":label_id})
+            {"input_ids": input_ids, "input_mask": input_mask, "segment_ids": segment_ids, "label_id": label_id}
+        )
 
     return features
 
 
 def create_tensor_dataset(features):
-    
+
     batch_input_ids = []
     batch_input_mask = []
     batch_segment_ids = []
@@ -91,31 +87,29 @@ def create_tensor_dataset(features):
         batch_input_mask.append(feature["input_mask"])
         batch_segment_ids.append(feature["segment_ids"])
         batch_label_ids.append(feature["label_id"])
-    
+
     return TensorDataset(
-        torch.tensor(batch_input_ids,dtype=torch.long),
-        torch.tensor(batch_input_mask,dtype=torch.long),
-        torch.tensor(batch_segment_ids,dtype=torch.long),
-        torch.tensor(batch_label_ids,dtype=torch.long),
+        torch.tensor(batch_input_ids, dtype=torch.long),
+        torch.tensor(batch_input_mask, dtype=torch.long),
+        torch.tensor(batch_segment_ids, dtype=torch.long),
+        torch.tensor(batch_label_ids, dtype=torch.long),
     )
 
 
-def prepare_data_loader(dataset_path,
-                        max_seq_length=128,
-                         eval_batch_size=16):
+def prepare_data_loader(dataset_path, max_seq_length=128, eval_batch_size=16):
 
-    tokenizer =  BertTokenizer.from_pretrained('bert-base-uncased')
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     processor = glue_processors["sst-2"]()
     num_labels = len(processor.get_labels())
 
     eval_examples = processor.get_dev_examples(dataset_path)
- 
+
     eval_features = convert_examples_to_features(
-            eval_examples,
-            processor.get_labels(),
-            max_seq_length,
-            tokenizer,
-        )
+        eval_examples,
+        processor.get_labels(),
+        max_seq_length,
+        tokenizer,
+    )
 
     eval_data = create_tensor_dataset(eval_features)
     eval_sampler = SequentialSampler(eval_data)
@@ -126,40 +120,42 @@ def prepare_data_loader(dataset_path,
     )
     return eval_dataloader
 
+
 def load_supernet(checkpoint_path):
 
     bert_config = BertConfig()
-    model = BertSupernetForSequenceClassification(bert_config,num_labels=2)
+    model = BertSupernetForSequenceClassification(bert_config, num_labels=2)
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')["model"],
         strict=True,
     )
     return model
 
-def compute_accuracy_sst2(config, 
-                          eval_dataloader,
-                         model,):
+
+def compute_accuracy_sst2(
+    config,
+    eval_dataloader,
+    model,
+):
     """Measure SST-2 Accuracy score of the BERT based model."""
-    
+
     model.eval()
     model.set_sample_config(config)
     device = 'cpu'
     preds = None
     out_label_ids = None
-    
-    for i, (input_ids, input_mask, segment_ids, 
-        label_ids) in enumerate(eval_dataloader):
-        
+
+    for i, (input_ids, input_mask, segment_ids, label_ids) in enumerate(eval_dataloader):
+
         input_ids = input_ids.to(device)
         input_mask = input_mask.to(device)
-        segment_ids =segment_ids.to(device)
+        segment_ids = segment_ids.to(device)
         label_ids = label_ids.to(device)
 
         with torch.no_grad():
-            network_outputs =model(input_ids, attention_mask=input_mask,
-            token_type_ids=segment_ids, labels=label_ids)
+            network_outputs = model(input_ids, attention_mask=input_mask, token_type_ids=segment_ids, labels=label_ids)
             logits = network_outputs[1]
-       
+
         if preds is None:
             preds = logits.detach().cpu().numpy()
             out_label_ids = label_ids.detach().cpu().numpy()
@@ -172,31 +168,31 @@ def compute_accuracy_sst2(config,
             )
     preds = np.argmax(preds, axis=1)
     accuracy_sst2 = (preds == out_label_ids).mean()
-  
+
     return accuracy_sst2
 
 
 def compute_latency(config, dataset_path, batch_size=128, get_model_parameters=False):
     """Measure latency of the Transformer-based model."""
-    
+
     return None
 
 
-def compute_macs(config,model):
+def compute_macs(config, model):
     """Calculate MACs for BERT-based models."""
 
     model.eval()
     model.set_sample_config(config)
-    
+
     for module in model.modules():
         if hasattr(module, 'profile') and model != module:
-             module.profile(True)
-    
-    input_ids = torch.zeros([1,128],dtype=torch.long)
-    segment_ids = torch.zeros([1,128],dtype=torch.long)
-    input_mask = torch.zeros([1,128],dtype=torch.long)
+            module.profile(True)
 
-    macs = FlopCountAnalysis(model,(input_ids,segment_ids,input_mask))
+    input_ids = torch.zeros([1, 128], dtype=torch.long)
+    segment_ids = torch.zeros([1, 128], dtype=torch.long)
+    input_mask = torch.zeros([1, 128], dtype=torch.long)
+
+    macs = FlopCountAnalysis(model, (input_ids, segment_ids, input_mask))
     macs_total = macs.total()
     params = 0
 
@@ -274,7 +270,7 @@ class BertSST2Runner:
         Returns:
             `macs`
         """
-        macs, params = compute_macs(subnet_cfg,self.supernet_model)
+        macs, params = compute_macs(subnet_cfg, self.supernet_model)
         logging.info('Model\'s macs: {}'.format(macs))
         return macs, params
 
@@ -300,7 +296,7 @@ class BertSST2Runner:
         )
 
         times = []
-        lat_mean, lat_std = 0,0
+        lat_mean, lat_std = 0, 0
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
@@ -322,11 +318,12 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
         # PyMoo vector to Elastic Parameter Mapping
         param_dict = self.manager.translate2param(x)
 
-        sample = {'hidden_size': 768,
-                  'num_layers': param_dict['num_layers'][0],
-                  'num_attention_heads': param_dict['num_attention_heads'],
-                  'intermediate_size': param_dict["intermediate_size"]
-                 }
+        sample = {
+            'hidden_size': 768,
+            'num_layers': param_dict['num_layers'][0],
+            'num_attention_heads': param_dict['num_attention_heads'],
+            'intermediate_size': param_dict["intermediate_size"],
+        }
 
         subnet_sample = copy.deepcopy(sample)
 

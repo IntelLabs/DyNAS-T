@@ -20,8 +20,8 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
 )
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
-from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
+from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -64,11 +64,10 @@ SUPERNET_PARAMETERS = {
         'decoder_ende_attention_heads': {'count': 6, 'vars': [8, 4]},
         'decoder_arbitrary_ende_attn': {'count': 6, 'vars': [-1, 1, 2]},
     },
-
     'bert_base_sst2': {
-        'num_layers': {'count':1, 'vars': [6,7,8,9,10,11,12]},
-        'num_attention_heads': {'count':12, 'vars': [6,8,10,12]},
-        'intermediate_size': {'count':12, 'vars': [1024,2048,3072]},
+        'num_layers': {'count': 1, 'vars': [6, 7, 8, 9, 10, 11, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
 }
 
@@ -78,7 +77,7 @@ EVALUATION_INTERFACE = {
     'ofa_mbv3_d234_e346_k357_w1.2': EvaluationInterfaceOFAMobileNetV3,
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
-    'bert_base_sst2': EvaluationInterfaceBertSST2, 
+    'bert_base_sst2': EvaluationInterfaceBertSST2,
 }
 
 LINAS_INNERLOOP_EVALS = {
