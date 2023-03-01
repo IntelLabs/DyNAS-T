@@ -15,7 +15,7 @@
 import sys
 
 from dynast.search.search_tactic import LINAS, Evolutionary, RandomSearch
-from dynast.utils import log
+from dynast.utils import check_kwargs_deprecated, log
 
 
 class DyNAS:
@@ -48,6 +48,8 @@ class DyNAS:
             if argument not in kwargs:
                 log.error(f"Missing `--{argument}` parameter.")
                 sys.exit("Missing argument, see log file for info.")
+
+        kwargs = check_kwargs_deprecated(**kwargs)
 
         if len(kwargs['optimization_metrics']) > 3:
             log.error('Number of optimization_metrics is out of range. 1-3 supported.')
