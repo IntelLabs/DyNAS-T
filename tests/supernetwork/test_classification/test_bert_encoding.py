@@ -41,7 +41,9 @@ def test_bertss2encoding_translate2param():
         'intermediate_size': [1024, 1024, 3072, 3072, 1024, 3072, 1024, 3072, 3072, 3072, 3072, 2048],
     }
 
+    # fmt: off
     assert [11, 6, 6, 10, 8, 8, 8, 6, 6, 12, 6, 6, 0, 1024, 1024, 3072, 3072, 1024, 3072, 1024, 3072, 3072, 3072, 3072, 0] == bertss2encoding.onehot_custom(
         subcfg,
         provide_onehot=False,
     )
+    # fmt: on
