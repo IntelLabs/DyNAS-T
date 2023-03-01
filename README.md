@@ -167,7 +167,7 @@ An example of the search results for a Multi-Objective search using both LINAS+N
 
 Search can be performed with multiple workers using the `MPI` / `torch.distributed` library. To use this functionality, your script should be called with `mpirun`/`mpiexec` command and an additional `--distributed` param has to be set (`DyNAS([...], distributed=True`).
 
-> Note: `torch.distributed`, unless explicitly specified, uses `OMP_NUM_THREADS=1` which may result in slow evaluation time. Good practice is to explicitly set `OMP_NUM_THREADS`  to `(total_core_count)/(num_workers)`.
+> Note: When run with `torchrun`, unless explicitly specified, `torch.distributed` uses `OMP_NUM_THREADS=1` ([link](https://github.com/pytorch/pytorch/commit/1c0309a9a924e34803bf7e8975f7ce88fb845131)) which may result in slow evaluation time. Good practice is to explicitly set `OMP_NUM_THREADS`  to `(total_core_count)/(num_workers)` (optional for MPI).
 
 *Example 4.* Distributed NAS process with two OpenMPI workers for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters)
 
