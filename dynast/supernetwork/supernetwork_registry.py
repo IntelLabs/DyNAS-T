@@ -98,6 +98,7 @@ SUPERNET_TYPE = {
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
+    'recommendation': [],
 }
 
 SUPERNET_METRICS = {

@@ -25,6 +25,7 @@ import sys
 import time
 import warnings
 from datetime import datetime
+from typing import Tuple
 
 import fairseq
 import numpy as np
@@ -476,7 +477,7 @@ class TransformerLTRunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
-        self.target = 'cpu'
+        self.device = 'cpu'  # TODO(macsz) It's not used anywhere
         self.test_size = None
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
@@ -513,7 +514,7 @@ class TransformerLTRunner:
     def validate_macs(
         self,
         subnet_cfg: dict,
-    ) -> float:
+    ) -> Tuple[float, float]:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model

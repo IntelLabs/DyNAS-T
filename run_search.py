@@ -1,7 +1,6 @@
 import argparse
 
 from dynast.dynast_manager import DyNAS
-from dynast.utils import log, set_logger
 
 
 def main(args):
@@ -21,11 +20,14 @@ def main(args):
         verbose=args.verbose,
         supernet_ckpt_path=args.supernet_ckpt_path,
         device=args.device,
+        valid_size=args.valid_size,
+        dataloader_workers=args.dataloader_workers,
+        distributed=args.distributed,
     )
 
     results = agent.search()
 
-    log.info(results)
+    print('Search results: ', results)
 
 
 if __name__ == '__main__':
@@ -64,7 +66,14 @@ if __name__ == '__main__':
     )
     parser.add_argument('-d', '--device', default='cpu', type=str, help='Target device to run measurements on.')
     parser.add_argument('--num_evals', default=250, type=int, help='Total number of evaluations during search.')
-    parser.add_argument('--batch_size', default=1, type=int, help='Batch size for latency measurement calculation.')
+    parser.add_argument('--batch_size', default=128, type=int, help='Batch size for latency measurement calculation.')
+    parser.add_argument(
+        '--valid_size',
+        default=None,
+        type=int,
+        help='How many batches of data to use when evaluating model\'s accuracy.',
+    )
+    parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
     parser.add_argument('--results_path', required=True, type=str, help='Path to store search results, csv format')
     parser.add_argument('--dataset_path', default='/datasets/imagenet-ilsvrc2012', type=str, help='')
@@ -84,8 +93,17 @@ if __name__ == '__main__':
     )
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information.')
 
-    args = parser.parse_args()
+    dist_parser = parser.add_argument_group('Distributed search options')
+    parser.add_argument(
+        '--distributed',
+        action='store_true',
+        help='If set, a distributed implementation of the search algorithm will be used.',
+    )
+    dist_parser.add_argument(
+        "--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility."
+    )
+    dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 
-    set_logger()
+    args = parser.parse_args()
 
     main(args)

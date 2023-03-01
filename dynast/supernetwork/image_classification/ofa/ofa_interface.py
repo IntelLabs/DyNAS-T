@@ -25,6 +25,7 @@ from ofa.imagenet_classification.run_manager import ImagenetRunConfig, RunManage
 from ofa.tutorial.flops_table import rm_bn_from_net
 
 from dynast.measure.latency import auto_steps
+from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 from dynast.utils.nn import get_macs, get_parameters, measure_latency
@@ -38,14 +39,16 @@ class OFARunner:
 
     def __init__(
         self,
-        supernet,
-        dataset_path,
-        acc_predictor=None,
-        macs_predictor=None,
-        latency_predictor=None,
-        params_predictor=None,
-        batch_size=1,
+        supernet: str,
+        dataset_path: str,
+        acc_predictor: Predictor = None,
+        macs_predictor: Predictor = None,
+        latency_predictor: Predictor = None,
+        params_predictor: Predictor = None,
+        batch_size: int = 1,
+        dataloader_workers: int = 4,
         device: str = 'cpu',
+        valid_size: int = None,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -58,30 +61,32 @@ class OFARunner:
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
         self.ofa_network = ofa.model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
-            test_batch_size=64, n_worker=20
-        )  # TODO(macsz) `test_batch_size` and `n_worker` should be configurable
+            test_batch_size=batch_size,
+            n_worker=dataloader_workers,
+            valid_size=valid_size,
+        )
 
-    def estimate_accuracy_top1(self, subnet_cfg):
+    def estimate_accuracy_top1(self, subnet_cfg) -> float:
         top1 = self.acc_predictor.predict(subnet_cfg)
         return top1
 
-    def estimate_macs(self, subnet_cfg):
+    def estimate_macs(self, subnet_cfg) -> int:
         macs = self.macs_predictor.predict(subnet_cfg)
         return macs
 
-    def estimate_latency(self, subnet_cfg):
+    def estimate_latency(self, subnet_cfg) -> float:
         latency = self.latency_predictor.predict(subnet_cfg)
         return latency
 
-    def estimate_parameters(self, subnet_cfg):
+    def estimate_parameters(self, subnet_cfg) -> int:
         parameters = self.params_predictor.predict(subnet_cfg)
         return parameters
 
-    def validate_top1(self, subnet_cfg, device=None):
+    def validate_top1(self, subnet_cfg, device=None) -> float:
         device = self.device if not device else device
 
         subnet = self.get_subnet(subnet_cfg)
-        folder_name = '.torch/tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
+        folder_name = '/tmp/ofa-tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
         run_manager = RunManager('{}/eval_subnet'.format(folder_name), subnet, self.run_config, init=False)
         run_manager.reset_running_statistics(net=subnet)
 
@@ -91,7 +96,7 @@ class OFARunner:
         top1 = acc[0]
         return top1
 
-    def validate_macs_params(self, subnet_cfg: dict, device: str = None) -> float:
+    def validate_macs_params(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model
