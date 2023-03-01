@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
 
 from dynast.search.encoding import EncodingBase
@@ -21,15 +23,15 @@ class OFAMobileNetV3Encoding(EncodingBase):
     def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
         super().__init__(param_dict, verbose, seed)
 
-    def construct_maps(self, keys):
-        d = dict()
+    def construct_maps(self, keys: Union[List, Tuple]) -> Dict[int, int]:
+        d: Dict[int, int] = dict()
         keys = list(set(keys))
         for k in keys:
             if k not in d:
                 d[k] = len(list(d.keys()))
         return d
 
-    def onehot_custom(self, ks_list, ex_list, d_list):
+    def onehot_custom(self, ks_list: list, ex_list: list, d_list: list) -> np.ndarray:
 
         ks_map = self.construct_maps(keys=(3, 5, 7))
         ex_map = self.construct_maps(keys=(3, 4, 6))

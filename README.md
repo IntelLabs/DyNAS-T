@@ -163,6 +163,32 @@ python run_search.py \
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
 ![DyNAS-T Results](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/search_results.png?raw=true)
 
+### Distributed Search
+
+Search can be performed with multiple workers using the `MPI` / `torch.distributed` library. To use this functionality, your script should be called with `mpirun`/`mpiexec` command and an additional `--distributed` param has to be set (`DyNAS([...], distributed=True`).
+
+> Note: When run with `torchrun`, unless explicitly specified, `torch.distributed` uses `OMP_NUM_THREADS=1` ([link](https://github.com/pytorch/pytorch/commit/1c0309a9a924e34803bf7e8975f7ce88fb845131)) which may result in slow evaluation time. Good practice is to explicitly set `OMP_NUM_THREADS`  to `(total_core_count)/(num_workers)` (optional for MPI).
+
+*Example 4.* Distributed NAS process with two OpenMPI workers for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters)
+
+```bash
+OMP_NUM_THREADS=28 mpirun \
+    --report-bindings \
+    -x MASTER_ADDR=127.0.0.1 \
+    -x MASTER_PORT=1234 \
+    -np 2 \
+    -bind-to socket \
+    -map-by socket \
+    python run_search.py \
+        --supernet ofa_mbv3_d234_e346_k357_w1.0 \
+         --optimization_metrics accuracy_top1 macs \
+        --results_path results.csv \
+        --search_tactic linas \
+        --distributed \
+        --population 50 \
+        --num_evals 250
+```
+
 ## References
 
 [1] Cai, H., Gan, C., & Han, S. (2020). Once for All: Train One Network and Specialize it for Efficient Deployment. ArXiv, abs/1908.09791.

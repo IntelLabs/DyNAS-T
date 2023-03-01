@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import sys
 
-from dynast.search.search_tactic import LINAS, Evolutionary, RandomSearch
-from dynast.utils import check_kwargs_deprecated, log
+from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
+from dynast.utils import check_kwargs_deprecated, log, set_logger
+from dynast.utils.distributed import get_distributed_vars, init_distributed
 
 
 class DyNAS:
@@ -26,6 +28,18 @@ class DyNAS:
     '''
 
     def __new__(self, **kwargs):
+        log_level = logging.INFO
+        if kwargs.get('verbose'):
+            log_level = logging.DEBUG
+        set_logger(level=log_level)
+
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        if DIST_METHOD:
+            backend = kwargs.get('backend', 'gloo')
+            init_distributed(backend, WORLD_RANK, WORLD_SIZE)
+            seed = kwargs.get('seed', None)
+            if seed:
+                kwargs['seed'] = seed + WORLD_RANK
 
         log.info('=' * 40)
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
@@ -61,6 +75,17 @@ class DyNAS:
             log.info(f'{key}: {value}')
         log.info('-' * 40)
 
+        if kwargs.get('distributed', False):
+            # LINAS bi-level evolutionary algorithm search distributed to multiple workers
+            if kwargs['search_tactic'] == 'linas':
+                log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
+                return LINASDistributed(**kwargs)
+
+                # Uniform random sampling of the architectural space distributed to multiple workers
+            elif kwargs['search_tactic'] == 'random':
+                log.info('Initializing DyNAS random (distributed) search algorithm object.')
+                return RandomSearchDistributed(**kwargs)
+
         # LINAS bi-level evolutionary algorithm search
         if kwargs['search_tactic'] == 'linas':
             log.info('Initializing DyNAS LINAS algorithm object.')
@@ -77,4 +102,8 @@ class DyNAS:
             return RandomSearch(**kwargs)
 
         else:
-            log.error("Invalid `--search_tactic` parameter (options: 'linas', 'evolutionary', 'random').")
+            error_message = "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
+                kwargs['search_tactic']
+            )  # TODO(macsz) Un-hardcode options.
+            log.error(error_message)
+            raise NotImplementedError(error_message)
