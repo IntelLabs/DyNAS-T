@@ -1,3 +1,1 @@
 ofa==0.1.0.post202203231606
-onnx==1.13.0
-onnxruntime==1.10.0
