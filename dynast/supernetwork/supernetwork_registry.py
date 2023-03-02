@@ -86,7 +86,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_mbv3_d234_e346_k357_w1.2': 20000,
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
-    'bert_base_sst2': 10000,
+    'bert_base_sst2': 20000,
 }
 
 SUPERNET_TYPE = {
