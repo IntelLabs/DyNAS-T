@@ -102,8 +102,10 @@ class DyNAS:
             return RandomSearch(**kwargs)
 
         else:
-            error_message = "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
-                kwargs['search_tactic']
+            error_message = (
+                "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
+                    kwargs['search_tactic']
+                )
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)
             raise NotImplementedError(error_message)

@@ -40,6 +40,8 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 |OFA ResNet50 | ofa_resnet50 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |TransformerLT | transformer_lt_wmt_en_de | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
+|BERT-SST2 | bert_base_sst2 | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
+
 
 > **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
 
@@ -201,4 +203,4 @@ OMP_NUM_THREADS=28 mpirun \
 
 > This “research quality code”  is for Non-Commercial purposes provided by Intel “As Is” without any express or implied warranty of any kind. Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it. Intel does not warrant or assume responsibility for the accuracy or completeness of any information, text, graphics, links or other items within the code. A thorough security review has not been performed on this code. Additionally, this repository may contain components that are out of date or contain known security vulnerabilities.
 
-> ImageNet: Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it.
+> ImageNet, WMT, SST2: Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it.

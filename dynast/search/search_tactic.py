@@ -26,6 +26,7 @@ from dynast.search.evolutionary import (
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
+from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.utils import log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 
@@ -114,6 +115,11 @@ class NASBaseConfig:
                     self.measurements.remove(metric)
 
         elif self.supernet in SUPERNET_TYPE['machine_translation']:
+            # TODO(macsz,sharathns93) Fix
+            pass
+
+        elif self.supernet in SUPERNET_TYPE['text_classification']:
+            # TODO(macsz,sharathns93) Fix
             pass
 
         elif self.supernet in SUPERNET_TYPE['recommendation']:
@@ -140,6 +146,15 @@ class NASBaseConfig:
                 'Latency (ms)',
                 'MACs',
                 'BLEU Score',
+            ]  # TODO(macsz) Should be based on specified measurements
+        elif self.supernet in SUPERNET_TYPE['text_classification']:
+            self.csv_header = [
+                'Sub-network',
+                'Date',
+                'Model Parameters',
+                'Latency (ms)',
+                'MACs',
+                'SST-2 Acc',
             ]  # TODO(macsz) Should be based on specified measurements
         elif self.supernet in SUPERNET_TYPE['recommendation']:
             self.csv_header = [
@@ -183,6 +198,14 @@ class NASBaseConfig:
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
+            )
+        elif self.supernet == 'bert_base_sst2':
+            self.runner_validate = BertSST2Runner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -336,6 +359,18 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                 )
 
+            elif self.supernet == 'bert_base_sst2':
+                runner_predict = BertSST2Runner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -461,6 +496,7 @@ class Evolutionary(NASBaseConfig):
         supernet_ckpt_path=None,
         valid_size: int = None,
         dataloader_workers: int = 4,
+        device: str = 'cpu',
         **kwargs,
     ):
         super().__init__(
@@ -476,6 +512,7 @@ class Evolutionary(NASBaseConfig):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
+            device=device,
             valid_size=valid_size,
             dataloader_workers=dataloader_workers,
         )
@@ -594,6 +631,7 @@ class RandomSearch(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         valid_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
@@ -611,6 +649,7 @@ class RandomSearch(NASBaseConfig):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
+            device=device,
             valid_size=valid_size,
             dataloader_workers=dataloader_workers,
         )
