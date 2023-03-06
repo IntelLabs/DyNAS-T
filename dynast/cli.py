@@ -3,7 +3,7 @@ import argparse
 from dynast.dynast_manager import DyNAS
 
 
-def main(args):
+def _main(args):
 
     agent = DyNAS(
         supernet=args.supernet,
@@ -30,7 +30,7 @@ def main(args):
     print('Search results: ', results)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--supernet',
@@ -106,4 +106,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args)
+    _main(args)
+
+
+if __name__ == '__main__':
+    main()
