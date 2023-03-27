@@ -19,7 +19,7 @@ if __name__ == '__main__':
     with open(fn, 'r') as f:
         lns = f.readlines()
         for i, ln in enumerate(lns):
-            if i<3:
+            if i < 3:
                 continue
             ln = ln.strip()
             res = ln.split(', ')
@@ -40,4 +40,3 @@ if __name__ == '__main__':
     plt.xlabel('MACCs')
     plt.ylabel('Top1 [%]')
     plt.savefig('out.png')
-
