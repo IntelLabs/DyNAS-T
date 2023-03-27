@@ -14,6 +14,7 @@
 
 # functions from OpenVINO notebooks.
 
+import json
 import os
 import socket
 import time
@@ -26,16 +27,21 @@ from pathlib import Path
 
 import torch
 import torchvision.transforms as transforms
+from addict import Dict
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from tqdm.notebook import tqdm_notebook
+
+from dynast.utils import log
 
 warnings.filterwarnings("ignore", "DeprecationWarning")
 
 __all__ = [
     "ResNet",
     "resnet50_cifar10",
+    "load_base_model",
+    "load_config",
 ]
 
 
@@ -592,3 +598,31 @@ def create_cifar10_dataloader(dataset_dir, batch_size, batch_size_val, device, n
     )
 
     return train_loader, val_loader
+
+
+def load_base_model(config):
+    fp32_pth_url = "/store/code/bootstrapnas/Hardware-Aware-Automated-Machine-Learning/models/pretrained/resnet50.pt"
+    log.info(f"Loading base model {fp32_pth_url}...")
+    model = resnet50_cifar10()
+    state_dict = torch.load(fp32_pth_url)
+    model.load_state_dict(state_dict)
+    model.to(config.device)
+    return model
+
+
+def load_config(args):
+    # TODO(macsz) Remove args.
+    config_path = "/store/code/bootstrapnas/Hardware-Aware-Automated-Machine-Learning/models/supernets/cifar10/resnet50/config.json"
+    log.info(f"Loading config {config_path}...")
+    with open(config_path) as f:
+        config = Dict(json.load(f))
+    config.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO(macsz) Update this.
+    log.info(f"Using device: {config.device}")
+    config.log_dir = args.log_dir
+    config.checkpoint_save_dir = config.log_dir
+    config.supernet_path = args.supernet_path
+    config.supernet_weights = args.supernet_weights
+    config.batch_size = args.batch_size
+    config.dataset = args.dataset
+    config.name = "dynast_bnas_external"  # TODO(macsz) Update this.
+    return config

@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import random
 import sys
@@ -8,12 +7,11 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import tqdm
-from addict import Dict
 from nncf import set_log_level
 from torch import nn
 
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNAS
-from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_utils import resnet50_cifar10
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_utils import load_base_model, load_config
 from dynast.utils import log, set_logger
 from dynast.utils.datasets import CIFAR10
 from dynast.utils.nn import get_macs, reset_bn, validate_classification
@@ -50,36 +48,6 @@ def get_nas_argument_parser():
     parser.add_argument("--dataset", type=str, default="cifar10", choices=["cifar10"])
     parser.add_argument("--out_fn", type=str, default="out_1.csv")
     return parser
-
-
-def load_base_model(config):
-    fp32_pth_url = "/store/code/bootstrapnas/Hardware-Aware-Automated-Machine-Learning/models/pretrained/resnet50.pt"
-    log.info(f"Loading base model {fp32_pth_url}...")
-    model = resnet50_cifar10()
-    state_dict = torch.load(fp32_pth_url)
-    model.load_state_dict(state_dict)
-    model.to(config.device)
-    return model
-
-
-def load_config(args):
-    config_path = "/store/code/bootstrapnas/Hardware-Aware-Automated-Machine-Learning/models/supernets/cifar10/resnet50/config.json"
-    log.info(f"Loading config {config_path}...")
-    with open(config_path) as f:
-        config = Dict(json.load(f))
-    config.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    log.info(f"Using device: {config.device}")
-    config.log_dir = args.log_dir
-    config.checkpoint_save_dir = config.log_dir
-    config.supernet_path = args.supernet_path
-    config.supernet_weights = args.supernet_weights
-    config.batch_size = args.batch_size
-    config.dataset = args.dataset
-    config.name = "dynast_bnas_external"
-    return config
-
-
-# from examples.torch.classification.main import validate
 
 
 def validate(model, test_dataloader, train_dataloader, config, bn=True):
