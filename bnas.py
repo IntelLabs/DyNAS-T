@@ -3,6 +3,7 @@ import json
 import logging
 import random
 import sys
+from typing import List
 
 import torch
 import torchvision
@@ -10,9 +11,13 @@ import torchvision.transforms as transforms
 import tqdm
 from addict import Dict
 from nncf import set_log_level
-from nncf.experimental.torch.nas.bootstrapNAS.bootstrapNAS import BootstrapNAS
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
+from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
+from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.model_creation import create_nncf_network
 from torch import nn
 
+from bootstrapnas_utils import resnet50_cifar10
 from dynast.utils import log, set_logger
 from dynast.utils.datasets import CIFAR10
 from dynast.utils.nn import get_macs, reset_bn, validate_classification
@@ -20,11 +25,70 @@ from dynast.utils.nn import get_macs, reset_bn, validate_classification
 set_log_level(logging.ERROR)
 set_logger(logging.INFO)
 
-from bootstrapnas_utils import resnet50_cifar10
-
 transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 NUM_EVALS = 1
+
+
+class BootstrapNAS:
+    def __init__(self, model, nncf_config, supernet_path, supernet_weights):
+        nncf_network = create_nncf_network(model, nncf_config)
+
+        compression_state = torch.load(supernet_path, map_location=torch.device(nncf_config.device))
+        self._model, self._elasticity_ctrl = resume_compression_from_state(nncf_network, compression_state)
+        model_weights = torch.load(supernet_weights, map_location=torch.device(nncf_config.device))
+
+        load_state(model, model_weights, is_resume=True)
+
+    def get_search_space(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        active_handlers = {
+            dim: m_handler._handlers[dim] for dim in m_handler._handlers if m_handler._is_handler_enabled_map[dim]
+        }
+        space = {}
+        for handler_id, handler in active_handlers.items():
+            space[handler_id.value] = handler.get_search_space()
+        return space
+
+    def eval_subnet(self, config, eval_fn, **kwargs):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        m_handler.activate_subnet_for_config(
+            m_handler.get_config_from_pymoo(config)
+            # config
+        )
+        print(kwargs)
+        return eval_fn(self._model, **kwargs)
+
+    def get_active_subnet(self):
+        return self._model
+
+    def get_active_config(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_active_config()
+
+    def get_random_config(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_random_config()
+
+    def get_minimum_config(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_minimum_config()
+
+    def get_maximum_config(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_maximum_config()
+
+    def get_available_elasticity_dims(self):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_available_elasticity_dims()
+
+    def activate_subnet_for_config(self, config):
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        m_handler.activate_subnet_for_config(config)
+
+    def get_config_from_pymoo(self, x: List) -> SubnetConfig:
+        m_handler = self._elasticity_ctrl.multi_elasticity_handler
+        return m_handler.get_config_from_pymoo(x)
 
 
 def get_nas_argument_parser():
@@ -126,6 +190,7 @@ def adapt_bn(model, config):
 
 
 def main(argv):
+    random.seed(42)
     parser = get_nas_argument_parser()
     args = parser.parse_args(argv)
 
@@ -146,20 +211,21 @@ def main(argv):
     log.info(f"Min config: {bootstrapNAS.get_minimum_config()}")
     log.info(f"Max config: {bootstrapNAS.get_maximum_config()}")
 
-    bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_minimum_config())
-    subnet_min = bootstrapNAS.get_active_subnet()
-    acc_min = validate(subnet_min, config)
-    macs_min = get_macs(subnet_min, input_size=config.input_info.sample_size, device=config.device)
-    log.info(f"Min MACs: {macs_min}, top1: {acc_min}")
-    write(f"{macs_min}, {acc_min}", fn=args.out_fn)
+    if False:
+        bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_minimum_config())
+        subnet_min = bootstrapNAS.get_active_subnet()
+        acc_min = validate(subnet_min, config)
+        macs_min = get_macs(subnet_min, input_size=config.input_info.sample_size, device=config.device)
+        log.info(f"Min MACs: {macs_min}, top1: {acc_min}")
+        write(f"{macs_min}, {acc_min}", fn=args.out_fn)
 
-    bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_maximum_config())
-    subnet_max = bootstrapNAS.get_active_subnet()
-    acc_max = validate(subnet_max, config)
-    macs_max = get_macs(subnet_max, input_size=config.input_info.sample_size, device=config.device)
-    log.info(f"Max MACs: {macs_max}, top1: {acc_max}")
-    write(f"{macs_max}, {acc_max}", fn=args.out_fn)
-    # log.info(f'Diff MACs: {macs_max-macs_min} ({(macs_max-macs_min)/macs_max*100}%)')
+    if False:
+        bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_maximum_config())
+        subnet_max = bootstrapNAS.get_active_subnet()
+        acc_max = validate(subnet_max, config)
+        macs_max = get_macs(subnet_max, input_size=config.input_info.sample_size, device=config.device)
+        log.info(f"Max MACs: {macs_max}, top1: {acc_max}")
+        write(f"{macs_max}, {acc_max}", fn=args.out_fn)
 
     for _ in tqdm.tqdm(range(args.num_evals)):
         bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_random_config())
@@ -170,7 +236,6 @@ def main(argv):
         write(f"{macs}, {acc}", fn=args.out_fn)
 
     if False:
-        random.seed(None)
         config = bootstrapNAS.get_random_config()
         results = bootstrapNAS.eval_subnet(
             config=config,
