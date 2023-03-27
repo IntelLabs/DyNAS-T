@@ -12,8 +12,8 @@ from addict import Dict
 from nncf import set_log_level
 from torch import nn
 
-from bootstrapnas_utils import resnet50_cifar10
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNAS
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_utils import resnet50_cifar10
 from dynast.utils import log, set_logger
 from dynast.utils.datasets import CIFAR10
 from dynast.utils.nn import get_macs, reset_bn, validate_classification

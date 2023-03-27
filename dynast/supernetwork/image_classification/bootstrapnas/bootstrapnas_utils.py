@@ -1,42 +1,43 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-functions from OpenVINO notebooks.
-"""
+# functions from OpenVINO notebooks.
 
+import os
+import socket
+import time
 import urllib
 import urllib.parse
 import urllib.request
-import socket
-import os
+import warnings  # to disable warnings on export to ONNX
 from os import PathLike
 from pathlib import Path
-from tqdm.notebook import tqdm_notebook
 
 import torch
+import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
-import torchvision.transforms as transforms
+from tqdm.notebook import tqdm_notebook
 
-
-import time
-import warnings  # to disable warnings on export to ONNX
 warnings.filterwarnings("ignore", "DeprecationWarning")
 
 __all__ = [
     "ResNet",
     "resnet50_cifar10",
 ]
+
 
 def download_file(
     url: PathLike,
@@ -125,15 +126,14 @@ class DownloadProgressBar(tqdm_notebook):
         if downloaded <= total_size:
             self.update(downloaded - self.n)
 
+
 ### Train Function
 def train_epoch(train_loader, model, device, criterion, optimizer, epoch, compression_ctrl, train_iters=None):
     batch_time = AverageMeter("Time", ":3.3f")
     losses = AverageMeter("Loss", ":2.3f")
     top1 = AverageMeter("Acc@1", ":2.2f")
     top5 = AverageMeter("Acc@5", ":2.2f")
-    progress = ProgressMeter(
-        len(train_loader), [batch_time, losses, top1, top5], prefix="Epoch:[{}]".format(epoch)
-    )
+    progress = ProgressMeter(len(train_loader), [batch_time, losses, top1, top5], prefix="Epoch:[{}]".format(epoch))
 
     # switch to train mode
     model.train()
@@ -215,7 +215,7 @@ def validate(model, val_loader, criterion=nn.CrossEntropyLoss()):
                 progress.display(i)
 
         print(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}".format(top1=top1, top5=top5))
-    return top1.avg, top5.avg, losses.val 
+    return top1.avg, top5.avg, losses.val
 
 
 ### Helpers Functions
@@ -430,24 +430,16 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
 
         # CIFAR10: kernel_size 7 -> 3, stride 2 -> 1, padding 3->1
-        self.conv1 = nn.Conv2d(
-            3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False
-        )
+        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=3, stride=1, padding=1, bias=False)
         # END
 
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(
-            block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0]
-        )
-        self.layer3 = self._make_layer(
-            block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1]
-        )
-        self.layer4 = self._make_layer(
-            block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2]
-        )
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0])
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1])
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -531,9 +523,7 @@ def _resnet(arch, block, layers, pretrained, progress, device, **kwargs):
     model = ResNet(block, layers, **kwargs)
     if pretrained:
         script_dir = os.path.dirname(__file__)
-        state_dict = torch.load(
-            script_dir + "/state_dicts/" + arch + ".pt", map_location=device
-        )
+        state_dict = torch.load(script_dir + "/state_dicts/" + arch + ".pt", map_location=device)
         model.load_state_dict(state_dict)
     return model
 
@@ -544,13 +534,12 @@ def resnet50_cifar10(pretrained=False, progress=True, device="cpu", **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return _resnet(
-        "resnet50", Bottleneck, [3, 4, 6, 3], pretrained, progress, device, **kwargs
-    )
+    return _resnet("resnet50", Bottleneck, [3, 4, 6, 3], pretrained, progress, device, **kwargs)
 
 
 def create_folders_demo(base_model_name):
     from pathlib import Path
+
     # MODEL_DIR = Path("model")
     MODEL_DIR = Path("../../models/pretrained")
     OUTPUT_DIR = Path("output")
@@ -571,12 +560,15 @@ def create_cifar10_dataloader(dataset_dir, batch_size, batch_size_val, device, n
     image_size = 32  # cifar10 resolution
     normalize = transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2471, 0.2435, 0.2616))
 
-    train_transform = transforms.Compose([
-        transforms.RandomCrop(image_size, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        transforms.ToTensor(),
-        normalize])
+    train_transform = transforms.Compose(
+        [
+            transforms.RandomCrop(image_size, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ToTensor(),
+            normalize,
+        ]
+    )
 
     download = False
     # if not DATASET_DIR.exists():
@@ -584,12 +576,19 @@ def create_cifar10_dataloader(dataset_dir, batch_size, batch_size_val, device, n
         download = True
 
     train_dataset = CIFAR10(dataset_dir, train=True, transform=train_transform, download=download)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                              num_workers=n_worker, pin_memory=pin_memory, drop_last=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=n_worker, pin_memory=pin_memory, drop_last=True
+    )
 
     val_transform = transforms.Compose([transforms.ToTensor(), normalize])
     val_dataset = CIFAR10(dataset_dir, train=False, transform=val_transform, download=download)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=False,
-                            num_workers=n_worker, pin_memory=pin_memory, drop_last=False)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=batch_size_val,
+        shuffle=False,
+        num_workers=n_worker,
+        pin_memory=pin_memory,
+        drop_last=False,
+    )
 
     return train_loader, val_loader
