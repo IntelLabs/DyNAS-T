@@ -149,24 +149,16 @@ def load_config(args):
 
 def validate(model, test_dataloader, train_dataloader, config, bn=True):
     model.eval()
-    correct = 0
-    total = 0
-    # since we're not training, we don't need to calculate the gradients for our outputs
+
     if bn:
         log.info("Adjusting BN...")
         adapt_bn(model=model, train_dataloader=train_dataloader, config=config)
-    with torch.no_grad():
-        for data in tqdm.tqdm(test_dataloader):
-            images, labels = data
-            images, labels = images.to(config.device), labels.to(config.device)
-            # calculate outputs by running images through the network
-            outputs = model(images)
-            # the class with the highest energy is what we choose as prediction
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    top1 = 100 * correct / total
-    log.info(f"Accuracy of the network on the 10000 test images: {top1} %")
+
+    loss, top1, top5 = validate_classification(
+        model=model,
+        data_loader=test_dataloader,
+        device=config.device,
+    )
     return top1
 
 
