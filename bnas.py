@@ -147,18 +147,16 @@ def load_config(args):
 # from examples.torch.classification.main import validate
 
 
-def validate(model, config, bn=True):
-    testset = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=config.batch_size, shuffle=False, num_workers=2)
+def validate(model, test_dataloader, train_dataloader, config, bn=True):
     model.eval()
     correct = 0
     total = 0
     # since we're not training, we don't need to calculate the gradients for our outputs
     if bn:
         log.info("Adjusting BN...")
-        adapt_bn(model, config)
+        adapt_bn(model=model, train_dataloader=train_dataloader, config=config)
     with torch.no_grad():
-        for data in tqdm.tqdm(testloader):
+        for data in tqdm.tqdm(test_dataloader):
             images, labels = data
             images, labels = images.to(config.device), labels.to(config.device)
             # calculate outputs by running images through the network
@@ -177,14 +175,11 @@ def write(line, scratch=False, fn="out.csv"):
         f.write(f"{line}\n")
 
 
-def adapt_bn(model, config):
-    trainset = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=config.batch_size, shuffle=True, num_workers=2)
-
+def adapt_bn(model, train_dataloader, config):
     reset_bn(
         model=model,
         num_samples=200,
-        train_dataloader=trainloader,
+        train_dataloader=train_dataloader,
         device=config.device,
     )
 
@@ -197,7 +192,13 @@ def main(argv):
     config = load_config(args)
     model = load_base_model(config)
 
-    acc = validate(model, config, False)
+    testset = torchvision.datasets.CIFAR10(root="./data", train=False, download=True, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=config.batch_size, shuffle=False, num_workers=2)
+
+    trainset = torchvision.datasets.CIFAR10(root="./data", train=True, download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=config.batch_size, shuffle=True, num_workers=2)
+
+    acc = validate(model=model, test_dataloader=testloader, train_dataloader=trainloader, config=config, bn=False)
     macs = get_macs(model, input_size=config.input_info.sample_size, device=config.device)
     log.info(f"model MACs: {macs}, top1: {acc}")
     write(f"{macs}, {acc}", scratch=True, fn=args.out_fn)
@@ -214,7 +215,7 @@ def main(argv):
     if False:
         bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_minimum_config())
         subnet_min = bootstrapNAS.get_active_subnet()
-        acc_min = validate(subnet_min, config)
+        acc_min = validate(model=subnet_min, test_dataloader=testloader, train_dataloader=trainloader, config=config)
         macs_min = get_macs(subnet_min, input_size=config.input_info.sample_size, device=config.device)
         log.info(f"Min MACs: {macs_min}, top1: {acc_min}")
         write(f"{macs_min}, {acc_min}", fn=args.out_fn)
@@ -222,7 +223,7 @@ def main(argv):
     if False:
         bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_maximum_config())
         subnet_max = bootstrapNAS.get_active_subnet()
-        acc_max = validate(subnet_max, config)
+        acc_max = validate(model=subnet_max, test_dataloader=testloader, train_dataloader=trainloader, config=config)
         macs_max = get_macs(subnet_max, input_size=config.input_info.sample_size, device=config.device)
         log.info(f"Max MACs: {macs_max}, top1: {acc_max}")
         write(f"{macs_max}, {acc_max}", fn=args.out_fn)
@@ -230,7 +231,7 @@ def main(argv):
     for _ in tqdm.tqdm(range(args.num_evals)):
         bootstrapNAS.activate_subnet_for_config(bootstrapNAS.get_random_config())
         subnet = bootstrapNAS.get_active_subnet()
-        acc = validate(subnet, config)
+        acc = validate(model=subnet, test_dataloader=testloader, train_dataloader=trainloader, config=config)
         macs = get_macs(subnet, input_size=config.input_info.sample_size, device=config.device)
         log.info(f"Random MACs: {macs}, top1: {acc}")
         write(f"{macs}, {acc}", fn=args.out_fn)
