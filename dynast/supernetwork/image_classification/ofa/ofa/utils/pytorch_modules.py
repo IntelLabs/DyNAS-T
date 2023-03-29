@@ -15,10 +15,9 @@ __all__ = [
     "build_activation",
     "ShuffleLayer",
     "MyGlobalAvgPool2d",
-    # "Hswish",
+    "Hswish",
     "Hsigmoid",
     "SEModule",
-    # "MultiHeadCrossEntropyLoss",
 ]
 
 
@@ -145,17 +144,3 @@ class SEModule(nn.Module):
 
     def __repr__(self):
         return "SE(channel=%d, reduction=%d)" % (self.channel, self.reduction)
-
-
-# class MultiHeadCrossEntropyLoss(nn.Module):
-#     def forward(self, outputs, targets):
-#         assert outputs.dim() == 3, outputs
-#         assert targets.dim() == 2, targets
-
-#         assert outputs.size(1) == targets.size(1), (outputs, targets)
-#         num_heads = targets.size(1)
-
-#         loss = 0
-#         for k in range(num_heads):
-#             loss += F.cross_entropy(outputs[:, k, :], targets[:, k]) / num_heads
-#         return loss
