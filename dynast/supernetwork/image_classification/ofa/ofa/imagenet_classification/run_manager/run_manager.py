@@ -25,7 +25,7 @@ from dynast.supernetwork.image_classification.ofa.ofa.utils import (
     mix_labels,
     write_log,
 )
-from dynast.utils.nn import accuracy, AverageMeter
+from dynast.utils.nn import AverageMeter, accuracy
 
 __all__ = ["RunManager"]
 
