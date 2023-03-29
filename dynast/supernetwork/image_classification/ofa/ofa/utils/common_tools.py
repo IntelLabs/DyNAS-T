@@ -2,9 +2,10 @@
 # # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # # International Conference on Learning Representations (ICLR), 2020.
 
-import numpy as np
 import os
 import sys
+
+import numpy as np
 import torch
 
 try:
@@ -13,33 +14,14 @@ except ImportError:
     from urllib.request import urlretrieve
 
 __all__ = [
-    # "sort_dict",
     "get_same_padding",
-    # "get_split_list",
-    # "list_sum",
-    # "list_mean",
-    # "list_join",
-    # "subset_mean",
     "sub_filter_start_end",
     "min_divisible_value",
     "val2list",
     "download_url",
     "write_log",
-    # "pairwise_accuracy",
-    "accuracy",
-    "AverageMeter",
-    # "MultiClassAverageMeter",
-    # "DistributedMetric",
     "DistributedTensor",
 ]
-
-
-# def sort_dict(src_dict, reverse=False, return_dict=True):
-#     output = sorted(src_dict.items(), key=lambda x: x[1], reverse=reverse)
-#     if return_dict:
-#         return dict(output)
-#     else:
-#         return output
 
 
 def get_same_padding(kernel_size):
@@ -51,33 +33,6 @@ def get_same_padding(kernel_size):
     assert isinstance(kernel_size, int), "kernel size should be either `int` or `tuple`"
     assert kernel_size % 2 > 0, "kernel size should be odd number"
     return kernel_size // 2
-
-
-# def get_split_list(in_dim, child_num, accumulate=False):
-#     in_dim_list = [in_dim // child_num] * child_num
-#     for _i in range(in_dim % child_num):
-#         in_dim_list[_i] += 1
-#     if accumulate:
-#         for i in range(1, child_num):
-#             in_dim_list[i] += in_dim_list[i - 1]
-#     return in_dim_list
-
-
-# def list_sum(x):
-#     return x[0] if len(x) == 1 else x[0] + list_sum(x[1:])
-
-
-# def list_mean(x):
-#     return list_sum(x) / len(x)
-
-
-# def list_join(val_list, sep="\t"):
-#     return sep.join([str(val) for val in val_list])
-
-
-# def subset_mean(val_list, sub_indexes):
-#     sub_indexes = val2list(sub_indexes, 1)
-#     return list_mean([val_list[idx] for idx in sub_indexes])
 
 
 def sub_filter_start_end(kernel_size, sub_kernel_size):
@@ -126,7 +81,6 @@ def download_url(url, model_dir="~/.torch/", overwrite=False):
 
 
 def write_log(logs_path, log_str, prefix="valid", should_print=True, mode="a"):
-    #TODO(macsz) Could drop
     if not os.path.exists(logs_path):
         os.makedirs(logs_path, exist_ok=True)
     """ prefix: valid, train, test """
@@ -148,143 +102,8 @@ def write_log(logs_path, log_str, prefix="valid", should_print=True, mode="a"):
         print(log_str)
 
 
-# def pairwise_accuracy(la, lb, n_samples=200000):
-#     n = len(la)
-#     assert n == len(lb)
-#     total = 0
-#     count = 0
-#     for _ in range(n_samples):
-#         i = np.random.randint(n)
-#         j = np.random.randint(n)
-#         while i == j:
-#             j = np.random.randint(n)
-#         if la[i] >= la[j] and lb[i] >= lb[j]:
-#             count += 1
-#         if la[i] < la[j] and lb[i] < lb[j]:
-#             count += 1
-#         total += 1
-#     return float(count) / total
-
-
-def accuracy(output, target, topk=(1,)):
-    #TODO(macsz) OFA_DEP_RM Can be merged with what we have in utils
-    """Computes the precision@k for the specified values of k"""
-    maxk = max(topk)
-    batch_size = target.size(0)
-
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.reshape(1, -1).expand_as(pred))
-
-    res = []
-    for k in topk:
-        correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
-
-
-class AverageMeter(object):
-    #TODO(macsz) OFA_DEP_RM Can be merged with what we have in utils
-    """
-    Computes and stores the average and current value
-    Copied from: https://github.com/pytorch/examples/blob/master/imagenet/main.py
-    """
-
-    def __init__(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-
-# class MultiClassAverageMeter:
-
-#     """Multi Binary Classification Tasks"""
-
-#     def __init__(self, num_classes, balanced=False, **kwargs):
-
-#         super(MultiClassAverageMeter, self).__init__()
-#         self.num_classes = num_classes
-#         self.balanced = balanced
-
-#         self.counts = []
-#         for k in range(self.num_classes):
-#             self.counts.append(np.ndarray((2, 2), dtype=np.float32))
-
-#         self.reset()
-
-#     def reset(self):
-#         for k in range(self.num_classes):
-#             self.counts[k].fill(0)
-
-#     def add(self, outputs, targets):
-#         outputs = outputs.data.cpu().numpy()
-#         targets = targets.data.cpu().numpy()
-
-#         for k in range(self.num_classes):
-#             output = np.argmax(outputs[:, k, :], axis=1)
-#             target = targets[:, k]
-
-#             x = output + 2 * target
-#             bincount = np.bincount(x.astype(np.int32), minlength=2 ** 2)
-
-#             self.counts[k] += bincount.reshape((2, 2))
-
-#     def value(self):
-#         mean = 0
-#         for k in range(self.num_classes):
-#             if self.balanced:
-#                 value = np.mean(
-#                     (
-#                         self.counts[k]
-#                         / np.maximum(np.sum(self.counts[k], axis=1), 1)[:, None]
-#                     ).diagonal()
-#                 )
-#             else:
-#                 value = np.sum(self.counts[k].diagonal()) / np.maximum(
-#                     np.sum(self.counts[k]), 1
-#                 )
-
-#             mean += value / self.num_classes * 100.0
-#         return mean
-
-
-# class DistributedMetric(object):
-#     """
-#     Horovod: average metrics from distributed training.
-#     """
-
-#     def __init__(self, name):
-#         self.name = name
-#         self.sum = torch.zeros(1)[0]
-#         self.count = torch.zeros(1)[0]
-
-#     def update(self, val, delta_n=1):
-#         import horovod.torch as hvd
-
-#         val *= delta_n
-#         self.sum += hvd.allreduce(val.detach().cpu(), name=self.name)
-#         self.count += delta_n
-
-#     @property
-#     def avg(self):
-#         return self.sum / self.count
-
-
 class DistributedTensor(object):
-    #TODO(macsz) This most likely can be dropped (unless there is a strong case for Horovod/distributed)
+    # TODO(macsz) This most likely can be dropped (unless there is a strong case for Horovod/distributed)
     def __init__(self, name):
         self.name = name
         self.sum = None
