@@ -4,11 +4,8 @@ import time
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 
-# import math
-# import os
 from PIL import Image
 
-# __all__ = ["MyRandomResizedCrop", "MyResizeRandomCrop", "MyResize"]
 __all__ = ["MyRandomResizedCrop"]
 
 _pil_interpolation_to_str = {
@@ -91,71 +88,3 @@ class MyRandomResizedCrop(transforms.RandomResizedCrop):
         format_string += ", ratio={0}".format(tuple(round(r, 4) for r in self.ratio))
         format_string += ", interpolation={0})".format(interpolate_str)
         return format_string
-
-
-# class MyResizeRandomCrop(object):
-#     def __init__(
-#         self,
-#         interpolation=Image.BILINEAR,
-#         use_padding=False,
-#         pad_if_needed=False,
-#         fill=0,
-#         padding_mode="constant",
-#     ):
-#         # resize
-#         self.interpolation = interpolation
-#         # random crop
-#         self.use_padding = use_padding
-#         self.pad_if_needed = pad_if_needed
-#         self.fill = fill
-#         self.padding_mode = padding_mode
-
-#     def __call__(self, img):
-#         crop_size = MyRandomResizedCrop.ACTIVE_SIZE
-
-#         if not self.use_padding:
-#             resize_size = int(math.ceil(crop_size / 0.875))
-#             img = F.resize(img, resize_size, self.interpolation)
-#         else:
-#             img = F.resize(img, crop_size, self.interpolation)
-#             padding_size = crop_size // 8
-#             img = F.pad(img, padding_size, self.fill, self.padding_mode)
-
-#         # pad the width if needed
-#         if self.pad_if_needed and img.size[0] < crop_size:
-#             img = F.pad(img, (crop_size - img.size[0], 0), self.fill, self.padding_mode)
-#         # pad the height if needed
-#         if self.pad_if_needed and img.size[1] < crop_size:
-#             img = F.pad(img, (0, crop_size - img.size[1]), self.fill, self.padding_mode)
-
-#         i, j, h, w = transforms.RandomCrop.get_params(img, (crop_size, crop_size))
-#         return F.crop(img, i, j, h, w)
-
-#     def __repr__(self):
-#         return (
-#             "MyResizeRandomCrop(size=%s%s, interpolation=%s, use_padding=%s, fill=%s)"
-#             % (
-#                 MyRandomResizedCrop.IMAGE_SIZE_LIST,
-#                 "@continuous" if MyRandomResizedCrop.CONTINUOUS else "",
-#                 _pil_interpolation_to_str[self.interpolation],
-#                 self.use_padding,
-#                 self.fill,
-#             )
-#         )
-
-
-# class MyResize(object):
-#     def __init__(self, interpolation=Image.BILINEAR):
-#         self.interpolation = interpolation
-
-#     def __call__(self, img):
-#         target_size = MyRandomResizedCrop.ACTIVE_SIZE
-#         img = F.resize(img, target_size, self.interpolation)
-#         return img
-
-#     def __repr__(self):
-#         return "MyResize(size=%s%s, interpolation=%s)" % (
-#             MyRandomResizedCrop.IMAGE_SIZE_LIST,
-#             "@continuous" if MyRandomResizedCrop.CONTINUOUS else "",
-#             _pil_interpolation_to_str[self.interpolation],
-#         )
