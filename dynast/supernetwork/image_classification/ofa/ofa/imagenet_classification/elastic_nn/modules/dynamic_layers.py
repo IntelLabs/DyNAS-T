@@ -3,34 +3,37 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import copy
-import torch
-import torch.nn as nn
 from collections import OrderedDict
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
-    MBConvLayer,
-    ConvLayer,
-    IdentityLayer,
-    set_layer_from_config,
-)
-from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import ResNetBottleneckBlock, LinearLayer
+import torch
+import torch.nn as nn
+
 from dynast.supernetwork.image_classification.ofa.ofa.utils import (
     MyModule,
-    val2list,
-    get_net_device,
-    build_activation,
-    make_divisible,
-    SEModule,
     MyNetwork,
+    SEModule,
+    build_activation,
+    get_net_device,
+    make_divisible,
+    val2list,
 )
+from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
+    ConvLayer,
+    IdentityLayer,
+    LinearLayer,
+    MBConvLayer,
+    ResNetBottleneckBlock,
+    set_layer_from_config,
+)
+
 from .dynamic_op import (
-    DynamicSeparableConv2d,
-    DynamicConv2d,
     DynamicBatchNorm2d,
-    DynamicSE,
+    DynamicConv2d,
     DynamicGroupNorm,
+    DynamicLinear,
+    DynamicSE,
+    DynamicSeparableConv2d,
 )
-from .dynamic_op import DynamicLinear
 
 __all__ = [
     "adjust_bn_according_to_idx",
@@ -51,11 +54,7 @@ def adjust_bn_according_to_idx(bn, idx):
 
 
 def copy_bn(target_bn, src_bn):
-    feature_dim = (
-        target_bn.num_channels
-        if isinstance(target_bn, nn.GroupNorm)
-        else target_bn.num_features
-    )
+    feature_dim = target_bn.num_channels if isinstance(target_bn, nn.GroupNorm) else target_bn.num_features
 
     target_bn.weight.data.copy_(src_bn.weight.data[:feature_dim])
     target_bn.bias.data.copy_(src_bn.bias.data[:feature_dim])
@@ -107,20 +106,14 @@ class DynamicLinearLayer(MyModule):
         return DynamicLinearLayer(**config)
 
     def get_active_subnet(self, in_features, preserve_weight=True):
-        sub_layer = LinearLayer(
-            in_features, self.out_features, self.bias, dropout_rate=self.dropout_rate
-        )
+        sub_layer = LinearLayer(in_features, self.out_features, self.bias, dropout_rate=self.dropout_rate)
         sub_layer = sub_layer.to(get_net_device(self))
         if not preserve_weight:
             return sub_layer
 
-        sub_layer.linear.weight.data.copy_(
-            self.linear.get_active_weight(self.out_features, in_features).data
-        )
+        sub_layer.linear.weight.data.copy_(self.linear.get_active_weight(self.out_features, in_features).data)
         if self.bias:
-            sub_layer.linear.bias.data.copy_(
-                self.linear.get_active_bias(self.out_features).data
-            )
+            sub_layer.linear.bias.data.copy_(self.linear.get_active_bias(self.out_features).data)
         return sub_layer
 
     def get_active_subnet_config(self, in_features):
@@ -169,9 +162,7 @@ class DynamicMBConvLayer(MyModule):
                     [
                         (
                             "conv",
-                            DynamicConv2d(
-                                max(self.in_channel_list), max_middle_channel
-                            ),
+                            DynamicConv2d(max(self.in_channel_list), max_middle_channel),
                         ),
                         ("bn", DynamicBatchNorm2d(max_middle_channel)),
                         ("act", build_activation(self.act_func)),
@@ -184,9 +175,7 @@ class DynamicMBConvLayer(MyModule):
                 [
                     (
                         "conv",
-                        DynamicSeparableConv2d(
-                            max_middle_channel, self.kernel_size_list, self.stride
-                        ),
+                        DynamicSeparableConv2d(max_middle_channel, self.kernel_size_list, self.stride),
                     ),
                     ("bn", DynamicBatchNorm2d(max_middle_channel)),
                     ("act", build_activation(self.act_func)),
@@ -273,9 +262,7 @@ class DynamicMBConvLayer(MyModule):
         return max(self.out_channel_list)
 
     def active_middle_channel(self, in_channel):
-        return make_divisible(
-            round(in_channel * self.active_expand_ratio), MyNetwork.CHANNEL_DIVISIBLE
-        )
+        return make_divisible(round(in_channel * self.active_expand_ratio), MyNetwork.CHANNEL_DIVISIBLE)
 
     ############################################################################################
 
@@ -290,16 +277,12 @@ class DynamicMBConvLayer(MyModule):
         # copy weight from current layer
         if sub_layer.inverted_bottleneck is not None:
             sub_layer.inverted_bottleneck.conv.weight.data.copy_(
-                self.inverted_bottleneck.conv.get_active_filter(
-                    middle_channel, in_channel
-                ).data,
+                self.inverted_bottleneck.conv.get_active_filter(middle_channel, in_channel).data,
             )
             copy_bn(sub_layer.inverted_bottleneck.bn, self.inverted_bottleneck.bn.bn)
 
         sub_layer.depth_conv.conv.weight.data.copy_(
-            self.depth_conv.conv.get_active_filter(
-                middle_channel, self.active_kernel_size
-            ).data
+            self.depth_conv.conv.get_active_filter(middle_channel, self.active_kernel_size).data
         )
         copy_bn(sub_layer.depth_conv.bn, self.depth_conv.bn.bn)
 
@@ -311,9 +294,7 @@ class DynamicMBConvLayer(MyModule):
             sub_layer.depth_conv.se.fc.reduce.weight.data.copy_(
                 self.depth_conv.se.get_active_reduce_weight(se_mid, middle_channel).data
             )
-            sub_layer.depth_conv.se.fc.reduce.bias.data.copy_(
-                self.depth_conv.se.get_active_reduce_bias(se_mid).data
-            )
+            sub_layer.depth_conv.se.fc.reduce.bias.data.copy_(self.depth_conv.se.get_active_reduce_bias(se_mid).data)
 
             sub_layer.depth_conv.se.fc.expand.weight.data.copy_(
                 self.depth_conv.se.get_active_expand_weight(se_mid, middle_channel).data
@@ -323,9 +304,7 @@ class DynamicMBConvLayer(MyModule):
             )
 
         sub_layer.point_linear.conv.weight.data.copy_(
-            self.point_linear.conv.get_active_filter(
-                self.active_out_channel, middle_channel
-            ).data
+            self.point_linear.conv.get_active_filter(self.active_out_channel, middle_channel).data
         )
         copy_bn(sub_layer.point_linear.bn, self.point_linear.bn.bn)
 
@@ -345,9 +324,7 @@ class DynamicMBConvLayer(MyModule):
         }
 
     def re_organize_middle_weights(self, expand_ratio_stage=0):
-        importance = torch.sum(
-            torch.abs(self.point_linear.conv.conv.weight.data), dim=(0, 2, 3)
-        )
+        importance = torch.sum(torch.abs(self.point_linear.conv.conv.weight.data), dim=(0, 2, 3))
         if isinstance(self.depth_conv.bn, DynamicGroupNorm):
             channel_per_group = self.depth_conv.bn.channel_per_group
             importance_chunks = torch.split(importance, channel_per_group)
@@ -379,22 +356,16 @@ class DynamicMBConvLayer(MyModule):
         )
 
         adjust_bn_according_to_idx(self.depth_conv.bn.bn, sorted_idx)
-        self.depth_conv.conv.conv.weight.data = torch.index_select(
-            self.depth_conv.conv.conv.weight.data, 0, sorted_idx
-        )
+        self.depth_conv.conv.conv.weight.data = torch.index_select(self.depth_conv.conv.conv.weight.data, 0, sorted_idx)
 
         if self.use_se:
             # se expand: output dim 0 reorganize
             se_expand = self.depth_conv.se.fc.expand
-            se_expand.weight.data = torch.index_select(
-                se_expand.weight.data, 0, sorted_idx
-            )
+            se_expand.weight.data = torch.index_select(se_expand.weight.data, 0, sorted_idx)
             se_expand.bias.data = torch.index_select(se_expand.bias.data, 0, sorted_idx)
             # se reduce: input dim 1 reorganize
             se_reduce = self.depth_conv.se.fc.reduce
-            se_reduce.weight.data = torch.index_select(
-                se_reduce.weight.data, 1, sorted_idx
-            )
+            se_reduce.weight.data = torch.index_select(se_reduce.weight.data, 1, sorted_idx)
             # middle weight reorganize
             se_importance = torch.sum(torch.abs(se_expand.weight.data), dim=(0, 2, 3))
             se_importance, se_idx = torch.sort(se_importance, dim=0, descending=True)
@@ -500,9 +471,7 @@ class DynamicConvLayer(MyModule):
         if not preserve_weight:
             return sub_layer
 
-        sub_layer.conv.weight.data.copy_(
-            self.conv.get_active_filter(self.active_out_channel, in_channel).data
-        )
+        sub_layer.conv.weight.data.copy_(self.conv.get_active_filter(self.active_out_channel, in_channel).data)
         if self.use_bn:
             copy_bn(sub_layer.bn, self.bn.bn)
 
@@ -567,9 +536,7 @@ class DynamicResNetBottleneckBlock(MyModule):
                 [
                     (
                         "conv",
-                        DynamicConv2d(
-                            max_middle_channel, max_middle_channel, kernel_size, stride
-                        ),
+                        DynamicConv2d(max_middle_channel, max_middle_channel, kernel_size, stride),
                     ),
                     ("bn", DynamicBatchNorm2d(max_middle_channel)),
                     ("act", build_activation(self.act_func, inplace=True)),
@@ -590,9 +557,7 @@ class DynamicResNetBottleneckBlock(MyModule):
         )
 
         if self.stride == 1 and self.in_channel_list == self.out_channel_list:
-            self.downsample = IdentityLayer(
-                max(self.in_channel_list), max(self.out_channel_list)
-            )
+            self.downsample = IdentityLayer(max(self.in_channel_list), max(self.out_channel_list))
         elif self.downsample_mode == "conv":
             self.downsample = nn.Sequential(
                 OrderedDict(
@@ -624,9 +589,7 @@ class DynamicResNetBottleneckBlock(MyModule):
                         ),
                         (
                             "conv",
-                            DynamicConv2d(
-                                max(self.in_channel_list), max(self.out_channel_list)
-                            ),
+                            DynamicConv2d(max(self.in_channel_list), max(self.out_channel_list)),
                         ),
                         ("bn", DynamicBatchNorm2d(max(self.out_channel_list))),
                     ]
@@ -670,9 +633,7 @@ class DynamicResNetBottleneckBlock(MyModule):
                 self.active_out_channel,
                 self.stride,
             ),
-            "Identity"
-            if isinstance(self.downsample, IdentityLayer)
-            else self.downsample_mode,
+            "Identity" if isinstance(self.downsample, IdentityLayer) else self.downsample_mode,
         )
 
     @property
@@ -719,31 +680,23 @@ class DynamicResNetBottleneckBlock(MyModule):
 
         # copy weight from current layer
         sub_layer.conv1.conv.weight.data.copy_(
-            self.conv1.conv.get_active_filter(
-                self.active_middle_channels, in_channel
-            ).data
+            self.conv1.conv.get_active_filter(self.active_middle_channels, in_channel).data
         )
         copy_bn(sub_layer.conv1.bn, self.conv1.bn.bn)
 
         sub_layer.conv2.conv.weight.data.copy_(
-            self.conv2.conv.get_active_filter(
-                self.active_middle_channels, self.active_middle_channels
-            ).data
+            self.conv2.conv.get_active_filter(self.active_middle_channels, self.active_middle_channels).data
         )
         copy_bn(sub_layer.conv2.bn, self.conv2.bn.bn)
 
         sub_layer.conv3.conv.weight.data.copy_(
-            self.conv3.conv.get_active_filter(
-                self.active_out_channel, self.active_middle_channels
-            ).data
+            self.conv3.conv.get_active_filter(self.active_out_channel, self.active_middle_channels).data
         )
         copy_bn(sub_layer.conv3.bn, self.conv3.bn.bn)
 
         if not isinstance(self.downsample, IdentityLayer):
             sub_layer.downsample.conv.weight.data.copy_(
-                self.downsample.conv.get_active_filter(
-                    self.active_out_channel, in_channel
-                ).data
+                self.downsample.conv.get_active_filter(self.active_out_channel, in_channel).data
             )
             copy_bn(sub_layer.downsample.bn, self.downsample.bn.bn)
 
@@ -765,9 +718,7 @@ class DynamicResNetBottleneckBlock(MyModule):
 
     def re_organize_middle_weights(self, expand_ratio_stage=0):
         # conv3 -> conv2
-        importance = torch.sum(
-            torch.abs(self.conv3.conv.conv.weight.data), dim=(0, 2, 3)
-        )
+        importance = torch.sum(torch.abs(self.conv3.conv.conv.weight.data), dim=(0, 2, 3))
         if isinstance(self.conv2.bn, DynamicGroupNorm):
             channel_per_group = self.conv2.bn.channel_per_group
             importance_chunks = torch.split(importance, channel_per_group)
@@ -793,18 +744,12 @@ class DynamicResNetBottleneckBlock(MyModule):
                 right = left
 
         sorted_importance, sorted_idx = torch.sort(importance, dim=0, descending=True)
-        self.conv3.conv.conv.weight.data = torch.index_select(
-            self.conv3.conv.conv.weight.data, 1, sorted_idx
-        )
+        self.conv3.conv.conv.weight.data = torch.index_select(self.conv3.conv.conv.weight.data, 1, sorted_idx)
         adjust_bn_according_to_idx(self.conv2.bn.bn, sorted_idx)
-        self.conv2.conv.conv.weight.data = torch.index_select(
-            self.conv2.conv.conv.weight.data, 0, sorted_idx
-        )
+        self.conv2.conv.conv.weight.data = torch.index_select(self.conv2.conv.conv.weight.data, 0, sorted_idx)
 
         # conv2 -> conv1
-        importance = torch.sum(
-            torch.abs(self.conv2.conv.conv.weight.data), dim=(0, 2, 3)
-        )
+        importance = torch.sum(torch.abs(self.conv2.conv.conv.weight.data), dim=(0, 2, 3))
         if isinstance(self.conv1.bn, DynamicGroupNorm):
             channel_per_group = self.conv1.bn.channel_per_group
             importance_chunks = torch.split(importance, channel_per_group)
@@ -830,12 +775,8 @@ class DynamicResNetBottleneckBlock(MyModule):
                 right = left
         sorted_importance, sorted_idx = torch.sort(importance, dim=0, descending=True)
 
-        self.conv2.conv.conv.weight.data = torch.index_select(
-            self.conv2.conv.conv.weight.data, 1, sorted_idx
-        )
+        self.conv2.conv.conv.weight.data = torch.index_select(self.conv2.conv.conv.weight.data, 1, sorted_idx)
         adjust_bn_according_to_idx(self.conv1.bn.bn, sorted_idx)
-        self.conv1.conv.conv.weight.data = torch.index_select(
-            self.conv1.conv.conv.weight.data, 0, sorted_idx
-        )
+        self.conv1.conv.conv.weight.data = torch.index_select(self.conv1.conv.conv.weight.data, 0, sorted_idx)
 
         return None

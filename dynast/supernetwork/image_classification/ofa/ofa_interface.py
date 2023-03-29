@@ -18,14 +18,19 @@ import uuid
 from datetime import datetime
 from typing import Tuple
 
-from dynast.supernetwork.image_classification.ofa.ofa import model_zoo as ofa_model_zoo
 import torch
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.data_providers.imagenet import ImagenetDataProvider
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.run_manager import ImagenetRunConfig, RunManager
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
+from dynast.supernetwork.image_classification.ofa.ofa import model_zoo as ofa_model_zoo
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.data_providers.imagenet import (
+    ImagenetDataProvider,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.run_manager import (
+    ImagenetRunConfig,
+    RunManager,
+)
 from dynast.utils import log
 from dynast.utils.nn import get_macs, get_parameters, measure_latency
 

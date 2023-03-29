@@ -2,13 +2,21 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 
-from collections import OrderedDict
-from dynast.supernetwork.image_classification.ofa.ofa.utils import get_same_padding, min_divisible_value, SEModule, ShuffleLayer
-from dynast.supernetwork.image_classification.ofa.ofa.utils import MyNetwork, MyModule
-from dynast.supernetwork.image_classification.ofa.ofa.utils import build_activation, make_divisible
+from dynast.supernetwork.image_classification.ofa.ofa.utils import (
+    MyModule,
+    MyNetwork,
+    SEModule,
+    ShuffleLayer,
+    build_activation,
+    get_same_padding,
+    make_divisible,
+    min_divisible_value,
+)
 
 __all__ = [
     "set_layer_from_config",
@@ -75,9 +83,7 @@ class My2DLayer(MyModule):
         else:
             modules["bn"] = None
         # activation
-        modules["act"] = build_activation(
-            self.act_func, self.ops_list[0] != "act" and self.use_bn
-        )
+        modules["act"] = build_activation(self.act_func, self.ops_list[0] != "act" and self.use_bn)
         # dropout
         if self.dropout_rate > 0:
             modules["dropout"] = nn.Dropout2d(self.dropout_rate, inplace=True)
@@ -169,9 +175,7 @@ class ConvLayer(My2DLayer):
         self.has_shuffle = has_shuffle
         self.use_se = use_se
 
-        super(ConvLayer, self).__init__(
-            in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order
-        )
+        super(ConvLayer, self).__init__(in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order)
         if self.use_se:
             self.add_module("se", SEModule(self.out_channels))
 
@@ -258,9 +262,7 @@ class IdentityLayer(My2DLayer):
         dropout_rate=0,
         ops_order="weight_bn_act",
     ):
-        super(IdentityLayer, self).__init__(
-            in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order
-        )
+        super(IdentityLayer, self).__init__(in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order)
 
     def weight_op(self):
         return None
@@ -321,9 +323,7 @@ class LinearLayer(MyModule):
         else:
             modules["dropout"] = None
         # linear
-        modules["weight"] = {
-            "linear": nn.Linear(self.in_features, self.out_features, self.bias)
-        }
+        modules["weight"] = {"linear": nn.Linear(self.in_features, self.out_features, self.bias)}
 
         # add modules
         for op in self.ops_list:
@@ -378,9 +378,7 @@ class LinearLayer(MyModule):
 
 
 class MultiHeadLinearLayer(MyModule):
-    def __init__(
-        self, in_features, out_features, num_heads=1, bias=True, dropout_rate=0
-    ):
+    def __init__(self, in_features, out_features, num_heads=1, bias=True, dropout_rate=0):
         super(MultiHeadLinearLayer, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -431,15 +429,12 @@ class MultiHeadLinearLayer(MyModule):
         return MultiHeadLinearLayer(**config)
 
     def __repr__(self):
-        return (
-            "MultiHeadLinear(in_features=%d, out_features=%d, num_heads=%d, bias=%s, dropout_rate=%s)"
-            % (
-                self.in_features,
-                self.out_features,
-                self.num_heads,
-                self.bias,
-                self.dropout_rate,
-            )
+        return "MultiHeadLinear(in_features=%d, out_features=%d, num_heads=%d, bias=%s, dropout_rate=%s)" % (
+            self.in_features,
+            self.out_features,
+            self.num_heads,
+            self.bias,
+            self.dropout_rate,
         )
 
 
@@ -504,9 +499,7 @@ class MBConvLayer(MyModule):
                     [
                         (
                             "conv",
-                            nn.Conv2d(
-                                self.in_channels, feature_dim, 1, 1, 0, bias=False
-                            ),
+                            nn.Conv2d(self.in_channels, feature_dim, 1, 1, 0, bias=False),
                         ),
                         ("bn", nn.BatchNorm2d(feature_dim)),
                         ("act", build_activation(self.act_func, inplace=True)),
@@ -515,11 +508,7 @@ class MBConvLayer(MyModule):
             )
 
         pad = get_same_padding(self.kernel_size)
-        groups = (
-            feature_dim
-            if self.groups is None
-            else min_divisible_value(feature_dim, self.groups)
-        )
+        groups = feature_dim if self.groups is None else min_divisible_value(feature_dim, self.groups)
         depth_conv_modules = [
             (
                 "conv",
@@ -633,9 +622,7 @@ class ResidualBlock(MyModule):
 
     @staticmethod
     def build_from_config(config):
-        conv_config = (
-            config["conv"] if "conv" in config else config["mobile_inverted_conv"]
-        )
+        conv_config = config["conv"] if "conv" in config else config["mobile_inverted_conv"]
         conv = set_layer_from_config(conv_config)
         shortcut = set_layer_from_config(config["shortcut"])
         return ResidualBlock(conv, shortcut)
@@ -736,9 +723,7 @@ class ResNetBottleneckBlock(MyModule):
                     [
                         (
                             "conv",
-                            nn.Conv2d(
-                                in_channels, out_channels, 1, stride, 0, bias=False
-                            ),
+                            nn.Conv2d(in_channels, out_channels, 1, stride, 0, bias=False),
                         ),
                         ("bn", nn.BatchNorm2d(out_channels)),
                     ]
@@ -794,9 +779,7 @@ class ResNetBottleneckBlock(MyModule):
                 self.stride,
                 self.groups,
             ),
-            "Identity"
-            if isinstance(self.downsample, IdentityLayer)
-            else self.downsample_mode,
+            "Identity" if isinstance(self.downsample, IdentityLayer) else self.downsample_mode,
         )
 
     @property

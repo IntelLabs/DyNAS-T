@@ -2,18 +2,18 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
-import torch.nn.functional as F
-import torch.nn as nn
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 
 from dynast.supernetwork.image_classification.ofa.ofa.utils import (
-    get_same_padding,
-    sub_filter_start_end,
-    make_divisible,
-    SEModule,
-    MyNetwork,
     MyConv2d,
+    MyNetwork,
+    SEModule,
+    get_same_padding,
+    make_divisible,
+    sub_filter_start_end,
 )
 
 __all__ = [
@@ -58,9 +58,7 @@ class DynamicSeparableConv2d(nn.Module):
                 ks_larger = self._ks_set[i + 1]
                 param_name = "%dto%d" % (ks_larger, ks_small)
                 # noinspection PyArgumentList
-                scale_params["%s_matrix" % param_name] = Parameter(
-                    torch.eye(ks_small ** 2)
-                )
+                scale_params["%s_matrix" % param_name] = Parameter(torch.eye(ks_small**2))
             for name, param in scale_params.items():
                 self.register_parameter(name, param)
 
@@ -73,9 +71,7 @@ class DynamicSeparableConv2d(nn.Module):
         start, end = sub_filter_start_end(max_kernel_size, kernel_size)
         filters = self.conv.weight[:out_channel, :in_channel, start:end, start:end]
         if self.KERNEL_TRANSFORM_MODE is not None and kernel_size < max_kernel_size:
-            start_filter = self.conv.weight[
-                :out_channel, :in_channel, :, :
-            ]  # start with max kernel
+            start_filter = self.conv.weight[:out_channel, :in_channel, :, :]  # start with max kernel
             for i in range(len(self._ks_set) - 1, 0, -1):
                 src_ks = self._ks_set[i]
                 if src_ks <= kernel_size:
@@ -84,20 +80,14 @@ class DynamicSeparableConv2d(nn.Module):
                 start, end = sub_filter_start_end(src_ks, target_ks)
                 _input_filter = start_filter[:, :, start:end, start:end]
                 _input_filter = _input_filter.contiguous()
-                _input_filter = _input_filter.view(
-                    _input_filter.size(0), _input_filter.size(1), -1
-                )
+                _input_filter = _input_filter.view(_input_filter.size(0), _input_filter.size(1), -1)
                 _input_filter = _input_filter.view(-1, _input_filter.size(2))
                 _input_filter = F.linear(
                     _input_filter,
                     self.__getattr__("%dto%d_matrix" % (src_ks, target_ks)),
                 )
-                _input_filter = _input_filter.view(
-                    filters.size(0), filters.size(1), target_ks ** 2
-                )
-                _input_filter = _input_filter.view(
-                    filters.size(0), filters.size(1), target_ks, target_ks
-                )
+                _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks**2)
+                _input_filter = _input_filter.view(filters.size(0), filters.size(1), target_ks, target_ks)
                 start_filter = _input_filter
             filters = start_filter
         return filters
@@ -110,19 +100,13 @@ class DynamicSeparableConv2d(nn.Module):
         filters = self.get_active_filter(in_channel, kernel_size).contiguous()
 
         padding = get_same_padding(kernel_size)
-        filters = (
-            self.conv.weight_standardization(filters)
-            if isinstance(self.conv, MyConv2d)
-            else filters
-        )
+        filters = self.conv.weight_standardization(filters) if isinstance(self.conv, MyConv2d) else filters
         y = F.conv2d(x, filters, None, self.stride, padding, self.dilation, in_channel)
         return y
 
 
 class DynamicConv2d(nn.Module):
-    def __init__(
-        self, max_in_channels, max_out_channels, kernel_size=1, stride=1, dilation=1
-    ):
+    def __init__(self, max_in_channels, max_out_channels, kernel_size=1, stride=1, dilation=1):
         super(DynamicConv2d, self).__init__()
 
         self.max_in_channels = max_in_channels
@@ -151,11 +135,7 @@ class DynamicConv2d(nn.Module):
         filters = self.get_active_filter(out_channel, in_channel).contiguous()
 
         padding = get_same_padding(self.kernel_size)
-        filters = (
-            self.conv.weight_standardization(filters)
-            if isinstance(self.conv, MyConv2d)
-            else filters
-        )
+        filters = self.conv.weight_standardization(filters) if isinstance(self.conv, MyConv2d) else filters
         y = F.conv2d(x, filters, None, self.stride, padding, self.dilation, 1)
         return y
 
@@ -215,11 +195,7 @@ class DynamicGroupConv2d(nn.Module):
 
         filters = self.get_active_filter(kernel_size, groups).contiguous()
         padding = get_same_padding(kernel_size)
-        filters = (
-            self.conv.weight_standardization(filters)
-            if isinstance(self.conv, MyConv2d)
-            else filters
-        )
+        filters = self.conv.weight_standardization(filters) if isinstance(self.conv, MyConv2d) else filters
         y = F.conv2d(
             x,
             filters,
@@ -273,18 +249,14 @@ class DynamicBatchNorm2d(nn.Module):
 
 
 class DynamicGroupNorm(nn.GroupNorm):
-    def __init__(
-        self, num_groups, num_channels, eps=1e-5, affine=True, channel_per_group=None
-    ):
+    def __init__(self, num_groups, num_channels, eps=1e-5, affine=True, channel_per_group=None):
         super(DynamicGroupNorm, self).__init__(num_groups, num_channels, eps, affine)
         self.channel_per_group = channel_per_group
 
     def forward(self, x):
         n_channels = x.size(1)
         n_groups = n_channels // self.channel_per_group
-        return F.group_norm(
-            x, n_groups, self.weight[:n_channels], self.bias[:n_channels], self.eps
-        )
+        return F.group_norm(x, n_groups, self.weight[:n_channels], self.bias[:n_channels], self.eps)
 
     @property
     def bn(self):
@@ -301,18 +273,14 @@ class DynamicSE(SEModule):
         else:
             assert in_channel % groups == 0
             sub_in_channels = in_channel // groups
-            sub_filters = torch.chunk(
-                self.fc.reduce.weight[:num_mid, :, :, :], groups, dim=1
-            )
+            sub_filters = torch.chunk(self.fc.reduce.weight[:num_mid, :, :, :], groups, dim=1)
             return torch.cat(
                 [sub_filter[:, :sub_in_channels, :, :] for sub_filter in sub_filters],
                 dim=1,
             )
 
     def get_active_reduce_bias(self, num_mid):
-        return (
-            self.fc.reduce.bias[:num_mid] if self.fc.reduce.bias is not None else None
-        )
+        return self.fc.reduce.bias[:num_mid] if self.fc.reduce.bias is not None else None
 
     def get_active_expand_weight(self, num_mid, in_channel, groups=None):
         if groups is None or groups == 1:
@@ -320,9 +288,7 @@ class DynamicSE(SEModule):
         else:
             assert in_channel % groups == 0
             sub_in_channels = in_channel // groups
-            sub_filters = torch.chunk(
-                self.fc.expand.weight[:, :num_mid, :, :], groups, dim=0
-            )
+            sub_filters = torch.chunk(self.fc.expand.weight[:, :num_mid, :, :], groups, dim=0)
             return torch.cat(
                 [sub_filter[:sub_in_channels, :, :, :] for sub_filter in sub_filters],
                 dim=0,
@@ -330,38 +296,26 @@ class DynamicSE(SEModule):
 
     def get_active_expand_bias(self, in_channel, groups=None):
         if groups is None or groups == 1:
-            return (
-                self.fc.expand.bias[:in_channel]
-                if self.fc.expand.bias is not None
-                else None
-            )
+            return self.fc.expand.bias[:in_channel] if self.fc.expand.bias is not None else None
         else:
             assert in_channel % groups == 0
             sub_in_channels = in_channel // groups
             sub_bias_list = torch.chunk(self.fc.expand.bias, groups, dim=0)
-            return torch.cat(
-                [sub_bias[:sub_in_channels] for sub_bias in sub_bias_list], dim=0
-            )
+            return torch.cat([sub_bias[:sub_in_channels] for sub_bias in sub_bias_list], dim=0)
 
     def forward(self, x, groups=None):
         in_channel = x.size(1)
-        num_mid = make_divisible(
-            in_channel // self.reduction, divisor=MyNetwork.CHANNEL_DIVISIBLE
-        )
+        num_mid = make_divisible(in_channel // self.reduction, divisor=MyNetwork.CHANNEL_DIVISIBLE)
 
         y = x.mean(3, keepdim=True).mean(2, keepdim=True)
         # reduce
-        reduce_filter = self.get_active_reduce_weight(
-            num_mid, in_channel, groups=groups
-        ).contiguous()
+        reduce_filter = self.get_active_reduce_weight(num_mid, in_channel, groups=groups).contiguous()
         reduce_bias = self.get_active_reduce_bias(num_mid)
         y = F.conv2d(y, reduce_filter, reduce_bias, 1, 0, 1, 1)
         # relu
         y = self.fc.relu(y)
         # expand
-        expand_filter = self.get_active_expand_weight(
-            num_mid, in_channel, groups=groups
-        ).contiguous()
+        expand_filter = self.get_active_expand_weight(num_mid, in_channel, groups=groups).contiguous()
         expand_bias = self.get_active_expand_bias(in_channel, groups=groups)
         y = F.conv2d(y, expand_filter, expand_bias, 1, 0, 1, 1)
         # hard sigmoid

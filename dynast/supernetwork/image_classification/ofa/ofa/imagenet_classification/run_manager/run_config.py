@@ -2,8 +2,8 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils import calc_learning_rate, build_optimizer
 from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.data_providers import ImagenetDataProvider
+from dynast.supernetwork.image_classification.ofa.ofa.utils import build_optimizer, calc_learning_rate
 
 __all__ = ["RunConfig", "ImagenetRunConfig", "DistributedImageNetRunConfig"]
 
@@ -66,16 +66,12 @@ class RunConfig:
 
     def adjust_learning_rate(self, optimizer, epoch, batch=0, nBatch=None):
         """adjust learning of a given optimizer and return the new learning rate"""
-        new_lr = calc_learning_rate(
-            epoch, self.init_lr, self.n_epochs, batch, nBatch, self.lr_schedule_type
-        )
+        new_lr = calc_learning_rate(epoch, self.init_lr, self.n_epochs, batch, nBatch, self.lr_schedule_type)
         for param_group in optimizer.param_groups:
             param_group["lr"] = new_lr
         return new_lr
 
-    def warmup_adjust_learning_rate(
-        self, optimizer, T_total, nBatch, epoch, batch=0, warmup_lr=0
-    ):
+    def warmup_adjust_learning_rate(self, optimizer, T_total, nBatch, epoch, batch=0, warmup_lr=0):
         T_cur = epoch * nBatch + batch + 1
         new_lr = T_cur / T_total * (self.init_lr - warmup_lr) + warmup_lr
         for param_group in optimizer.param_groups:
@@ -100,12 +96,8 @@ class RunConfig:
     def test_loader(self):
         return self.data_provider.test
 
-    def random_sub_train_loader(
-        self, n_images, batch_size, num_worker=None, num_replicas=None, rank=None
-    ):
-        return self.data_provider.build_sub_train_loader(
-            n_images, batch_size, num_worker, num_replicas, rank
-        )
+    def random_sub_train_loader(self, n_images, batch_size, num_worker=None, num_replicas=None, rank=None):
+        return self.data_provider.build_sub_train_loader(n_images, batch_size, num_worker, num_replicas, rank)
 
     """ optimizer """
 

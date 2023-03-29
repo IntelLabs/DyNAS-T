@@ -3,15 +3,19 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import json
+
 import torch
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils import download_url
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks import get_net_by_name, proxyless_base
 from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.networks import (
     OFAMobileNetV3,
     OFAProxylessNASNets,
     OFAResNets,
 )
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks import (
+    get_net_by_name,
+    proxyless_base,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.utils import download_url
 
 __all__ = [
     "ofa_specialized",
@@ -109,9 +113,7 @@ def proxylessnas_net(net_id, pretrained=True):
     if pretrained:
         net.load_state_dict(
             torch.load(
-                download_url(
-                    "https://hanlab.mit.edu/files/proxylessNAS/%s.pth" % net_id
-                ),
+                download_url("https://hanlab.mit.edu/files/proxylessNAS/%s.pth" % net_id),
                 map_location="cpu",
             )["state_dict"]
         )

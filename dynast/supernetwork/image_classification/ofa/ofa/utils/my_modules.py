@@ -3,6 +3,7 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import math
+
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -65,9 +66,7 @@ def replace_bn_with_gn(model, gn_channel_per_group):
         to_replace_dict = {}
         for name, sub_m in m.named_children():
             if isinstance(sub_m, nn.BatchNorm2d):
-                num_groups = sub_m.num_features // min_divisible_value(
-                    sub_m.num_features, gn_channel_per_group
-                )
+                num_groups = sub_m.num_features // min_divisible_value(sub_m.num_features, gn_channel_per_group)
                 gn_m = nn.GroupNorm(
                     num_groups=num_groups,
                     num_channels=sub_m.num_features,
@@ -182,16 +181,9 @@ class MyConv2d(nn.Conv2d):
 
     def weight_standardization(self, weight):
         if self.WS_EPS is not None:
-            weight_mean = (
-                weight.mean(dim=1, keepdim=True)
-                .mean(dim=2, keepdim=True)
-                .mean(dim=3, keepdim=True)
-            )
+            weight_mean = weight.mean(dim=1, keepdim=True).mean(dim=2, keepdim=True).mean(dim=3, keepdim=True)
             weight = weight - weight_mean
-            std = (
-                weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1)
-                + self.WS_EPS
-            )
+            std = weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1) + self.WS_EPS
             weight = weight / std.expand_as(weight)
         return weight
 

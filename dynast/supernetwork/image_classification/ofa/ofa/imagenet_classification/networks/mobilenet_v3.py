@@ -3,25 +3,24 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import copy
+
 import torch.nn as nn
 
+from dynast.supernetwork.image_classification.ofa.ofa.utils import MyGlobalAvgPool2d, MyNetwork, make_divisible
 from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
-    set_layer_from_config,
-    MBConvLayer,
     ConvLayer,
     IdentityLayer,
     LinearLayer,
+    MBConvLayer,
     ResidualBlock,
+    set_layer_from_config,
 )
-from dynast.supernetwork.image_classification.ofa.ofa.utils import MyNetwork, make_divisible, MyGlobalAvgPool2d
 
 __all__ = ["MobileNetV3", "MobileNetV3Large"]
 
 
 class MobileNetV3(MyNetwork):
-    def __init__(
-        self, first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
-    ):
+    def __init__(self, first_conv, blocks, final_expand_layer, feature_mix_layer, classifier):
         super(MobileNetV3, self).__init__()
 
         self.first_conv = first_conv
@@ -76,9 +75,7 @@ class MobileNetV3(MyNetwork):
         for block_config in config["blocks"]:
             blocks.append(ResidualBlock.build_from_config(block_config))
 
-        net = MobileNetV3(
-            first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
-        )
+        net = MobileNetV3(first_conv, blocks, final_expand_layer, feature_mix_layer, classifier)
         if "bn" in config:
             net.set_bn_param(**config["bn"])
         else:
@@ -89,9 +86,7 @@ class MobileNetV3(MyNetwork):
     def zero_last_gamma(self):
         for m in self.modules():
             if isinstance(m, ResidualBlock):
-                if isinstance(m.conv, MBConvLayer) and isinstance(
-                    m.shortcut, IdentityLayer
-                ):
+                if isinstance(m.conv, MBConvLayer) and isinstance(m.shortcut, IdentityLayer):
                     m.conv.point_linear.bn.weight.data.zero_()
 
     @property
@@ -172,9 +167,7 @@ class MobileNetV3(MyNetwork):
         return first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
 
     @staticmethod
-    def adjust_cfg(
-        cfg, ks=None, expand_ratio=None, depth_param=None, stage_width_list=None
-    ):
+    def adjust_cfg(cfg, ks=None, expand_ratio=None, depth_param=None, stage_width_list=None):
         for i, (stage_id, block_config_list) in enumerate(cfg.items()):
             for block_config in block_config_list:
                 if ks is not None and stage_id != "0":
@@ -186,9 +179,7 @@ class MobileNetV3(MyNetwork):
                         block_config[2] = stage_width_list[i]
             if depth_param is not None and stage_id != "0":
                 new_block_config_list = [block_config_list[0]]
-                new_block_config_list += [
-                    copy.deepcopy(block_config_list[-1]) for _ in range(depth_param - 1)
-                ]
+                new_block_config_list += [copy.deepcopy(block_config_list[-1]) for _ in range(depth_param - 1)]
                 cfg[stage_id] = new_block_config_list
         return cfg
 
@@ -220,13 +211,9 @@ class MobileNetV3Large(MobileNetV3):
         input_channel = 16
         last_channel = 1280
 
-        input_channel = make_divisible(
-            input_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
+        input_channel = make_divisible(input_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
         last_channel = (
-            make_divisible(last_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
-            if width_mult > 1.0
-            else last_channel
+            make_divisible(last_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE) if width_mult > 1.0 else last_channel
         )
 
         cfg = {
@@ -265,12 +252,8 @@ class MobileNetV3Large(MobileNetV3):
         for stage_id, block_config_list in cfg.items():
             for block_config in block_config_list:
                 if block_config[1] is not None:
-                    block_config[1] = make_divisible(
-                        block_config[1] * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-                    )
-                block_config[2] = make_divisible(
-                    block_config[2] * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-                )
+                    block_config[1] = make_divisible(block_config[1] * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
+                block_config[2] = make_divisible(block_config[2] * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
 
         (
             first_conv,
@@ -278,11 +261,7 @@ class MobileNetV3Large(MobileNetV3):
             final_expand_layer,
             feature_mix_layer,
             classifier,
-        ) = self.build_net_via_cfg(
-            cfg, input_channel, last_channel, n_classes, dropout_rate
-        )
-        super(MobileNetV3Large, self).__init__(
-            first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
-        )
+        ) = self.build_net_via_cfg(cfg, input_channel, last_channel, n_classes, dropout_rate)
+        super(MobileNetV3Large, self).__init__(first_conv, blocks, final_expand_layer, feature_mix_layer, classifier)
         # set bn param
         self.set_bn_param(*bn_param)

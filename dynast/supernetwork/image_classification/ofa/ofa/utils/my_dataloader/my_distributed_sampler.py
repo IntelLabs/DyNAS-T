@@ -1,22 +1,21 @@
 import math
+
 import torch
 from torch.utils.data.distributed import DistributedSampler
 
-__all__ = ["MyDistributedSampler", ]#"WeightedDistributedSampler"]
+__all__ = [
+    "MyDistributedSampler",
+]  # "WeightedDistributedSampler"]
 
 
 class MyDistributedSampler(DistributedSampler):
     """Allow Subset Sampler in Distributed Training"""
 
-    def __init__(
-        self, dataset, num_replicas=None, rank=None, shuffle=True, sub_index_list=None
-    ):
+    def __init__(self, dataset, num_replicas=None, rank=None, shuffle=True, sub_index_list=None):
         super(MyDistributedSampler, self).__init__(dataset, num_replicas, rank, shuffle)
         self.sub_index_list = sub_index_list  # numpy
 
-        self.num_samples = int(
-            math.ceil(len(self.sub_index_list) * 1.0 / self.num_replicas)
-        )
+        self.num_samples = int(math.ceil(len(self.sub_index_list) * 1.0 / self.num_replicas))
         self.total_size = self.num_samples * self.num_replicas
         print("Use MyDistributedSampler: %d, %d" % (self.num_samples, self.total_size))
 

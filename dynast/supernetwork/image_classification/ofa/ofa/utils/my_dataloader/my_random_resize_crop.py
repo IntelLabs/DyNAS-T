@@ -1,11 +1,12 @@
-import time
 import random
+import time
+
+import torchvision.transforms as transforms
+import torchvision.transforms.functional as F
+
 # import math
 # import os
 from PIL import Image
-
-import torchvision.transforms.functional as F
-import torchvision.transforms as transforms
 
 # __all__ = ["MyRandomResizedCrop", "MyResizeRandomCrop", "MyResize"]
 __all__ = ["MyRandomResizedCrop"]
@@ -79,15 +80,11 @@ class MyRandomResizedCrop(transforms.RandomResizedCrop):
             _seed = os.getpid() + time.time()
         random.seed(_seed)
         candidate_sizes, relative_probs = MyRandomResizedCrop.get_candidate_image_size()
-        MyRandomResizedCrop.ACTIVE_SIZE = random.choices(
-            candidate_sizes, weights=relative_probs
-        )[0]
+        MyRandomResizedCrop.ACTIVE_SIZE = random.choices(candidate_sizes, weights=relative_probs)[0]
 
     def __repr__(self):
         interpolate_str = _pil_interpolation_to_str[self.interpolation]
-        format_string = self.__class__.__name__ + "(size={0}".format(
-            MyRandomResizedCrop.IMAGE_SIZE_LIST
-        )
+        format_string = self.__class__.__name__ + "(size={0}".format(MyRandomResizedCrop.IMAGE_SIZE_LIST)
         if MyRandomResizedCrop.CONTINUOUS:
             format_string += "@continuous"
         format_string += ", scale={0}".format(tuple(round(s, 4) for s in self.scale))

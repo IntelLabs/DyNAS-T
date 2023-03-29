@@ -2,8 +2,8 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
-from .proxyless_nets import *
 from .mobilenet_v3 import *
+from .proxyless_nets import *
 from .resnets import *
 
 

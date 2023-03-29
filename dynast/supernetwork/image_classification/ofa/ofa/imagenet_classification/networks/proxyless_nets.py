@@ -3,22 +3,23 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import json
+
 import torch.nn as nn
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
-    set_layer_from_config,
-    MBConvLayer,
-    ConvLayer,
-    IdentityLayer,
-    LinearLayer,
-    ResidualBlock,
-)
 from dynast.supernetwork.image_classification.ofa.ofa.utils import (
+    MyGlobalAvgPool2d,
+    MyNetwork,
     download_url,
     make_divisible,
     val2list,
-    MyNetwork,
-    MyGlobalAvgPool2d,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
+    ConvLayer,
+    IdentityLayer,
+    LinearLayer,
+    MBConvLayer,
+    ResidualBlock,
+    set_layer_from_config,
 )
 
 __all__ = ["proxyless_base", "ProxylessNASNets", "MobileNetV2"]
@@ -87,9 +88,7 @@ class ProxylessNASNets(MyNetwork):
             "bn": self.get_bn_param(),
             "first_conv": self.first_conv.config,
             "blocks": [block.config for block in self.blocks],
-            "feature_mix_layer": None
-            if self.feature_mix_layer is None
-            else self.feature_mix_layer.config,
+            "feature_mix_layer": None if self.feature_mix_layer is None else self.feature_mix_layer.config,
             "classifier": self.classifier.config,
         }
 
@@ -114,9 +113,7 @@ class ProxylessNASNets(MyNetwork):
     def zero_last_gamma(self):
         for m in self.modules():
             if isinstance(m, ResidualBlock):
-                if isinstance(m.conv, MBConvLayer) and isinstance(
-                    m.shortcut, IdentityLayer
-                ):
+                if isinstance(m.conv, MBConvLayer) and isinstance(m.shortcut, IdentityLayer):
                     m.conv.point_linear.bn.weight.data.zero_()
 
     @property
@@ -164,13 +161,9 @@ class MobileNetV2(ProxylessNASNets):
         input_channel = 32
         last_channel = 1280
 
-        input_channel = make_divisible(
-            input_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
+        input_channel = make_divisible(input_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
         last_channel = (
-            make_divisible(last_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
-            if width_mult > 1.0
-            else last_channel
+            make_divisible(last_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE) if width_mult > 1.0 else last_channel
         )
 
         inverted_residual_setting = [
@@ -248,9 +241,7 @@ class MobileNetV2(ProxylessNASNets):
 
         classifier = LinearLayer(last_channel, n_classes, dropout_rate=dropout_rate)
 
-        super(MobileNetV2, self).__init__(
-            first_conv, blocks, feature_mix_layer, classifier
-        )
+        super(MobileNetV2, self).__init__(first_conv, blocks, feature_mix_layer, classifier)
 
         # set bn param
         self.set_bn_param(*bn_param)

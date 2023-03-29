@@ -2,9 +2,10 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
-import math
 import copy
+import math
 import time
+
 import torch
 import torch.nn as nn
 
@@ -83,13 +84,11 @@ def get_net_device(net):
 
 
 def count_parameters(net):
-    #TODO(macsz) Probably can drop.
     total_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
     return total_params
 
 
 def count_net_flops(net, data_shape=(1, 3, 224, 224)):
-    #NOTE(macsz) OFA_DEP_RM This method was changed for code simplificaion.
 
     if isinstance(net, nn.DataParallel):
         net = net.module
@@ -97,10 +96,8 @@ def count_net_flops(net, data_shape=(1, 3, 224, 224)):
     return get_macs(net, data_shape)
 
 
-def measure_net_latency(
-    net, l_type="gpu8", fast=True, input_shape=(3, 224, 224), clean=False
-):
-    #TODO(macsz) Probably can drop.
+def measure_net_latency(net, l_type="gpu8", fast=True, input_shape=(3, 224, 224), clean=False):
+    # TODO(macsz) Probably can drop.
     if isinstance(net, nn.DataParallel):
         net = net.module
 
@@ -168,9 +165,7 @@ def get_net_info(net, input_shape=(3, 224, 224), measure_latency=None, print_inf
     # latencies
     latency_types = [] if measure_latency is None else measure_latency.split("#")
     for l_type in latency_types:
-        latency, measured_latency = measure_net_latency(
-            net, l_type, fast=False, input_shape=input_shape
-        )
+        latency, measured_latency = measure_net_latency(net, l_type, fast=False, input_shape=input_shape)
         net_info["%s latency" % l_type] = {"val": latency, "hist": measured_latency}
 
     if print_info:
@@ -178,10 +173,7 @@ def get_net_info(net, input_shape=(3, 224, 224), measure_latency=None, print_inf
         print("Total training params: %.2fM" % (net_info["params"]))
         print("Total FLOPs: %.2fM" % (net_info["flops"]))
         for l_type in latency_types:
-            print(
-                "Estimated %s latency: %.3fms"
-                % (l_type, net_info["%s latency" % l_type]["val"])
-            )
+            print("Estimated %s latency: %.3fms" % (l_type, net_info["%s latency" % l_type]["val"]))
 
     return net_info
 
@@ -189,9 +181,7 @@ def get_net_info(net, input_shape=(3, 224, 224), measure_latency=None, print_inf
 # """ optimizer """
 
 
-def build_optimizer(
-    net_params, opt_type, opt_param, init_lr, weight_decay, no_decay_keys
-):
+def build_optimizer(net_params, opt_type, opt_param, init_lr, weight_decay, no_decay_keys):
     if no_decay_keys is not None:
         assert isinstance(net_params, list) and len(net_params) == 2
         net_params = [
@@ -203,12 +193,8 @@ def build_optimizer(
 
     if opt_type == "sgd":
         opt_param = {} if opt_param is None else opt_param
-        momentum, nesterov = opt_param.get("momentum", 0.9), opt_param.get(
-            "nesterov", True
-        )
-        optimizer = torch.optim.SGD(
-            net_params, init_lr, momentum=momentum, nesterov=nesterov
-        )
+        momentum, nesterov = opt_param.get("momentum", 0.9), opt_param.get("nesterov", True)
+        optimizer = torch.optim.SGD(net_params, init_lr, momentum=momentum, nesterov=nesterov)
     elif opt_type == "adam":
         optimizer = torch.optim.Adam(net_params, init_lr)
     else:
@@ -219,9 +205,7 @@ def build_optimizer(
 # """ learning rate schedule """
 
 
-def calc_learning_rate(
-    epoch, init_lr, n_epochs, batch=0, nBatch=None, lr_schedule_type="cosine"
-):
+def calc_learning_rate(epoch, init_lr, n_epochs, batch=0, nBatch=None, lr_schedule_type="cosine"):
     if lr_schedule_type == "cosine":
         t_total = n_epochs * nBatch
         t_cur = epoch * nBatch + batch

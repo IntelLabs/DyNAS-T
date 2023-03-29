@@ -1,13 +1,14 @@
 import torch.nn as nn
 
+from dynast.supernetwork.image_classification.ofa.ofa.utils import MyGlobalAvgPool2d, MyNetwork, make_divisible
 from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
-    set_layer_from_config,
     ConvLayer,
     IdentityLayer,
     LinearLayer,
+    ResidualBlock,
+    ResNetBottleneckBlock,
+    set_layer_from_config,
 )
-from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import ResNetBottleneckBlock, ResidualBlock
-from dynast.supernetwork.image_classification.ofa.ofa.utils import make_divisible, MyNetwork, MyGlobalAvgPool2d
 
 __all__ = ["ResNets", "ResNet50", "ResNet50D"]
 
@@ -21,9 +22,7 @@ class ResNets(MyNetwork):
         super(ResNets, self).__init__()
 
         self.input_stem = nn.ModuleList(input_stem)
-        self.max_pooling = nn.MaxPool2d(
-            kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False
-        )
+        self.max_pooling = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
         self.blocks = nn.ModuleList(blocks)
         self.global_avg_pool = MyGlobalAvgPool2d(keep_dim=False)
         self.classifier = classifier
@@ -81,9 +80,7 @@ class ResNets(MyNetwork):
 
     def zero_last_gamma(self):
         for m in self.modules():
-            if isinstance(m, ResNetBottleneckBlock) and isinstance(
-                m.downsample, IdentityLayer
-            ):
+            if isinstance(m, ResNetBottleneckBlock) and isinstance(m.downsample, IdentityLayer):
                 m.conv3.bn.weight.data.zero_()
 
     @property
@@ -91,10 +88,7 @@ class ResNets(MyNetwork):
         info_list = []
         block_index_list = []
         for i, block in enumerate(self.blocks):
-            if (
-                not isinstance(block.downsample, IdentityLayer)
-                and len(block_index_list) > 0
-            ):
+            if not isinstance(block.downsample, IdentityLayer) and len(block_index_list) > 0:
                 info_list.append(block_index_list)
                 block_index_list = []
             block_index_list.append(i)
@@ -122,9 +116,7 @@ class ResNet50(ResNets):
         input_channel = make_divisible(64 * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
         stage_width_list = ResNets.STAGE_WIDTH_LIST.copy()
         for i, width in enumerate(stage_width_list):
-            stage_width_list[i] = make_divisible(
-                width * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-            )
+            stage_width_list[i] = make_divisible(width * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
 
         depth_list = [3, 4, 6, 3]
         if depth_param is not None:
@@ -185,14 +177,10 @@ class ResNet50D(ResNets):
         expand_ratio = 0.25 if expand_ratio is None else expand_ratio
 
         input_channel = make_divisible(64 * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
-        mid_input_channel = make_divisible(
-            input_channel // 2, MyNetwork.CHANNEL_DIVISIBLE
-        )
+        mid_input_channel = make_divisible(input_channel // 2, MyNetwork.CHANNEL_DIVISIBLE)
         stage_width_list = ResNets.STAGE_WIDTH_LIST.copy()
         for i, width in enumerate(stage_width_list):
-            stage_width_list[i] = make_divisible(
-                width * width_mult, MyNetwork.CHANNEL_DIVISIBLE
-            )
+            stage_width_list[i] = make_divisible(width * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
 
         depth_list = [3, 4, 6, 3]
         if depth_param is not None:

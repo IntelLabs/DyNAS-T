@@ -5,8 +5,13 @@
 import copy
 import random
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils import make_divisible, val2list, MyNetwork
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.modules import DynamicMBConvLayer
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.modules import (
+    DynamicMBConvLayer,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks.proxyless_nets import (
+    ProxylessNASNets,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.utils import MyNetwork, make_divisible, val2list
 from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
     ConvLayer,
     IdentityLayer,
@@ -14,7 +19,6 @@ from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
     MBConvLayer,
     ResidualBlock,
 )
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks.proxyless_nets import ProxylessNASNets
 
 __all__ = ["OFAProxylessNASNets"]
 
@@ -48,15 +52,9 @@ class OFAProxylessNASNets(ProxylessNASNets):
             # ProxylessNAS Stage Width
             base_stage_width = [32, 16, 24, 40, 80, 96, 192, 320, 1280]
 
-        input_channel = make_divisible(
-            base_stage_width[0] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
-        first_block_width = make_divisible(
-            base_stage_width[1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
-        last_channel = make_divisible(
-            base_stage_width[-1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
+        input_channel = make_divisible(base_stage_width[0] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
+        first_block_width = make_divisible(base_stage_width[1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
+        last_channel = make_divisible(base_stage_width[-1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
 
         # first conv layer
         first_conv = ConvLayer(
@@ -90,9 +88,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
 
         width_list = []
         for base_width in base_stage_width[2:-1]:
-            width = make_divisible(
-                base_width * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-            )
+            width = make_divisible(base_width * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
             width_list.append(width)
 
         for width, n_block, s in zip(width_list, n_block_list, stride_stages):
@@ -134,9 +130,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
         )
         classifier = LinearLayer(last_channel, n_classes, dropout_rate=dropout_rate)
 
-        super(OFAProxylessNASNets, self).__init__(
-            first_conv, blocks, feature_mix_layer, classifier
-        )
+        super(OFAProxylessNASNets, self).__init__(first_conv, blocks, feature_mix_layer, classifier)
 
         # set bn param
         self.set_bn_param(momentum=bn_param[0], eps=bn_param[1])
@@ -191,9 +185,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
             "bn": self.get_bn_param(),
             "first_conv": self.first_conv.config,
             "blocks": [block.config for block in self.blocks],
-            "feature_mix_layer": None
-            if self.feature_mix_layer is None
-            else self.feature_mix_layer.config,
+            "feature_mix_layer": None if self.feature_mix_layer is None else self.feature_mix_layer.config,
             "classifier": self.classifier.config,
         }
 
@@ -236,9 +228,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
     """ set, sample and get active sub-networks """
 
     def set_max_net(self):
-        self.set_active_subnet(
-            ks=max(self.ks_list), e=max(self.expand_ratio_list), d=max(self.depth_list)
-        )
+        self.set_active_subnet(ks=max(self.ks_list), e=max(self.expand_ratio_list), d=max(self.depth_list))
 
     def set_active_subnet(self, ks=None, e=None, d=None, **kwargs):
         ks = val2list(ks, len(self.blocks) - 1)
@@ -272,9 +262,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
 
     def sample_active_subnet(self):
         ks_candidates = (
-            self.ks_list
-            if self.__dict__.get("_ks_include_list", None) is None
-            else self.__dict__["_ks_include_list"]
+            self.ks_list if self.__dict__.get("_ks_include_list", None) is None else self.__dict__["_ks_include_list"]
         )
         expand_candidates = (
             self.expand_ratio_list
@@ -306,9 +294,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
         # sample depth
         depth_setting = []
         if not isinstance(depth_candidates[0], list):
-            depth_candidates = [
-                depth_candidates for _ in range(len(self.block_group_info))
-            ]
+            depth_candidates = [depth_candidates for _ in range(len(self.block_group_info))]
         for d_set in depth_candidates:
             d = random.choice(d_set)
             depth_setting.append(d)
@@ -337,9 +323,7 @@ class OFAProxylessNASNets(ProxylessNASNets):
             for idx in active_idx:
                 stage_blocks.append(
                     ResidualBlock(
-                        self.blocks[idx].conv.get_active_subnet(
-                            input_channel, preserve_weight
-                        ),
+                        self.blocks[idx].conv.get_active_subnet(input_channel, preserve_weight),
                         copy.deepcopy(self.blocks[idx].shortcut),
                     )
                 )
@@ -366,12 +350,8 @@ class OFAProxylessNASNets(ProxylessNASNets):
                 stage_blocks.append(
                     {
                         "name": ResidualBlock.__name__,
-                        "conv": self.blocks[idx].conv.get_active_subnet_config(
-                            input_channel
-                        ),
-                        "shortcut": self.blocks[idx].shortcut.config
-                        if self.blocks[idx].shortcut is not None
-                        else None,
+                        "conv": self.blocks[idx].conv.get_active_subnet_config(input_channel),
+                        "shortcut": self.blocks[idx].shortcut.config if self.blocks[idx].shortcut is not None else None,
                     }
                 )
                 try:

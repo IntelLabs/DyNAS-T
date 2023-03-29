@@ -2,41 +2,36 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
+import json
 import os
 import random
 import time
-import json
+
 import numpy as np
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.optim
 from tqdm import tqdm
 
 from dynast.supernetwork.image_classification.ofa.ofa.utils import (
-    get_net_info,
+    MyRandomResizedCrop,
     cross_entropy_loss_with_soft_target,
     cross_entropy_with_label_smoothing,
-)
-from dynast.supernetwork.image_classification.ofa.ofa.utils import (
-    AverageMeter,
-    accuracy,
-    write_log,
+    get_net_info,
+    init_models,
     mix_images,
     mix_labels,
-    init_models,
+    write_log,
 )
-from dynast.supernetwork.image_classification.ofa.ofa.utils import MyRandomResizedCrop
-
+from dynast.utils.nn import accuracy, AverageMeter
 
 __all__ = ["RunManager"]
 
 
 class RunManager:
-    def __init__(
-        self, path, net, run_config, init=True, measure_latency=None, no_gpu=False
-    ):
+    def __init__(self, path, net, run_config, init=True, measure_latency=None, no_gpu=False):
         self.path = path
         self.net = net
         self.run_config = run_config
@@ -58,9 +53,7 @@ class RunManager:
             init_models(run_config.model_init)
 
         # net info
-        net_info = get_net_info(
-            self.net, self.run_config.data_provider.data_shape, measure_latency, True
-        )
+        net_info = get_net_info(self.net, self.run_config.data_provider.data_shape, measure_latency, True)
         with open("%s/net_info.txt" % self.path, "w") as fout:
             fout.write(json.dumps(net_info, indent=4) + "\n")
             # noinspection PyBroadException
@@ -76,10 +69,8 @@ class RunManager:
         if isinstance(self.run_config.mixup_alpha, float):
             self.train_criterion = cross_entropy_loss_with_soft_target
         elif self.run_config.label_smoothing > 0:
-            self.train_criterion = (
-                lambda pred, target: cross_entropy_with_label_smoothing(
-                    pred, target, self.run_config.label_smoothing
-                )
+            self.train_criterion = lambda pred, target: cross_entropy_with_label_smoothing(
+                pred, target, self.run_config.label_smoothing
             )
         else:
             self.train_criterion = nn.CrossEntropyLoss()
@@ -89,12 +80,8 @@ class RunManager:
         if self.run_config.no_decay_keys:
             keys = self.run_config.no_decay_keys.split("#")
             net_params = [
-                self.network.get_parameters(
-                    keys, mode="exclude"
-                ),  # parameters with weight decay
-                self.network.get_parameters(
-                    keys, mode="include"
-                ),  # parameters without weight decay
+                self.network.get_parameters(keys, mode="exclude"),  # parameters with weight decay
+                self.network.get_parameters(keys, mode="include"),  # parameters without weight decay
             ]
         else:
             # noinspection PyBroadException
@@ -143,9 +130,7 @@ class RunManager:
         if model_name is None:
             model_name = "checkpoint.pth.tar"
 
-        checkpoint[
-            "dataset"
-        ] = self.run_config.dataset  # add `dataset` info to the checkpoint
+        checkpoint["dataset"] = self.run_config.dataset  # add `dataset` info to the checkpoint
         latest_fname = os.path.join(self.save_path, "latest.txt")
         model_path = os.path.join(self.save_path, model_name)
         with open(latest_fname, "w") as fout:
@@ -216,8 +201,8 @@ class RunManager:
 
     def update_metric(self, metric_dict, output, labels):
         acc1, acc5 = accuracy(output, labels, topk=(1, 5))
-        metric_dict["top1"].update(acc1[0].item(), output.size(0))
-        metric_dict["top5"].update(acc5[0].item(), output.size(0))
+        metric_dict["top1"].update(acc1, output.size(0))
+        metric_dict["top5"].update(acc5, output.size(0))
 
     def get_metric_vals(self, metric_dict, return_dict=False):
         if return_dict:
@@ -246,9 +231,7 @@ class RunManager:
             net = nn.DataParallel(net)
 
         if data_loader is None:
-            data_loader = (
-                self.run_config.test_loader if is_test else self.run_config.valid_loader
-            )
+            data_loader = self.run_config.test_loader if is_test else self.run_config.valid_loader
 
         if train_mode:
             net.train()
@@ -335,17 +318,13 @@ class RunManager:
                         warmup_lr,
                     )
                 else:
-                    new_lr = self.run_config.adjust_learning_rate(
-                        self.optimizer, epoch - warmup_epochs, i, nBatch
-                    )
+                    new_lr = self.run_config.adjust_learning_rate(self.optimizer, epoch - warmup_epochs, i, nBatch)
 
                 images, labels = images.to(self.device), labels.to(self.device)
                 target = labels
                 if isinstance(self.run_config.mixup_alpha, float):
                     # transform data
-                    lam = random.betavariate(
-                        self.run_config.mixup_alpha, self.run_config.mixup_alpha
-                    )
+                    lam = random.betavariate(self.run_config.mixup_alpha, self.run_config.mixup_alpha)
                     images = mix_images(images, lam)
                     labels = mix_labels(
                         labels,
@@ -369,9 +348,7 @@ class RunManager:
                     loss_type = "ce"
                 else:
                     if args.kd_type == "ce":
-                        kd_loss = cross_entropy_loss_with_soft_target(
-                            output, soft_label
-                        )
+                        kd_loss = cross_entropy_loss_with_soft_target(output, soft_label)
                     else:
                         kd_loss = F.mse_loss(output, soft_logits)
                     loss = args.kd_ratio * kd_loss + loss
@@ -402,14 +379,10 @@ class RunManager:
 
     def train(self, args, warmup_epoch=0, warmup_lr=0):
         for epoch in range(self.start_epoch, self.run_config.n_epochs + warmup_epoch):
-            train_loss, (train_top1, train_top5) = self.train_one_epoch(
-                args, epoch, warmup_epoch, warmup_lr
-            )
+            train_loss, (train_top1, train_top5) = self.train_one_epoch(args, epoch, warmup_epoch, warmup_lr)
 
             if (epoch + 1) % self.run_config.validation_frequency == 0:
-                img_size, val_loss, val_acc, val_acc5 = self.validate_all_resolution(
-                    epoch=epoch, is_test=False
-                )
+                img_size, val_loss, val_acc, val_acc5 = self.validate_all_resolution(epoch=epoch, is_test=False)
 
                 is_best = np.mean(val_acc) > self.best_acc
                 self.best_acc = max(self.best_acc, np.mean(val_acc))
@@ -422,10 +395,7 @@ class RunManager:
                     self.get_metric_names()[0],
                 )
                 val_log += "\t{2} {0:.3f}\tTrain {1} {top1:.3f}\tloss {train_loss:.3f}\t".format(
-                    np.mean(val_acc5),
-                    *self.get_metric_names(),
-                    top1=train_top1,
-                    train_loss=train_loss
+                    np.mean(val_acc5), *self.get_metric_names(), top1=train_top1, train_loss=train_loss
                 )
                 for i_s, v_a in zip(img_size, val_acc):
                     val_log += "(%d, %.3f), " % (i_s, v_a)
@@ -443,15 +413,13 @@ class RunManager:
                 is_best=is_best,
             )
 
-    def reset_running_statistics(
-        self, net=None, subset_size=2000, subset_batch_size=200, data_loader=None
-    ):
-        from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.utils import set_running_statistics
+    def reset_running_statistics(self, net=None, subset_size=2000, subset_batch_size=200, data_loader=None):
+        from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.utils import (
+            set_running_statistics,
+        )
 
         if net is None:
             net = self.network
         if data_loader is None:
-            data_loader = self.run_config.random_sub_train_loader(
-                subset_size, subset_batch_size
-            )
+            data_loader = self.run_config.random_sub_train_loader(subset_size, subset_batch_size)
         set_running_statistics(net, data_loader)

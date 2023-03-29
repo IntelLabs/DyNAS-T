@@ -3,12 +3,15 @@
 # International Conference on Learning Representations (ICLR), 2020.
 
 import copy
-import torch.nn.functional as F
-import torch.nn as nn
-import torch
 
-from dynast.supernetwork.image_classification.ofa.ofa.utils import get_net_device, DistributedTensor
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.modules.dynamic_op import DynamicBatchNorm2d
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.modules.dynamic_op import (
+    DynamicBatchNorm2d,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.utils import DistributedTensor, get_net_device
 from dynast.utils.nn import AverageMeter
 
 __all__ = ["set_running_statistics"]
@@ -30,17 +33,9 @@ def set_running_statistics(model, data_loader, distributed=False):
 
             def new_forward(bn, mean_est, var_est):
                 def lambda_forward(x):
-                    batch_mean = (
-                        x.mean(0, keepdim=True)
-                        .mean(2, keepdim=True)
-                        .mean(3, keepdim=True)
-                    )  # 1, C, 1, 1
+                    batch_mean = x.mean(0, keepdim=True).mean(2, keepdim=True).mean(3, keepdim=True)  # 1, C, 1, 1
                     batch_var = (x - batch_mean) * (x - batch_mean)
-                    batch_var = (
-                        batch_var.mean(0, keepdim=True)
-                        .mean(2, keepdim=True)
-                        .mean(3, keepdim=True)
-                    )
+                    batch_var = batch_var.mean(0, keepdim=True).mean(2, keepdim=True).mean(3, keepdim=True)
 
                     batch_mean = torch.squeeze(batch_mean)
                     batch_var = torch.squeeze(batch_var)

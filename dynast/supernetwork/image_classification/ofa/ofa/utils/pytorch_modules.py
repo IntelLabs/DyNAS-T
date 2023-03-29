@@ -2,10 +2,12 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
+from collections import OrderedDict
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from collections import OrderedDict
+
 from .my_modules import MyNetwork
 
 __all__ = [
@@ -123,9 +125,7 @@ class SEModule(nn.Module):
         self.channel = channel
         self.reduction = SEModule.REDUCTION if reduction is None else reduction
 
-        num_mid = make_divisible(
-            self.channel // self.reduction, divisor=MyNetwork.CHANNEL_DIVISIBLE
-        )
+        num_mid = make_divisible(self.channel // self.reduction, divisor=MyNetwork.CHANNEL_DIVISIBLE)
 
         self.fc = nn.Sequential(
             OrderedDict(

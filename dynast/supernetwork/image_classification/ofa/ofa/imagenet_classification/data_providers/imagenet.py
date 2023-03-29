@@ -2,16 +2,21 @@
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
 
-import warnings
-import os
 import math
+import os
+import warnings
+
 import numpy as np
 import torch.utils.data
-import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torchvision.transforms as transforms
+
+from dynast.supernetwork.image_classification.ofa.ofa.utils.my_dataloader import (
+    MyDistributedSampler,
+    MyRandomResizedCrop,
+)
 
 from .base_provider import DataProvider
-from dynast.supernetwork.image_classification.ofa.ofa.utils.my_dataloader import MyRandomResizedCrop, MyDistributedSampler
 
 __all__ = ["ImagenetDataProvider"]
 
@@ -50,9 +55,7 @@ class ImagenetDataProvider(DataProvider):
             MyRandomResizedCrop.ACTIVE_SIZE = max(self.image_size)
 
             for img_size in self.image_size:
-                self._valid_transform_dict[img_size] = self.build_valid_transform(
-                    img_size
-                )
+                self._valid_transform_dict[img_size] = self.build_valid_transform(img_size)
             self.active_img_size = max(self.image_size)  # active resolution for test
             valid_transforms = self._valid_transform_dict[self.active_img_size]
             train_loader_class = MyDataLoader  # randomly sample image size for each batch of training image
@@ -69,24 +72,14 @@ class ImagenetDataProvider(DataProvider):
                 valid_size = int(len(train_dataset) * valid_size)
 
             valid_dataset = self.train_dataset(valid_transforms)
-            train_indexes, valid_indexes = self.random_sample_valid_set(
-                len(train_dataset), valid_size
-            )
+            train_indexes, valid_indexes = self.random_sample_valid_set(len(train_dataset), valid_size)
 
             if num_replicas is not None:
-                train_sampler = MyDistributedSampler(
-                    train_dataset, num_replicas, rank, True, np.array(train_indexes)
-                )
-                valid_sampler = MyDistributedSampler(
-                    valid_dataset, num_replicas, rank, True, np.array(valid_indexes)
-                )
+                train_sampler = MyDistributedSampler(train_dataset, num_replicas, rank, True, np.array(train_indexes))
+                valid_sampler = MyDistributedSampler(valid_dataset, num_replicas, rank, True, np.array(valid_indexes))
             else:
-                train_sampler = torch.utils.data.sampler.SubsetRandomSampler(
-                    train_indexes
-                )
-                valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(
-                    valid_indexes
-                )
+                train_sampler = torch.utils.data.sampler.SubsetRandomSampler(train_indexes)
+                valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(valid_indexes)
 
             self.train = train_loader_class(
                 train_dataset,
@@ -104,9 +97,7 @@ class ImagenetDataProvider(DataProvider):
             )
         else:
             if num_replicas is not None:
-                train_sampler = torch.utils.data.distributed.DistributedSampler(
-                    train_dataset, num_replicas, rank
-                )
+                train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset, num_replicas, rank)
                 self.train = train_loader_class(
                     train_dataset,
                     batch_size=train_batch_size,
@@ -126,9 +117,7 @@ class ImagenetDataProvider(DataProvider):
 
         test_dataset = self.test_dataset(valid_transforms)
         if num_replicas is not None:
-            test_sampler = torch.utils.data.distributed.DistributedSampler(
-                test_dataset, num_replicas, rank
-            )
+            test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset, num_replicas, rank)
             self.test = torch.utils.data.DataLoader(
                 test_dataset,
                 batch_size=test_batch_size,
@@ -188,24 +177,20 @@ class ImagenetDataProvider(DataProvider):
 
     @property
     def normalize(self):
-        return transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
+        return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def build_train_transform(self, image_size=None, print_log=True):
         if image_size is None:
             image_size = self.image_size
         if print_log:
             print(
-                "Color jitter: %s, resize_scale: %s, img_size: %s"
-                % (self.distort_color, self.resize_scale, image_size)
+                "Color jitter: %s, resize_scale: %s, img_size: %s" % (self.distort_color, self.resize_scale, image_size)
             )
 
         if isinstance(image_size, list):
             resize_transform_class = MyRandomResizedCrop
             print(
-                "Use MyRandomResizedCrop: %s, \t %s"
-                % MyRandomResizedCrop.get_candidate_image_size(),
+                "Use MyRandomResizedCrop: %s, \t %s" % MyRandomResizedCrop.get_candidate_image_size(),
                 "sync=%s, continuous=%s"
                 % (
                     MyRandomResizedCrop.SYNC_DISTRIBUTED,
@@ -224,13 +209,9 @@ class ImagenetDataProvider(DataProvider):
         # color augmentation (optional)
         color_transform = None
         if self.distort_color == "torch":
-            color_transform = transforms.ColorJitter(
-                brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
-            )
+            color_transform = transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
         elif self.distort_color == "tf":
-            color_transform = transforms.ColorJitter(
-                brightness=32.0 / 255.0, saturation=0.5
-            )
+            color_transform = transforms.ColorJitter(brightness=32.0 / 255.0, saturation=0.5)
         if color_transform is not None:
             train_transforms.append(color_transform)
 
@@ -257,16 +238,12 @@ class ImagenetDataProvider(DataProvider):
     def assign_active_img_size(self, new_img_size):
         self.active_img_size = new_img_size
         if self.active_img_size not in self._valid_transform_dict:
-            self._valid_transform_dict[
-                self.active_img_size
-            ] = self.build_valid_transform()
+            self._valid_transform_dict[self.active_img_size] = self.build_valid_transform()
         # change the transform of the valid and test set
         self.valid.dataset.transform = self._valid_transform_dict[self.active_img_size]
         self.test.dataset.transform = self._valid_transform_dict[self.active_img_size]
 
-    def build_sub_train_loader(
-        self, n_images, batch_size, num_worker=None, num_replicas=None, rank=None
-    ):
+    def build_sub_train_loader(self, n_images, batch_size, num_worker=None, num_replicas=None, rank=None):
         # used for resetting BN running statistics
         if self.__dict__.get("sub_train_%d" % self.active_img_size, None) is None:
             if num_worker is None:
@@ -278,9 +255,7 @@ class ImagenetDataProvider(DataProvider):
             rand_indexes = torch.randperm(n_samples, generator=g).tolist()
 
             new_train_dataset = self.train_dataset(
-                self.build_train_transform(
-                    image_size=self.active_img_size, print_log=False
-                )
+                self.build_train_transform(image_size=self.active_img_size, print_log=False)
             )
             chosen_indexes = rand_indexes[:n_images]
             if num_replicas is not None:
@@ -292,9 +267,7 @@ class ImagenetDataProvider(DataProvider):
                     np.array(chosen_indexes),
                 )
             else:
-                sub_sampler = torch.utils.data.sampler.SubsetRandomSampler(
-                    chosen_indexes
-                )
+                sub_sampler = torch.utils.data.sampler.SubsetRandomSampler(chosen_indexes)
             sub_data_loader = torch.utils.data.DataLoader(
                 new_train_dataset,
                 batch_size=batch_size,
@@ -304,7 +277,5 @@ class ImagenetDataProvider(DataProvider):
             )
             self.__dict__["sub_train_%d" % self.active_img_size] = []
             for images, labels in sub_data_loader:
-                self.__dict__["sub_train_%d" % self.active_img_size].append(
-                    (images, labels)
-                )
+                self.__dict__["sub_train_%d" % self.active_img_size].append((images, labels))
         return self.__dict__["sub_train_%d" % self.active_img_size]

@@ -8,6 +8,8 @@ import random
 from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.elastic_nn.modules.dynamic_layers import (
     DynamicMBConvLayer,
 )
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks import MobileNetV3
+from dynast.supernetwork.image_classification.ofa.ofa.utils import MyNetwork, make_divisible, val2list
 from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
     ConvLayer,
     IdentityLayer,
@@ -15,8 +17,6 @@ from dynast.supernetwork.image_classification.ofa.ofa.utils.layers import (
     MBConvLayer,
     ResidualBlock,
 )
-from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.networks import MobileNetV3
-from dynast.supernetwork.image_classification.ofa.ofa.utils import make_divisible, val2list, MyNetwork
 
 __all__ = ["OFAMobileNetV3"]
 
@@ -45,12 +45,8 @@ class OFAMobileNetV3(MobileNetV3):
 
         base_stage_width = [16, 16, 24, 40, 80, 112, 160, 960, 1280]
 
-        final_expand_width = make_divisible(
-            base_stage_width[-2] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
-        last_channel = make_divisible(
-            base_stage_width[-1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-        )
+        final_expand_width = make_divisible(base_stage_width[-2] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
+        last_channel = make_divisible(base_stage_width[-1] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
 
         stride_stages = [1, 2, 2, 2, 1, 2]
         act_stages = ["relu", "relu", "relu", "h_swish", "h_swish", "h_swish"]
@@ -58,16 +54,12 @@ class OFAMobileNetV3(MobileNetV3):
         n_block_list = [1] + [max(self.depth_list)] * 5
         width_list = []
         for base_width in base_stage_width[:-2]:
-            width = make_divisible(
-                base_width * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
-            )
+            width = make_divisible(base_width * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE)
             width_list.append(width)
 
         input_channel, first_block_dim = width_list[0], width_list[1]
         # first conv layer
-        first_conv = ConvLayer(
-            3, input_channel, kernel_size=3, stride=2, act_func="h_swish"
-        )
+        first_conv = ConvLayer(3, input_channel, kernel_size=3, stride=2, act_func="h_swish")
         first_block_conv = MBConvLayer(
             in_channels=input_channel,
             out_channels=first_block_dim,
@@ -79,9 +71,7 @@ class OFAMobileNetV3(MobileNetV3):
         )
         first_block = ResidualBlock(
             first_block_conv,
-            IdentityLayer(first_block_dim, first_block_dim)
-            if input_channel == first_block_dim
-            else None,
+            IdentityLayer(first_block_dim, first_block_dim) if input_channel == first_block_dim else None,
         )
 
         # inverted residual blocks
@@ -122,9 +112,7 @@ class OFAMobileNetV3(MobileNetV3):
                 blocks.append(ResidualBlock(mobile_inverted_conv, shortcut))
                 feature_dim = output_channel
         # final expand layer, feature mix layer & classifier
-        final_expand_layer = ConvLayer(
-            feature_dim, final_expand_width, kernel_size=1, act_func="h_swish"
-        )
+        final_expand_layer = ConvLayer(feature_dim, final_expand_width, kernel_size=1, act_func="h_swish")
         feature_mix_layer = ConvLayer(
             final_expand_width,
             last_channel,
@@ -136,9 +124,7 @@ class OFAMobileNetV3(MobileNetV3):
 
         classifier = LinearLayer(last_channel, n_classes, dropout_rate=dropout_rate)
 
-        super(OFAMobileNetV3, self).__init__(
-            first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
-        )
+        super(OFAMobileNetV3, self).__init__(first_conv, blocks, final_expand_layer, feature_mix_layer, classifier)
 
         # set bn param
         self.set_bn_param(momentum=bn_param[0], eps=bn_param[1])
@@ -237,9 +223,7 @@ class OFAMobileNetV3(MobileNetV3):
     """ set, sample and get active sub-networks """
 
     def set_max_net(self):
-        self.set_active_subnet(
-            ks=max(self.ks_list), e=max(self.expand_ratio_list), d=max(self.depth_list)
-        )
+        self.set_active_subnet(ks=max(self.ks_list), e=max(self.expand_ratio_list), d=max(self.depth_list))
 
     def set_active_subnet(self, ks=None, e=None, d=None, **kwargs):
         ks = val2list(ks, len(self.blocks) - 1)
@@ -273,9 +257,7 @@ class OFAMobileNetV3(MobileNetV3):
 
     def sample_active_subnet(self):
         ks_candidates = (
-            self.ks_list
-            if self.__dict__.get("_ks_include_list", None) is None
-            else self.__dict__["_ks_include_list"]
+            self.ks_list if self.__dict__.get("_ks_include_list", None) is None else self.__dict__["_ks_include_list"]
         )
         expand_candidates = (
             self.expand_ratio_list
@@ -307,9 +289,7 @@ class OFAMobileNetV3(MobileNetV3):
         # sample depth
         depth_setting = []
         if not isinstance(depth_candidates[0], list):
-            depth_candidates = [
-                depth_candidates for _ in range(len(self.block_group_info))
-            ]
+            depth_candidates = [depth_candidates for _ in range(len(self.block_group_info))]
         for d_set in depth_candidates:
             d = random.choice(d_set)
             depth_setting.append(d)
@@ -339,18 +319,14 @@ class OFAMobileNetV3(MobileNetV3):
             for idx in active_idx:
                 stage_blocks.append(
                     ResidualBlock(
-                        self.blocks[idx].conv.get_active_subnet(
-                            input_channel, preserve_weight
-                        ),
+                        self.blocks[idx].conv.get_active_subnet(input_channel, preserve_weight),
                         copy.deepcopy(self.blocks[idx].shortcut),
                     )
                 )
                 input_channel = stage_blocks[-1].conv.out_channels
             blocks += stage_blocks
 
-        _subnet = MobileNetV3(
-            first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
-        )
+        _subnet = MobileNetV3(first_conv, blocks, final_expand_layer, feature_mix_layer, classifier)
         _subnet.set_bn_param(**self.get_bn_param())
         return _subnet
 
@@ -372,12 +348,8 @@ class OFAMobileNetV3(MobileNetV3):
                 stage_blocks.append(
                     {
                         "name": ResidualBlock.__name__,
-                        "conv": self.blocks[idx].conv.get_active_subnet_config(
-                            input_channel
-                        ),
-                        "shortcut": self.blocks[idx].shortcut.config
-                        if self.blocks[idx].shortcut is not None
-                        else None,
+                        "conv": self.blocks[idx].conv.get_active_subnet_config(input_channel),
+                        "shortcut": self.blocks[idx].shortcut.config if self.blocks[idx].shortcut is not None else None,
                     }
                 )
                 input_channel = self.blocks[idx].conv.active_out_channel

@@ -42,9 +42,7 @@ class DataProvider:
         assert train_size > valid_size
 
         g = torch.Generator()
-        g.manual_seed(
-            DataProvider.VALID_SEED
-        )  # set random seed before sampling validation set
+        g.manual_seed(DataProvider.VALID_SEED)  # set random seed before sampling validation set
         rand_indexes = torch.randperm(train_size, generator=g).tolist()
 
         valid_indexes = rand_indexes[:valid_size]
