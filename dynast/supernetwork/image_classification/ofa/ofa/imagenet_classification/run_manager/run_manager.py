@@ -28,7 +28,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.parallel
 import torch.optim
-from tqdm import tqdm
 
 from dynast.supernetwork.image_classification.ofa.ofa.utils import (
     MyRandomResizedCrop,
@@ -257,28 +256,15 @@ class RunManager:
         metric_dict = self.get_metric_dict()
 
         with torch.no_grad():
-            with tqdm(
-                total=len(data_loader),
-                desc="Validate Epoch #{} {}".format(epoch + 1, run_str),
-                disable=no_logs,
-            ) as t:
-                for i, (images, labels) in enumerate(data_loader):
-                    images, labels = images.to(self.device), labels.to(self.device)
-                    # compute output
-                    output = net(images)
-                    loss = self.test_criterion(output, labels)
-                    # measure accuracy and record loss
-                    self.update_metric(metric_dict, output, labels)
+            for i, (images, labels) in enumerate(data_loader):
+                images, labels = images.to(self.device), labels.to(self.device)
+                # compute output
+                output = net(images)
+                loss = self.test_criterion(output, labels)
+                # measure accuracy and record loss
+                self.update_metric(metric_dict, output, labels)
 
-                    losses.update(loss.item(), images.size(0))
-                    t.set_postfix(
-                        {
-                            "loss": losses.avg,
-                            **self.get_metric_vals(metric_dict, return_dict=True),
-                            "img_size": images.size(2),
-                        }
-                    )
-                    t.update(1)
+                losses.update(loss.item(), images.size(0))
         return losses.avg, self.get_metric_vals(metric_dict)
 
     def validate_all_resolution(self, epoch=0, is_test=False, net=None):
@@ -315,81 +301,66 @@ class RunManager:
         metric_dict = self.get_metric_dict()
         data_time = AverageMeter()
 
-        with tqdm(
-            total=nBatch,
-            desc="{} Train Epoch #{}".format(self.run_config.dataset, epoch + 1),
-        ) as t:
-            end = time.time()
-            for i, (images, labels) in enumerate(self.run_config.train_loader):
-                MyRandomResizedCrop.BATCH = i
-                data_time.update(time.time() - end)
-                if epoch < warmup_epochs:
-                    new_lr = self.run_config.warmup_adjust_learning_rate(
-                        self.optimizer,
-                        warmup_epochs * nBatch,
-                        nBatch,
-                        epoch,
-                        i,
-                        warmup_lr,
-                    )
-                else:
-                    new_lr = self.run_config.adjust_learning_rate(self.optimizer, epoch - warmup_epochs, i, nBatch)
-
-                images, labels = images.to(self.device), labels.to(self.device)
-                target = labels
-                if isinstance(self.run_config.mixup_alpha, float):
-                    # transform data
-                    lam = random.betavariate(self.run_config.mixup_alpha, self.run_config.mixup_alpha)
-                    images = mix_images(images, lam)
-                    labels = mix_labels(
-                        labels,
-                        lam,
-                        self.run_config.data_provider.n_classes,
-                        self.run_config.label_smoothing,
-                    )
-
-                # soft target
-                if args.teacher_model is not None:
-                    args.teacher_model.train()
-                    with torch.no_grad():
-                        soft_logits = args.teacher_model(images).detach()
-                        soft_label = F.softmax(soft_logits, dim=1)
-
-                # compute output
-                output = self.net(images)
-                loss = self.train_criterion(output, labels)
-
-                if args.teacher_model is None:
-                    loss_type = "ce"
-                else:
-                    if args.kd_type == "ce":
-                        kd_loss = cross_entropy_loss_with_soft_target(output, soft_label)
-                    else:
-                        kd_loss = F.mse_loss(output, soft_logits)
-                    loss = args.kd_ratio * kd_loss + loss
-                    loss_type = "%.1fkd+ce" % args.kd_ratio
-
-                # compute gradient and do SGD step
-                self.net.zero_grad()  # or self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-                # measure accuracy and record loss
-                losses.update(loss.item(), images.size(0))
-                self.update_metric(metric_dict, output, target)
-
-                t.set_postfix(
-                    {
-                        "loss": losses.avg,
-                        **self.get_metric_vals(metric_dict, return_dict=True),
-                        "img_size": images.size(2),
-                        "lr": new_lr,
-                        "loss_type": loss_type,
-                        "data_time": data_time.avg,
-                    }
+        end = time.time()
+        for i, (images, labels) in enumerate(self.run_config.train_loader):
+            MyRandomResizedCrop.BATCH = i
+            data_time.update(time.time() - end)
+            if epoch < warmup_epochs:
+                new_lr = self.run_config.warmup_adjust_learning_rate(
+                    self.optimizer,
+                    warmup_epochs * nBatch,
+                    nBatch,
+                    epoch,
+                    i,
+                    warmup_lr,
                 )
-                t.update(1)
-                end = time.time()
+            else:
+                new_lr = self.run_config.adjust_learning_rate(self.optimizer, epoch - warmup_epochs, i, nBatch)
+
+            images, labels = images.to(self.device), labels.to(self.device)
+            target = labels
+            if isinstance(self.run_config.mixup_alpha, float):
+                # transform data
+                lam = random.betavariate(self.run_config.mixup_alpha, self.run_config.mixup_alpha)
+                images = mix_images(images, lam)
+                labels = mix_labels(
+                    labels,
+                    lam,
+                    self.run_config.data_provider.n_classes,
+                    self.run_config.label_smoothing,
+                )
+
+            # soft target
+            if args.teacher_model is not None:
+                args.teacher_model.train()
+                with torch.no_grad():
+                    soft_logits = args.teacher_model(images).detach()
+                    soft_label = F.softmax(soft_logits, dim=1)
+
+            # compute output
+            output = self.net(images)
+            loss = self.train_criterion(output, labels)
+
+            if args.teacher_model is None:
+                loss_type = "ce"
+            else:
+                if args.kd_type == "ce":
+                    kd_loss = cross_entropy_loss_with_soft_target(output, soft_label)
+                else:
+                    kd_loss = F.mse_loss(output, soft_logits)
+                loss = args.kd_ratio * kd_loss + loss
+                loss_type = "%.1fkd+ce" % args.kd_ratio
+
+            # compute gradient and do SGD step
+            self.net.zero_grad()  # or self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            # measure accuracy and record loss
+            losses.update(loss.item(), images.size(0))
+            self.update_metric(metric_dict, output, target)
+
+            end = time.time()
         return losses.avg, self.get_metric_vals(metric_dict)
 
     def train(self, args, warmup_epoch=0, warmup_lr=0):
