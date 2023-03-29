@@ -14,10 +14,9 @@ from dynast.utils.nn import get_macs, rm_bn_from_net
 __all__ = [
     "mix_images",
     "mix_labels",
-    # "label_smooth",
+    "label_smooth",
     "cross_entropy_loss_with_soft_target",
     "cross_entropy_with_label_smoothing",
-    # "clean_num_batch_tracked",
     "get_net_device",
     "count_parameters",
     "count_net_flops",
@@ -64,16 +63,6 @@ def cross_entropy_loss_with_soft_target(pred, soft_target):
 def cross_entropy_with_label_smoothing(pred, target, label_smoothing=0.1):
     soft_target = label_smooth(target, pred.size(1), label_smoothing)
     return cross_entropy_loss_with_soft_target(pred, soft_target)
-
-
-# """ BN related """
-
-
-# def clean_num_batch_tracked(net):
-#     for m in net.modules():
-#         if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
-#             if m.num_batches_tracked is not None:
-#                 m.num_batches_tracked.zero_()
 
 
 """ Network profiling """
