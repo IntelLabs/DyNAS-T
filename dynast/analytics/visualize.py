@@ -14,7 +14,7 @@
 
 import itertools
 import math
-from turtle import pd
+import pandas as pd
 
 import numpy as np
 from scipy.spatial import Delaunay
