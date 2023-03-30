@@ -129,45 +129,7 @@ class NASBaseConfig:
             log.error(f'Invalid supernet specified. Choose from the following: {SUPERNET_TYPE}')
 
     def format_csv_header(self):
-        if self.supernet in SUPERNET_TYPE['image_classification']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'Top-1 Acc (%)',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['machine_translation']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'BLEU Score',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['text_classification']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'SST-2 Acc',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['recommendation']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'HR@10',
-            ]  # TODO(macsz) Should be based on specified measurements
-        else:
-            # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
-            raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
+        self.csv_header = get_csv_header(self.supernet)
 
         log.info(f'Results csv file header ordering will be: {self.csv_header}')
 
