@@ -30,6 +30,10 @@ def get_license_template():
         lines = f.readlines()
         for line in lines:
             line = line.strip()
+            if line.startswith('##'):
+                # This will halt on the 3rd party licenses.
+                break
+
             if line and not line.startswith('#'):
                 license_content += line + ' '
     return license_content

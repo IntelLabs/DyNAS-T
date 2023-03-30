@@ -18,15 +18,19 @@ import uuid
 from datetime import datetime
 from typing import Tuple
 
-import ofa
 import torch
-from ofa.imagenet_classification.data_providers.imagenet import ImagenetDataProvider
-from ofa.imagenet_classification.run_manager import ImagenetRunConfig, RunManager
-from ofa.tutorial.flops_table import rm_bn_from_net
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
+from dynast.supernetwork.image_classification.ofa.ofa import model_zoo as ofa_model_zoo
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.data_providers.imagenet import (
+    ImagenetDataProvider,
+)
+from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.run_manager import (
+    ImagenetRunConfig,
+    RunManager,
+)
 from dynast.utils import log
 from dynast.utils.nn import get_macs, get_parameters, measure_latency
 
@@ -59,7 +63,7 @@ class OFARunner:
         self.device = device
         self.test_size = None
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
-        self.ofa_network = ofa.model_zoo.ofa_net(supernet, pretrained=True)
+        self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
