@@ -63,9 +63,11 @@ You can also install DyNAS-T from PyPI:
 pip install dynast
 ```
 
+Installing DyNAS-T with `pip` will make a `dynast` command available in your CLI.
+
 
 ## Running DyNAS-T
-The `run_search.py` template provide a starting point for running the NAS process. An evaluation is the process of determining the fitness of an architectural candidate. A *validation* evaluation is the costly process of running the full validation set. A *predictor* evaluation uses a pre-trained performance predictor.
+The `dynast/cli.py` (you can use `dynast` command to invoke this script) template provide a starting point for running the NAS process. An evaluation is the process of determining the fitness of an architectural candidate. A *validation* evaluation is the costly process of running the full validation set. A *predictor* evaluation uses a pre-trained performance predictor.
 
 * `supernet` - Name of the pre-trained super-network. See list of supported super-networks. For a custom super-network, you will have to modify the code including the `dynast_manager.py` and `supernetwork_registry.py` files.
 * `optimization_metrics` - These are the metrics that the NAS process optimizes for. Note that the number of objectives you specify must be compatible with the supporting algorithm.
@@ -83,7 +85,7 @@ The `run_search.py` template provide a starting point for running the NAS proces
 *Example 1a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy using a simple evolutionary genetic algorithm (GA) approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_mbv3_d234_e346_k357_w1.0 \
     --optimization_metrics accuracy_top1 \
     --measurements accuracy_top1 macs params \
@@ -96,7 +98,7 @@ python run_search.py \
 *Example 1b.* NAS process for the OFA MobileNetV3-w1.2 super-network that optimizes for ImageNet Top-1 accuracy using a LINAS + GA approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_mbv3_d234_e346_k357_w1.2 \
     --optimization_metrics accuracy_top1 \
     --measurements accuracy_top1 macs params \
@@ -111,7 +113,7 @@ python run_search.py \
 *Example 2a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* multiply-and-accumulates (MACs) using a LINAS+NSGA-II approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_mbv3_d234_e346_k357_w1.0 \
     --optimization_metrics accuracy_top1 macs \
     --measurements accuracy_top1 macs params \
@@ -124,7 +126,7 @@ python run_search.py \
 *Example 2b.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) using a evolutionary AGE-MOEA approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_resnet50 \
     --optimization_metrics accuracy_top1 params \
     --measurements accuracy_top1 macs params \
@@ -139,7 +141,7 @@ python run_search.py \
 *Example 3a.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a evolutionary unsga3 approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_resnet50 \
     --optimization_metrics accuracy_top1 macs params \
     --measurements accuracy_top1 macs params \
@@ -152,7 +154,7 @@ python run_search.py \
 *Example 3b.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a linas+unsga3 approach.
 
 ```bash
-python run_search.py \
+dynast \
     --supernet ofa_mbv3_d234_e346_k357_w1.0 \
     --optimization_metrics accuracy_top1 macs params \
     --measurements accuracy_top1 macs params \
@@ -181,7 +183,7 @@ OMP_NUM_THREADS=28 mpirun \
     -np 2 \
     -bind-to socket \
     -map-by socket \
-    python run_search.py \
+    dynast \
         --supernet ofa_mbv3_d234_e346_k357_w1.0 \
          --optimization_metrics accuracy_top1 macs \
         --results_path results.csv \
