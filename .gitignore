@@ -123,3 +123,4 @@ venv.bak/
 cifar10/
 coverity_tmp/
 data/
+*.png
