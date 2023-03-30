@@ -18,12 +18,12 @@ import random
 import pytest
 
 from dynast.search.encoding import EncodingBase
-from dynast.supernetwork.supernetwork_registry import SUPERNET_METRICS, SUPERNET_PARAMETERS
+from dynast.supernetwork.supernetwork_registry import SUPERNET_METRICS, get_supernet_parameters
 
 
 def test_process_param_dict(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
 
         # Test when creating the object (method is called within the init)
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
@@ -42,7 +42,7 @@ def test_process_param_dict(test_configs):
 
 def test_create_inv_mapper(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
 
         # Test when creating the object (method is called within the init)
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
@@ -56,7 +56,7 @@ def test_create_inv_mapper(test_configs):
 
 def test_random_sample(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         assert encoder.random_sample() == test_config['random_samples'][0]
@@ -64,14 +64,14 @@ def test_random_sample(test_configs):
 
 def test_random_samples(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         assert encoder.random_samples(size=2) == test_config['random_samples']
 
 
 def test_import_csv(test_configs):
-    supernet_param_dict = SUPERNET_PARAMETERS[test_configs[0]['supernet']]
+    supernet_param_dict = get_supernet_parameters(test_configs[0]['supernet'])
     encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
     column_names = ['subnet', 'date']
@@ -84,7 +84,7 @@ def test_import_csv(test_configs):
         )
 
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         df = encoder.import_csv(
@@ -107,7 +107,7 @@ def test_import_csv(test_configs):
 
 
 def test_set_seed(test_configs):
-    supernet_param_dict = SUPERNET_PARAMETERS[test_configs[0]['supernet']]
+    supernet_param_dict = get_supernet_parameters(test_configs[0]['supernet'])
     encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
     encoder.set_seed(42)
@@ -123,7 +123,7 @@ def test_create_training_set(test_configs):
     objective_name = 'macs'
 
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         df = encoder.import_csv(
@@ -146,7 +146,7 @@ def test_create_training_set(test_configs):
 
 def test_encoderbase_onehot_generic(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         onehot_vector = encoder.onehot_generic(in_array=test_config['pymoo_vector'])
@@ -155,7 +155,7 @@ def test_encoderbase_onehot_generic(test_configs):
 
 def test_encoderbase_translate2param(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         supernet_param_dict = encoder.translate2param(test_config['pymoo_vector'])
@@ -165,7 +165,7 @@ def test_encoderbase_translate2param(test_configs):
 
 def test_encoderbase__translate2pymoo(test_configs):
     for test_config in test_configs:
-        supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
+        supernet_param_dict = get_supernet_parameters(test_config['supernet'])
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
 
         pymoo_vector = encoder.translate2pymoo(test_config['param_dict'])

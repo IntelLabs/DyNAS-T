@@ -136,7 +136,7 @@ class NASBaseConfig:
     def init_supernet(self):
         # Initializes the super-network manager
         self.supernet_manager = SUPERNET_ENCODING[self.supernet](
-            param_dict=SUPERNET_PARAMETERS[self.supernet], seed=self.seed
+            param_dict=get_supernet_parameters(self.supernet), seed=self.seed
         )
 
     def _init_search(self):

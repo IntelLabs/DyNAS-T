@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import List
+from typing import Any, Dict, List
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
 from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
@@ -23,6 +23,18 @@ from dynast.supernetwork.machine_translation.transformer_encoding import Transfo
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+
+__all__ = [
+    "get_csv_header",
+    "get_supernet_parameters",
+    "EVALUATION_INTERFACE",
+    "LINAS_INNERLOOP_EVALS",
+    "SEARCH_ALGORITHMS",
+    "SUPERNET_ENCODING",
+    "SUPERNET_METRICS",
+    "SUPERNET_TYPE",
+]
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -31,9 +43,10 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
+    'bootstrapnas_resnet50_cifar10': BootstrapNASEncoding,
 }
 
-SUPERNET_PARAMETERS = {
+_SUPERNET_PARAMETERS = {
     'ofa_resnet50': {
         'd': {'count': 5, 'vars': [0, 1, 2]},
         'e': {'count': 18, 'vars': [0.2, 0.25, 0.35]},
@@ -96,6 +109,7 @@ SUPERNET_TYPE = {
         'ofa_mbv3_d234_e346_k357_w1.0',
         'ofa_mbv3_d234_e346_k357_w1.2',
         'ofa_proxyless_d234_e346_k357_w1.3',
+        'bootstrapnas_resnet50_cifar10',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
@@ -158,3 +172,6 @@ def get_csv_header(supernet: str) -> List[str]:
 
     return csv_header
 
+
+def get_supernet_parameters(supernet: str) -> Dict[str, Dict[str, Any]]:
+    return _SUPERNET_PARAMETERS[supernet]
