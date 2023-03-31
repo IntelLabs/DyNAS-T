@@ -23,6 +23,7 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
@@ -83,6 +84,11 @@ class NASBaseConfig:
         self.dataloader_workers = dataloader_workers
         self.valid_size = valid_size
 
+        if 'bootstrapnas' in kwargs:
+            self.bootstrapnas = kwargs['bootstrapnas']
+        else:
+            self.bootstrapnas = None
+
         self.verify_measurement_types()
         self.format_csv_header()
         self.init_supernet()
@@ -135,9 +141,11 @@ class NASBaseConfig:
 
     def init_supernet(self):
         # Initializes the super-network manager
-        self.supernet_manager = SUPERNET_ENCODING[self.supernet](
-            param_dict=get_supernet_parameters(self.supernet), seed=self.seed
-        )
+        if self.bootstrapnas:
+            param_dict = self.bootstrapnas.get_search_space()
+        else:
+            param_dict = get_supernet_parameters(self.supernet)
+        self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
 
     def _init_search(self):
         if self.supernet in [
@@ -167,6 +175,14 @@ class NASBaseConfig:
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+            )
+        elif 'bootstrapnas' in self.supernet:
+            self.runner_validate = BootstrapNASRunner(
+                bootstrapnas=self.bootstrapnas,
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
                 device=self.device,
             )
         else:
@@ -240,6 +256,7 @@ class LINAS(NASBaseConfig):
             device=device,
             valid_size=valid_size,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def train_predictors(self, results_path: str = None):
@@ -332,7 +349,20 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
                 )
-
+            elif 'bootstrapnas' in self.supernet:
+                runner_predict = BootstrapNASRunner(
+                    bootstrapnas=self.bootstrapnas,
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                )
+            else:
+                raise NotImplementedError
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -477,6 +507,7 @@ class Evolutionary(NASBaseConfig):
             device=device,
             valid_size=valid_size,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
@@ -614,6 +645,7 @@ class RandomSearch(NASBaseConfig):
             device=device,
             valid_size=valid_size,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):

@@ -16,83 +16,17 @@
 import copy
 import csv
 from datetime import datetime
-from typing import List, Tuple
+from typing import Tuple
 
 import numpy as np
 import torch
-from addict import Dict
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
-from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
-from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.model_creation import create_nncf_network
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 from dynast.utils.datasets import CIFAR10
-from dynast.utils.nn import get_macs, measure_latency, reset_bn, validate_classification
-
-
-class BootstrapNAS:
-    def __init__(self, model: torch.nn.Module, nncf_config: Dict):
-        nncf_network = create_nncf_network(model, nncf_config)
-
-        compression_state = torch.load(nncf_config.supernet_path, map_location=torch.device(nncf_config.device))
-        self._model, self._elasticity_ctrl = resume_compression_from_state(nncf_network, compression_state)
-        model_weights = torch.load(nncf_config.supernet_weights, map_location=torch.device(nncf_config.device))
-
-        load_state(model, model_weights, is_resume=True)
-
-    def get_search_space(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        active_handlers = {
-            dim: m_handler._handlers[dim] for dim in m_handler._handlers if m_handler._is_handler_enabled_map[dim]
-        }
-        space = {}
-        for handler_id, handler in active_handlers.items():
-            space[handler_id.value] = handler.get_search_space()
-        return space
-
-    def eval_subnet(self, config, eval_fn, **kwargs):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        m_handler.activate_subnet_for_config(
-            m_handler.get_config_from_pymoo(config)
-            # config
-        )
-        print(kwargs)
-        return eval_fn(self._model, **kwargs)
-
-    def get_active_subnet(self):
-        return self._model
-
-    def get_active_config(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_active_config()
-
-    def get_random_config(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_random_config()
-
-    def get_minimum_config(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_minimum_config()
-
-    def get_maximum_config(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_maximum_config()
-
-    def get_available_elasticity_dims(self):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_available_elasticity_dims()
-
-    def activate_subnet_for_config(self, config):
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        m_handler.activate_subnet_for_config(config)
-
-    def get_config_from_pymoo(self, x: List) -> SubnetConfig:
-        m_handler = self._elasticity_ctrl.multi_elasticity_handler
-        return m_handler.get_config_from_pymoo(x)
+from dynast.utils.nn import get_macs, measure_latency, validate_classification
 
 
 class BootstrapNASRunner:
@@ -102,8 +36,9 @@ class BootstrapNASRunner:
 
     def __init__(
         self,
-        model: torch.nn.Module,
-        config: Dict,
+        bootstrapnas: "BootstrapNAS",
+        supernet: str,
+        dataset_path: str = None,
         acc_predictor: Predictor = None,
         macs_predictor: Predictor = None,
         latency_predictor: Predictor = None,
@@ -117,10 +52,8 @@ class BootstrapNASRunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.bootstrapnas = BootstrapNAS(
-            model,
-            config,
-        )
+        self.bootstrapnas = bootstrapnas
+        self.dataset_path = dataset_path
 
     def estimate_accuracy_top1(self, subnet_cfg):
         top1 = self.acc_predictor.predict(subnet_cfg)
@@ -142,33 +75,32 @@ class BootstrapNASRunner:
         if device is None:
             device = self.device
 
-        train_dataloader = CIFAR10.train_dataloader(batch_size=self.batch_size)
+        CIFAR10.PATH = self.dataset_path
+
         validation_dataloader = CIFAR10.validation_dataloader(
             batch_size=self.batch_size
         )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
 
         subnet_sample = copy.deepcopy(pymoo_vector)
 
-        self.bootstrapnas.eval_subnet(
-            subnet_sample,
-            lambda _: 1.0,
-        )
-        model = self.bootstrapnas._model
+        self.bootstrapnas.activate_subnet_for_pymoo_config(subnet_sample)
+        model = self.bootstrapnas.get_active_subnet()
 
         model = model.to(device)
 
-        reset_bn(
-            model=model,
-            num_samples=2000,
-            train_dataloader=train_dataloader,
-            device=device,
-        )
+        # TODO(macsz) this is a hack to reset BN stats. We should do it properly.
+        # train_dataloader = CIFAR10.train_dataloader(batch_size=self.batch_size)
+        # reset_bn(
+        #     model=model,
+        #     num_samples=2000,
+        #     train_dataloader=train_dataloader,
+        #     device=device,
+        # )
 
         losses, top1, top5 = validate_classification(
             model=model,
             data_loader=validation_dataloader,
             device=device,
-            batch_size=self.batch_size,
         )
 
         return top1
@@ -195,9 +127,8 @@ class BootstrapNASRunner:
 
         macs = get_macs(
             model=model,
-            input_size=(1, 3, 224, 224),  # batch size does not matter for MACs (scales linearly).
+            input_size=(1, 3, 32, 32),  # batch size does not matter for MACs (scales linearly).
             device=device,
-            ignore_batchnorm=False,
         )
 
         return macs, params
@@ -206,7 +137,7 @@ class BootstrapNASRunner:
     def measure_latency(
         self,
         pymoo_vector: dict,
-        input_size: tuple = (1, 3, 224, 224),
+        input_size: tuple = (1, 3, 32, 32),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = None,
@@ -312,6 +243,7 @@ class EvaluationInterfaceBootstrapNAS(EvaluationInterface):
             if 'macs' in self.measurements or 'params' in self.measurements:
                 individual_results['macs'], individual_results['params'] = self.evaluator.validate_macs_params(x)
             if 'latency' in self.measurements:
+                # TODO(macsz) Make sure that the input size is correct
                 individual_results['latency'], _ = self.evaluator.measure_latency(x)
 
         # Write result for csv_path

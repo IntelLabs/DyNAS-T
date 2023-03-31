@@ -14,6 +14,9 @@
 
 
 from typing import Any, Dict, List
+
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
 from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
@@ -23,7 +26,6 @@ from dynast.supernetwork.machine_translation.transformer_encoding import Transfo
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
-from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 
 __all__ = [
     "get_csv_header",
@@ -92,6 +94,7 @@ EVALUATION_INTERFACE = {
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
+    'bootstrapnas_resnet50_cifar10': EvaluationInterfaceBootstrapNAS,
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -101,6 +104,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
+    'bootstrapnas_resnet50_cifar10': 5000,
 }
 
 SUPERNET_TYPE = {
@@ -121,6 +125,7 @@ SUPERNET_METRICS = {
     'ofa_mbv3_d234_e346_k357_w1.0': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
+    'bootstrapnas_resnet50_cifar10': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
 }
@@ -173,5 +178,10 @@ def get_csv_header(supernet: str) -> List[str]:
     return csv_header
 
 
-def get_supernet_parameters(supernet: str) -> Dict[str, Dict[str, Any]]:
+def get_supernet_parameters(supernet: str, **kwargs) -> Dict[str, Dict[str, Any]]:
+    if supernet.startswith('bootstrapnas'):
+        assert (
+            'bootstrapnas' in kwargs
+        ), 'BootstrapNAS object should be passed to run search with BootstrapNAS search space. Please check `bootstrapnas` argument.'
+
     return _SUPERNET_PARAMETERS[supernet]
