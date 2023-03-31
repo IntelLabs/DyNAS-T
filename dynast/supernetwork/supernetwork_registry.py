@@ -45,7 +45,7 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
-    'bootstrapnas_resnet50_cifar10': BootstrapNASEncoding,
+    'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
 
 _SUPERNET_PARAMETERS = {
@@ -94,7 +94,7 @@ EVALUATION_INTERFACE = {
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
-    'bootstrapnas_resnet50_cifar10': EvaluationInterfaceBootstrapNAS,
+    'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -104,7 +104,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
-    'bootstrapnas_resnet50_cifar10': 5000,
+    'bootstrapnas_image_classification': 5000,
 }
 
 SUPERNET_TYPE = {
@@ -113,7 +113,7 @@ SUPERNET_TYPE = {
         'ofa_mbv3_d234_e346_k357_w1.0',
         'ofa_mbv3_d234_e346_k357_w1.2',
         'ofa_proxyless_d234_e346_k357_w1.3',
-        'bootstrapnas_resnet50_cifar10',
+        'bootstrapnas_image_classification',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
@@ -125,9 +125,9 @@ SUPERNET_METRICS = {
     'ofa_mbv3_d234_e346_k357_w1.0': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
-    'bootstrapnas_resnet50_cifar10': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
+    'bootstrapnas_image_classification': ['params', 'latency', 'macs', 'accuracy_top1'],
 }
 
 

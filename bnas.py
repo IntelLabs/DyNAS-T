@@ -213,7 +213,7 @@ def main(argv):
                 'population': 50,
             }
         dynas = DyNAS(
-            supernet='bootstrapnas_resnet50_cifar10',
+            supernet='bootstrapnas_image_classification',
             optimization_metrics=['accuracy_top1', 'macs'],
             measurements=['accuracy_top1', 'macs'],
             batch_size=256,
