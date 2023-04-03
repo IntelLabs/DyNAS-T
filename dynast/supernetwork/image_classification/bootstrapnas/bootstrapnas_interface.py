@@ -81,21 +81,7 @@ class BootstrapNASRunner:
             batch_size=self.batch_size
         )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
 
-        subnet_sample = copy.deepcopy(pymoo_vector)
-
-        self.bootstrapnas.activate_subnet_for_pymoo_config(subnet_sample)
-        model = self.bootstrapnas.get_active_subnet()
-
-        model = model.to(device)
-
-        # TODO(macsz) this is a hack to reset BN stats. We should do it properly.
-        # train_dataloader = CIFAR10.train_dataloader(batch_size=self.batch_size)
-        # reset_bn(
-        #     model=model,
-        #     num_samples=2000,
-        #     train_dataloader=train_dataloader,
-        #     device=device,
-        # )
+        model = self._get_subnet(pymoo_vector, device)
 
         losses, top1, top5 = validate_classification(
             model=model,
@@ -115,13 +101,7 @@ class BootstrapNASRunner:
         if device is None:
             device = self.device
 
-        subnet_sample = copy.deepcopy(pymoo_vector)
-
-        self.bootstrapnas.eval_subnet(
-            subnet_sample,
-            lambda _: 1.0,
-        )
-        model = self.bootstrapnas._model
+        model = self._get_subnet(pymoo_vector, device)
 
         params = sum(param.numel() for param in model.parameters())
 
@@ -153,13 +133,7 @@ class BootstrapNASRunner:
         if device is None:
             device = self.device
 
-        subnet_sample = copy.deepcopy(pymoo_vector)
-
-        self.bootstrapnas.eval_subnet(
-            subnet_sample,
-            lambda _: 1.0,
-        )
-        model = self.bootstrapnas._model
+        model = self._get_subnet(pymoo_vector, device)
 
         if not warmup_steps:
             warmup_steps = auto_steps(input_size[0], is_warmup=True)
@@ -176,15 +150,13 @@ class BootstrapNASRunner:
         )
         return latency_mean, latency_std
 
-    def get_subnet(self, pymoo_vector):
-        self.bootstrapnas.eval_subnet(
-            pymoo_vector,
-            lambda _: 1.0,
-        )
-        self.subnet = self.bootstrapnas._model
-        self.subnet = self.subnet.to(self.device)
-        self.subnet.eval()
-        return self.subnet
+    def _get_subnet(self, pymoo_vector, device):
+        subnet_sample = copy.deepcopy(pymoo_vector)
+
+        self.bootstrapnas.activate_config(self.bootstrapnas.get_config_from_pymoo(subnet_sample))
+        model = self.bootstrapnas.get_active_subnet()
+        model = model.to(device)
+        return model
 
 
 class EvaluationInterfaceBootstrapNAS(EvaluationInterface):
