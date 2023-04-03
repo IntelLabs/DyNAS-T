@@ -1,7 +1,6 @@
 import logging
 import random
 
-import torchvision.transforms as transforms
 from nncf import set_log_level
 from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork
 
@@ -11,8 +10,6 @@ from dynast.utils import log, set_logger
 
 set_log_level(logging.ERROR)
 set_logger(logging.INFO)
-
-transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 
 def main():
