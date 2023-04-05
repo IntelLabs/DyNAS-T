@@ -1,3 +1,14 @@
+import sys
+
+DYNAST_PATH = "/store/code/opensource/DyNAS-T"
+NNCF_PATH = "/store/code/opensource/jpablomch_nncf_bootstrapnas"
+
+if DYNAST_PATH not in sys.path:
+    sys.path.insert(0, DYNAST_PATH)
+
+if NNCF_PATH not in sys.path:
+    sys.path.insert(0, NNCF_PATH)
+
 import json
 import logging
 import random
