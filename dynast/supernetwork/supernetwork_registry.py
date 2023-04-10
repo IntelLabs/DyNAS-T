@@ -22,6 +22,8 @@ from dynast.supernetwork.machine_translation.transformer_encoding import Transfo
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
+from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
+from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -30,6 +32,7 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
+    'vit_base_imagenet': ViTEncoding,
 }
 
 SUPERNET_PARAMETERS = {
@@ -69,6 +72,11 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
+    'vit_base_imagenet': {
+        'num_layers': {'count': 1, 'vars': [4, 5, 6, 7, 8, 9, 10, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [2, 4, 8, 12]},
+        'vit_intermediate_sizes': {'count': 12, 'vars': [512, 768, 1024, 3072]},
+    },
 }
 
 EVALUATION_INTERFACE = {
@@ -78,6 +86,7 @@ EVALUATION_INTERFACE = {
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
+    'vit_base_imagenet': EvaluationInterfaceViT,
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -87,6 +96,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
+    'vit_base_imagenet': 20000,
 }
 
 SUPERNET_TYPE = {
@@ -95,6 +105,7 @@ SUPERNET_TYPE = {
         'ofa_mbv3_d234_e346_k357_w1.0',
         'ofa_mbv3_d234_e346_k357_w1.2',
         'ofa_proxyless_d234_e346_k357_w1.3',
+        'vit_base_imagenet',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
@@ -108,6 +119,7 @@ SUPERNET_METRICS = {
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
+    'vit_base_imagenet': ['latency', 'macs', 'params', 'accuracy_top1'],
 }
 
 
