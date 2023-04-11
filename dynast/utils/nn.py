@@ -212,14 +212,6 @@ def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `mo
     model.eval()
 
 
-def rm_bn_from_net(
-    net: nn.Module,
-) -> None:
-    for m in net.modules():
-        if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
-            m.forward = lambda x: x
-
-
 @torch.no_grad()
 def measure_latency(
     model: nn.Module,
