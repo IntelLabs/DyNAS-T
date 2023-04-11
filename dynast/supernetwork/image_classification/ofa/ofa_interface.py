@@ -131,7 +131,6 @@ class OFARunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        input_size: tuple = (1, 3, 224, 224),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = None,
@@ -143,11 +142,12 @@ class OFARunner:
             mean latency; std latency
         """
         device = self.device if not device else device
+        input_size = (self.batch_size, 3, 224, 224)
 
         if not warmup_steps:
-            warmup_steps = auto_steps(input_size[0], is_warmup=True)
+            warmup_steps = auto_steps(self.batch_size, is_warmup=True)
         if not measure_steps:
-            measure_steps = auto_steps(input_size[0])
+            measure_steps = auto_steps(self.batch_size)
 
         model = self.get_subnet(subnet_cfg)
 
@@ -227,7 +227,7 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
             if 'latency' in self.measurements:
                 individual_results['latency'], _ = self.evaluator.measure_latency(
                     subnet_sample
-                )  # TODO(change batch size!!)
+                )
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_top1(subnet_sample)
 
