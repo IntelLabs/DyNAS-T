@@ -225,9 +225,7 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
                     subnet_sample
                 )
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(
-                    subnet_sample
-                )
+                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_top1(subnet_sample)
 
