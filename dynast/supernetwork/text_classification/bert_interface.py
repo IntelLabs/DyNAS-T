@@ -90,7 +90,7 @@ def compute_accuracy_sst2(
 def compute_latency(
     config,
     model,
-    eval_batch_size=4,
+    batch_size=4,
     device: str = 'cpu',
     warmup_steps: int = 10,
     measure_steps: int = 100,
@@ -101,9 +101,9 @@ def compute_latency(
     model.to(device)
     model.set_sample_config(config)
 
-    input_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
-    segment_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
-    input_mask = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
+    input_ids = torch.zeros([batch_size, 128], dtype=torch.long, device=device)
+    segment_ids = torch.zeros([batch_size, 128], dtype=torch.long, device=device)
+    input_mask = torch.zeros([batch_size, 128], dtype=torch.long, device=device)
 
     latencies = []
 
@@ -255,7 +255,6 @@ class BertSST2Runner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        eval_batch_size=4,
         warmup_steps: int = 10,
         measure_steps: int = 100,
     ):
@@ -271,7 +270,15 @@ class BertSST2Runner:
              Measure steps = {measure_steps}'
         )
 
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, eval_batch_size, device=self.device)
+        lat_mean, lat_std = compute_latency(
+            config=subnet_cfg,
+            model=self.supernet_model,
+            batch_size=self.batch_size,
+            device=self.device,
+            warmup_steps=warmup_steps,
+            measure_steps=measure_steps,
+        )
+
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
