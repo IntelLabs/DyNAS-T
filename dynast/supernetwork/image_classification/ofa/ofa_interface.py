@@ -32,7 +32,8 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
     RunManager,
 )
 from dynast.utils import log
-from dynast.utils.nn import get_macs, get_parameters, measure_latency
+from dynast.utils.datasets import ImageNet
+from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
 
 
 class OFARunner:
@@ -62,13 +63,23 @@ class OFARunner:
         self.batch_size = batch_size
         self.device = device
         self.test_size = test_size
+        self.dataset_path = dataset_path
+        self.dataloader_workers = dataloader_workers
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
+
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
             valid_size=test_size,
         )
+        self._init_data()
+
+    def _init_data(self):
+        ImageNet.PATH = self.dataset_path
+        self.dataloader = ImageNet.validation_dataloader(
+            batch_size=self.batch_size,
+            num_workers=self.dataloader_workers,
         )
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
@@ -97,8 +108,14 @@ class OFARunner:
 
         # Test sampled subnet
         self.run_config.data_provider.assign_active_img_size(subnet_cfg['r'][0])
-        loss, acc = run_manager.validate(net=subnet, no_logs=True)
-        top1 = acc[0]
+
+        loss, top1, top5 = validate_classification(
+            model=subnet,
+            data_loader=self.dataloader,
+            test_size=self.test_size,
+            device=self.device,
+        )
+
         return top1
 
     def validate_macs_params(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:
