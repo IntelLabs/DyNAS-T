@@ -3,7 +3,7 @@
 source $( dirname -- "$0"; )/config.sh
 
 time ${RUN_COMMAND} \
-        --results_path ${RESULTS_PATH}/results_ofaresnet50_random_long.csv \
+        --results_path ${RESULTS_PATH}/results_ofaresnet50_linas_long.csv \
         --supernet ofa_resnet50 \
         --dataset_path  ${DATASET_IMAGENET_PATH} \
         --search_tactic linas \
