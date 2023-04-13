@@ -52,7 +52,7 @@ class OFARunner:
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_size: int = None,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -61,13 +61,14 @@ class OFARunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.test_size = None
+        self.test_size = test_size
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
-            valid_size=valid_size,
+            valid_size=test_size,
+        )
         )
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
