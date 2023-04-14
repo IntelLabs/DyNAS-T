@@ -104,8 +104,6 @@ class TorchVisionReference(Reference):
         loss, top1, top5 = validate_classification(
             model=model,
             device=device,
-            is_openvino=False,
-            batch_size=batch_size,
             data_loader=self.dataset.validation_dataloader(
                 batch_size=batch_size,
                 image_size=input_size,

@@ -14,7 +14,7 @@ DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 SHORT_RANDOM_POPULATION=2
 
 # Limit the number of validation samples to speed up the test.
-SHORT_RANDOM_VALID_SIZE=20
+SHORT_RANDOM_TEST_SIZE=20
 
 
 #################################################################################################
