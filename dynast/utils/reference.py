@@ -108,7 +108,7 @@ class TorchVisionReference(Reference):
                 batch_size=batch_size,
                 image_size=input_size,
             ),
-            test_size=test_size,
+            test_size=test_size,  # TODO(macsz) Once the `test_size` functionality is implemented we will have to modify this call accordingly.
         )
         log.info(
             '\'{model_name}\' on \'{dataset_name}\' - top1 {top1} top5 {top5} loss {loss}'.format(

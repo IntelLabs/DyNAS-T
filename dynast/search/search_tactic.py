@@ -193,6 +193,7 @@ class NASBaseConfig:
                 test_size=self.test_size,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
+            # TODO(macsz) Add `test_size`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -200,6 +201,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
             )
         elif self.supernet == 'bert_base_sst2':
+            # TODO(macsz) Add `test_size`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
