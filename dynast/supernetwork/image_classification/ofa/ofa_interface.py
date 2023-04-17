@@ -112,7 +112,6 @@ class OFARunner:
         loss, top1, top5 = validate_classification(
             model=subnet,
             data_loader=self.dataloader,
-            test_size=self.test_size,
             device=self.device,
         )
 
