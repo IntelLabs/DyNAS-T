@@ -71,7 +71,7 @@ def main():
         '--test_size',
         default=None,
         type=int,
-        help='How many batches of data to use when evaluating model\'s accuracy.',
+        help='How many data samples to use when evaluating model\'s accuracy. If not set all test data will be used.',
     )
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
