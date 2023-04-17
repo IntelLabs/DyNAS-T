@@ -25,11 +25,11 @@ done
 echo "Path set to ${ROOT_PATH}"
 
 echo 'Running `isort`'
-isort ${ROOT_PATH}
+python -m isort ${ROOT_PATH}
 
 echo 'Running `black`'
 # `-S` - `black` will not replace single quotes with double quotes.
-black -S ${ROOT_PATH}
+python -m black -S ${ROOT_PATH}
 
 echo 'Running `mypy`'
-mypy ${ROOT_PATH}
+python -m mypy ${ROOT_PATH}

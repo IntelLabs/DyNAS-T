@@ -69,23 +69,12 @@ def accuracy(output, target, topk=(1,)) -> List[float]:
 def validate_classification(
     model,
     data_loader,
-    epoch=0,
     test_size=None,
-    is_openvino=False,
-    is_onnx=False,
-    use_mkldnn=False,
     device='cpu',
-    batch_size=128,
 ):
-    # NOTE(macsz): if `use_mkldnn` is set to True and model is an OFA submodel,
-    # please refer to HANDI OFA and follow MKLDNN instructions there.
-
     test_criterion = nn.CrossEntropyLoss()
 
-    if (not is_openvino) and (not is_onnx):
-        if not isinstance(model, nn.DataParallel):
-            model = nn.DataParallel(model)
-        model = model.eval()
+    model = model.eval()
 
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -96,15 +85,11 @@ def validate_classification(
     else:
         total = len(data_loader)
 
-    def to_numpy(tensor):
-        return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
-
     with torch.no_grad():
-        for i, (images, labels) in enumerate(data_loader):
-            epoch += 1
+        for epoch, (images, labels) in enumerate(data_loader):
             log.debug(
                 "Validate #{}/{} {}".format(
-                    epoch,
+                    epoch + 1,
                     total,
                     {
                         "loss": losses.avg,
@@ -116,47 +101,15 @@ def validate_classification(
             )
             images, labels = images.to(device), labels.to(device)
 
-            if use_mkldnn:
-                images = images.to_mkldnn()
-
-            # compute output
-            if is_onnx:
-                output = model.run(
-                    [model.get_outputs()[0].name],
-                    {model.get_inputs()[0].name: to_numpy(images)},
-                )
-                output = torch.from_numpy(output[0]).to(device)
-            elif is_openvino:
-                expected_batch_size = model.inputs["input"].shape[0]
-                img = to_numpy(images)
-                batch_size = len(img)
-
-                # openvino cannot handle dynamic batch sizes, so for
-                # the last batch of dataset, zero pad the batch size
-                if batch_size != expected_batch_size:
-                    assert batch_size < expected_batch_size, "Assert batch_size:{} < expected_batch_size:{}".format(
-                        batch_size, expected_batch_size
-                    )
-                    npad = expected_batch_size - batch_size
-                    img = np.pad(img, ((0, npad), (0, 0), (0, 0), (0, 0)), mode="constant")
-                    img = img.copy()
-
-                output = model.infer(inputs={"input": img})
-                output = torch.Tensor(output["output"])[:batch_size]
-            else:
-                output = model(images)
-
-            if use_mkldnn:
-                output = output.to_dense()
+            output = model(images)
 
             loss = test_criterion(output, labels)
-            # measure accuracy and record loss
             acc1, acc5 = accuracy(output, labels, topk=(1, 5))
 
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
-            if i > total:
+            if epoch + 1 >= total:
                 break
     return losses.avg, top1.avg, top5.avg
 

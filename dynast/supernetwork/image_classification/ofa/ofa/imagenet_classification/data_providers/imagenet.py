@@ -85,7 +85,7 @@ class ImagenetDataProvider(DataProvider):
                 assert isinstance(valid_size, float) and 0 < valid_size < 1
                 valid_size = int(len(train_dataset) * valid_size)
 
-            valid_dataset = self.train_dataset(valid_transforms)
+            valid_dataset = self.train_dataset(valid_transforms)  # TODO(macsz) This is wrong!
             train_indexes, valid_indexes = self.random_sample_valid_set(len(train_dataset), valid_size)
 
             if num_replicas is not None:
