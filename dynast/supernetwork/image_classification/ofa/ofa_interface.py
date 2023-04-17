@@ -16,7 +16,7 @@ import copy
 import csv
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Dict, Tuple
 
 import torch
 
@@ -46,20 +46,14 @@ class OFARunner:
         self,
         supernet: str,
         dataset_path: str,
-        acc_predictor: Predictor = None,
-        macs_predictor: Predictor = None,
-        latency_predictor: Predictor = None,
-        params_predictor: Predictor = None,
+        predictors: Dict[str, Predictor] = None,
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_size: int = None,
     ):
         self.supernet = supernet
-        self.acc_predictor = acc_predictor
-        self.macs_predictor = macs_predictor
-        self.latency_predictor = latency_predictor
-        self.params_predictor = params_predictor
+        self.predictors = predictors
         self.batch_size = batch_size
         self.device = device
         self.test_size = test_size
@@ -82,21 +76,9 @@ class OFARunner:
             num_workers=self.dataloader_workers,
         )
 
-    def estimate_accuracy_top1(self, subnet_cfg) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
-        return top1
-
-    def estimate_macs(self, subnet_cfg) -> int:
-        macs = self.macs_predictor.predict(subnet_cfg)
-        return macs
-
-    def estimate_latency(self, subnet_cfg) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
-        return latency
-
-    def estimate_parameters(self, subnet_cfg) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
-        return parameters
+    def estimate_metric(self, metric: str, subnet_cfg) -> float:
+        predicted_val = self.predictors.get(metric).predict(subnet_cfg)
+        return predicted_val
 
     def validate_top1(self, subnet_cfg, device=None) -> float:
         device = self.device if not device else device
@@ -219,21 +201,10 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'latency' in self.optimization_metrics:
-                individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'accuracy_top1' in self.optimization_metrics:
-                individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_top1(
-                    self.manager.onehot_generic(x).reshape(1, -1)
+            for metric in self.optimization_metrics:
+                # TODO(macsz) Maybe move [0] to the `estimate_metric`.
+                individual_results[metric] = self.evaluator.estimate_metric(
+                    metric, self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
 
         # Validation Mode
@@ -318,21 +289,10 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'latency' in self.optimization_metrics:
-                individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'accuracy_top1' in self.optimization_metrics:
-                individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_top1(
-                    self.manager.onehot_generic(x).reshape(1, -1)
+            for metric in self.optimization_metrics:
+                # TODO(macsz) Maybe move [0] to the `estimate_metric`.
+                individual_results[metric] = self.evaluator.estimate_metric(
+                    metric, self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
 
         # Validation Mode
