@@ -24,10 +24,10 @@ from dynast.search.evolutionary import (
     EvolutionarySingleObjective,
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
+from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.utils import log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 

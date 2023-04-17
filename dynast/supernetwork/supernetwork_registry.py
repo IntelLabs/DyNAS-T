@@ -18,12 +18,12 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
     EvaluationInterfaceOFAResNet50,
 )
+from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
+from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
-from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
-from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,

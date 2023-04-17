@@ -26,41 +26,44 @@ import torchprofile
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
-
-from .vit_supernetwork import SuperViT
 from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import validate_classification
+
+from .vit_supernetwork import SuperViT
 
 warnings.filterwarnings("ignore")
 
 IMAGE_SIZE = 224
-PATCH_SIZE=16
+PATCH_SIZE = 16
 NUM_CLASSES = 1000
-DROPOUT=0.1
-ATTN_DROPOUT=0.1
+DROPOUT = 0.1
+ATTN_DROPOUT = 0.1
 
 # ViT_B16
-NUM_LAYERS_B_16=12
-NUM_HEADS_B_16=12
-HIDDEN_DIM_B_16=768
-MLP_DIM_B_16=3072
+NUM_LAYERS_B_16 = 12
+NUM_HEADS_B_16 = 12
+HIDDEN_DIM_B_16 = 768
+MLP_DIM_B_16 = 3072
+
 
 def load_supernet(checkpoint_path):
 
-    model = SuperViT(image_size=IMAGE_SIZE,
-                    patch_size=PATCH_SIZE,
-                    num_layers=NUM_LAYERS_B_16,
-                    num_heads=NUM_HEADS_B_16,
-                    hidden_dim=HIDDEN_DIM_B_16,
-                    mlp_dim=MLP_DIM_B_16,
-                    num_classes=NUM_CLASSES,
-                    )
-    
+    model = SuperViT(
+        image_size=IMAGE_SIZE,
+        patch_size=PATCH_SIZE,
+        num_layers=NUM_LAYERS_B_16,
+        num_heads=NUM_HEADS_B_16,
+        hidden_dim=HIDDEN_DIM_B_16,
+        mlp_dim=MLP_DIM_B_16,
+        num_classes=NUM_CLASSES,
+    )
+
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')['state_dict'],
         strict=True,
     )
     return model
+
 
 # def accuracy(output, target, topk=(1,)):
 #     """Computes the accuracy over the k top predictions for the specified values of k"""
@@ -106,11 +109,12 @@ def load_supernet(checkpoint_path):
 #         running_top1.append(acc1[0].item() * images.size(0))
 #         running_top5.append(acc5[0].item() * images.size(0))
 #         running_count += images.size(0)
-    
-#     ave_top1 = np.sum(running_top1) / running_count 
+
+#     ave_top1 = np.sum(running_top1) / running_count
 #     ave_top5 = np.sum(running_top5) / running_count
 
 #     return ave_top1, ave_top5 # Return top5 if needed
+
 
 def compute_val_acc(
     config,
@@ -124,11 +128,9 @@ def compute_val_acc(
     model.eval()
     model.to(device)
     model.set_sample_config(config)
-    return validate_classification(model=model, 
-                            data_loader=eval_dataloader, 
-                            epoch=0, 
-                            test_size=test_size,
-                            device=device)
+    return validate_classification(
+        model=model, data_loader=eval_dataloader, epoch=0, test_size=test_size, device=device
+    )
 
 
 def compute_latency(
@@ -170,6 +172,7 @@ def compute_latency(
     latency_std = np.round(np.std(truncated_latency), 3)
 
     return latency_mean, latency_std
+
 
 # TODO: Make this correct for ViT: Fix param computation
 def compute_macs(config, model, base_config, device: str = 'cpu'):
@@ -248,8 +251,8 @@ class ViTRunner:
         self.device = device
         self.test_size = total_batches
         self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size)
-        #TODO: Figure out if a similar base config can be created for ViT
-        #self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
+        # TODO: Figure out if a similar base config can be created for ViT
+        # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
         self.supernet_model = load_supernet(self.checkpoint_path)
 
     def estimate_accuracy_imagenet(
@@ -279,12 +282,13 @@ class ViTRunner:
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
 
-        _, top1_accuracy, _ = compute_val_acc(config=subnet_cfg, 
-                                              eval_dataloader=self.eval_dataloader, 
-                                              model=self.supernet_model, 
-                                              test_size=self.test_size,
-                                              device=self.device,
-                                              )
+        _, top1_accuracy, _ = compute_val_acc(
+            config=subnet_cfg,
+            eval_dataloader=self.eval_dataloader,
+            model=self.supernet_model,
+            test_size=self.test_size,
+            device=self.device,
+        )
         return top1_accuracy
 
     def validate_macs(
@@ -298,7 +302,7 @@ class ViTRunner:
             `macs`
         """
         # TODO: Fix Macs computation
-        self.base_config=None
+        self.base_config = None
         macs, params = compute_macs(subnet_cfg, self.supernet_model, self.base_config)
         logging.info('Model\'s macs: {}'.format(macs))
         return macs, params

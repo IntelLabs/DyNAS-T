@@ -44,24 +44,34 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import math
+from collections import OrderedDict
+from functools import partial
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
-from functools import partial
-from collections import OrderedDict
 
-from .modules_supernetwork import SuperLinear, SuperLayerNorm, SuperEmbedding, SuperSelfAttentionOutput, SuperMultiheadAttention, Conv2dNormActivation
+from .modules_supernetwork import (
+    Conv2dNormActivation,
+    SuperEmbedding,
+    SuperLayerNorm,
+    SuperLinear,
+    SuperMultiheadAttention,
+    SuperSelfAttentionOutput,
+)
+
 
 class MLPBlock(nn.Sequential):
     """Transformer MLP block."""
+
     def __init__(self, in_dim, mlp_dim, dropout):
         super().__init__()
-        self.linear_1 = SuperLinear(super_in_dim=in_dim, super_out_dim=mlp_dim) 
-        self.act = nn.GELU() 
+        self.linear_1 = SuperLinear(super_in_dim=in_dim, super_out_dim=mlp_dim)
+        self.act = nn.GELU()
         self.dropout_1 = nn.Dropout(dropout)
-        self.linear_2 = SuperLinear(super_in_dim=mlp_dim, super_out_dim=in_dim)  
+        self.linear_2 = SuperLinear(super_in_dim=mlp_dim, super_out_dim=in_dim)
         self.dropout_2 = nn.Dropout(dropout)
 
         nn.init.xavier_uniform_(self.linear_1.weight)
@@ -72,22 +82,26 @@ class MLPBlock(nn.Sequential):
         # Elastic Parameters
         self.sample_hidden_size = None
         self.sample_intermediate_size = None
-    
+
     def set_sample_config(self, vit_hidden_size, vit_intermediate_size):
 
         self.sample_hidden_size = vit_hidden_size
         self.sample_intermediate_size = vit_intermediate_size
 
-        self.linear_1.set_sample_config(self.sample_hidden_size, 
-                                        self.sample_intermediate_size, 
-                                        )
+        self.linear_1.set_sample_config(
+            self.sample_hidden_size,
+            self.sample_intermediate_size,
+        )
 
-        self.linear_2.set_sample_config(self.sample_intermediate_size, 
-                                        self.sample_hidden_size, 
-                                        )
+        self.linear_2.set_sample_config(
+            self.sample_intermediate_size,
+            self.sample_hidden_size,
+        )
+
 
 class EncoderBlock(nn.Module):
     """Transformer encoder block."""
+
     def __init__(
         self,
         num_heads,
@@ -95,19 +109,22 @@ class EncoderBlock(nn.Module):
         mlp_dim,
         dropout,
         attention_dropout,
-        norm_layer = partial(SuperLayerNorm, eps=1e-6), #partial(nn.LayerNorm, eps=1e-6),
+        norm_layer=partial(SuperLayerNorm, eps=1e-6),  # partial(nn.LayerNorm, eps=1e-6),
     ):
         super().__init__()
         self.num_heads = num_heads
 
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
-        self.self_attention = SuperMultiheadAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
-        self.attention_output = SuperSelfAttentionOutput(hidden_dim, 
-                                                         layer_norm_eps=1e-6,
-                                                         hidden_dropout_prob= dropout,
-                                                         num_attention_heads=num_heads,
-                                                         )
+        self.self_attention = SuperMultiheadAttention(
+            hidden_dim, num_heads, dropout=attention_dropout, batch_first=True
+        )
+        self.attention_output = SuperSelfAttentionOutput(
+            hidden_dim,
+            layer_norm_eps=1e-6,
+            hidden_dropout_prob=dropout,
+            num_attention_heads=num_heads,
+        )
         self.dropout = nn.Dropout(dropout)
 
         # Intermediate MLP block
@@ -117,7 +134,7 @@ class EncoderBlock(nn.Module):
         # Elastic Parameters
         self.sample_hidden_size = None
         self.sample_intermediate_size = None
-        self.sample_num_attention_heads = None       
+        self.sample_num_attention_heads = None
 
     def forward(self, input: torch.Tensor):
         torch._assert(input.dim() == 3, f"Expected (batch_size, seq_length, hidden_dim) got {input.shape}")
@@ -127,34 +144,40 @@ class EncoderBlock(nn.Module):
         x, _ = self.self_attention(x, output_attentions=True)
         x = self.attention_output(x, input)
 
-        # Intermediate MLP 
+        # Intermediate MLP
         y = self.ln_2(x)
         y = self.mlp(y)
         return x + y
 
-    def set_sample_config(self, 
-                          vit_num_attention_heads, 
-                          vit_sample_hidden_size, 
-                          vit_sample_intermediate_size,
-                          ):
+    def set_sample_config(
+        self,
+        vit_num_attention_heads,
+        vit_sample_hidden_size,
+        vit_sample_intermediate_size,
+    ):
         self.sample_hidden_size = vit_sample_hidden_size
         self.sample_intermediate_size = vit_sample_intermediate_size
         self.sample_num_attention_heads = vit_num_attention_heads
-        self.self_attention.set_sample_config(self.sample_hidden_size, 
-                                              self.sample_num_attention_heads,
-                                              )
-        self.attention_output.set_sample_config(self.sample_hidden_size,
-                               self.sample_num_attention_heads,
-                               )
-        self.mlp.set_sample_config(self.sample_hidden_size, 
-                                   self.sample_intermediate_size,
-                                   )
+        self.self_attention.set_sample_config(
+            self.sample_hidden_size,
+            self.sample_num_attention_heads,
+        )
+        self.attention_output.set_sample_config(
+            self.sample_hidden_size,
+            self.sample_num_attention_heads,
+        )
+        self.mlp.set_sample_config(
+            self.sample_hidden_size,
+            self.sample_intermediate_size,
+        )
         # Update LayerNorm Size
         self.ln_1.set_sample_config(self.sample_hidden_size)
         self.ln_2.set_sample_config(self.sample_hidden_size)
 
+
 class Encoder(nn.Module):
     """Transformer Model Encoder for sequence to sequence translation."""
+
     def __init__(
         self,
         seq_length,
@@ -164,7 +187,7 @@ class Encoder(nn.Module):
         mlp_dim,
         dropout,
         attention_dropout,
-        norm_layer = partial(SuperLayerNorm, eps=1e-6), 
+        norm_layer=partial(SuperLayerNorm, eps=1e-6),
     ):
         super().__init__()
         # Note that batch_size is on the first dim because
@@ -184,7 +207,7 @@ class Encoder(nn.Module):
             )
         self.layers = nn.Sequential(layers)
         self.ln = norm_layer(hidden_dim)
-        
+
         # Elastic Parameters
         self.sample_config = None
         self.sample_num_layer = None
@@ -196,7 +219,7 @@ class Encoder(nn.Module):
         if position_ids is None:
             position_ids = self.position_ids[:, :seq_length]
 
-        input = input + self.pos_embedding(position_ids) 
+        input = input + self.pos_embedding(position_ids)
         x = self.dropout(input)
         for i in range(self.sample_num_layer):
             x = self.layers[i](x)
@@ -204,7 +227,7 @@ class Encoder(nn.Module):
         return x
 
     def set_sample_config(self, sample_config):
-        self.sample_config = sample_config 
+        self.sample_config = sample_config
         self.sample_num_layer = sample_config["num_layers"]
         self.sample_hidden_size = sample_config["vit_hidden_sizes"]
 
@@ -212,15 +235,15 @@ class Encoder(nn.Module):
             tmp_layer = self.layers[i]
             sample_intermediate_size = sample_config['vit_intermediate_sizes'][i]
             sample_num_attention_heads = sample_config['num_attention_heads'][i]
-            tmp_layer.set_sample_config(sample_num_attention_heads, 
-                                        self.sample_hidden_size, 
-                                        sample_intermediate_size)
-        
+            tmp_layer.set_sample_config(sample_num_attention_heads, self.sample_hidden_size, sample_intermediate_size)
+
         self.pos_embedding.set_sample_config(self.sample_hidden_size)
         self.ln.set_sample_config(self.sample_hidden_size)
 
+
 class SuperViT(nn.Module):
     """ViT Baseline adapted from https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py"""
+
     def __init__(
         self,
         image_size,
@@ -229,22 +252,22 @@ class SuperViT(nn.Module):
         num_heads,
         hidden_dim,
         mlp_dim,
-        dropout = 0.0,
-        attention_dropout = 0.0,
-        num_classes = 1000,
-        representation_size = None,
-        norm_layer = partial(SuperLayerNorm, eps=1e-6), 
-        conv_stem_configs = None,
+        dropout=0.0,
+        attention_dropout=0.0,
+        num_classes=1000,
+        representation_size=None,
+        norm_layer=partial(SuperLayerNorm, eps=1e-6),
+        conv_stem_configs=None,
     ):
         super().__init__()
         torch._assert(image_size % patch_size == 0, "Input shape indivisible by patch_size")
         self.image_size = image_size
-        self.patch_size = patch_size 
+        self.patch_size = patch_size
         self.hidden_dim = hidden_dim
         self.mlp_dim = mlp_dim
         self.attention_dropout = attention_dropout
         self.dropout = dropout
-        self.num_classes = num_classes 
+        self.num_classes = num_classes
         self.representation_size = representation_size
         self.norm_layer = norm_layer
 
@@ -359,7 +382,7 @@ class SuperViT(nn.Module):
         x = x[:, 0]
         x = self.heads(x)
         return x
- 
+
     def set_sample_config(self, sample_config):
         self.sample_config = sample_config
         self.encoder.set_sample_config(sample_config)

@@ -44,35 +44,32 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import math
+import warnings
 from collections import defaultdict
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import warnings
-import math
-import numpy as np
+
 
 class SuperEmbedding(nn.Embedding):
-
-    def __init__(self, num_embeddings, super_embed_dim, padding_idx = None, *args, **kwargs):
+    def __init__(self, num_embeddings, super_embed_dim, padding_idx=None, *args, **kwargs):
         super().__init__(num_embeddings, super_embed_dim, padding_idx, *args, **kwargs)
 
+        self.super_embed_dim = super_embed_dim
 
-        self.super_embed_dim = super_embed_dim 
+        self.sample_embed_dim = None
 
-
-        self.sample_embed_dim = None 
-
-        self.samples = {} 
+        self.samples = {}
         self.reset_parameters()
-
 
         self.profiling = False
 
     def reset_parameters(self):
         super().reset_parameters()
-        nn.init.normal_(self.weight, mean=0, std=self.embedding_dim ** -0.5)
+        nn.init.normal_(self.weight, mean=0, std=self.embedding_dim**-0.5)
         nn.init.constant_(self.weight[self.padding_idx], 0)
 
     def set_sample_config(self, sample_embed_dim):
@@ -80,7 +77,7 @@ class SuperEmbedding(nn.Embedding):
         self._sample_parameters()
 
     def _sample_parameters(self):
-        weight = self.weight[..., :self.sample_embed_dim]
+        weight = self.weight[..., : self.sample_embed_dim]
         self.samples['weight'] = weight
 
         return self.samples
@@ -92,20 +89,22 @@ class SuperEmbedding(nn.Embedding):
         return self.sample_parameters()['weight']
 
     def forward(self, input):
-        return F.embedding(input, 
-                           self.sampled_weight(), 
-                           self.padding_idx, 
-                           self.max_norm, 
-                           self.norm_type, 
-                           self.scale_grad_by_freq, 
-                           self.sparse,
-                           )
+        return F.embedding(
+            input,
+            self.sampled_weight(),
+            self.padding_idx,
+            self.max_norm,
+            self.norm_type,
+            self.scale_grad_by_freq,
+            self.sparse,
+        )
 
     def profile(self, mode=True):
         self.profiling = mode
 
     def calc_sampled_param_num(self):
         return self.samples.numel()
+
 
 class SuperLayerNorm(torch.nn.LayerNorm):
     def __init__(self, super_embed_dim, eps):
@@ -124,8 +123,8 @@ class SuperLayerNorm(torch.nn.LayerNorm):
         return self.samples
 
     def _sample_parameters(self):
-        self.samples['weight'] = self.weight[:self.sample_embed_dim]
-        self.samples['bias'] = self.bias[:self.sample_embed_dim]
+        self.samples['weight'] = self.weight[: self.sample_embed_dim]
+        self.samples['bias'] = self.bias[: self.sample_embed_dim]
         return self.samples
 
     def set_sample_config(self, sample_embed_dim):
@@ -134,7 +133,9 @@ class SuperLayerNorm(torch.nn.LayerNorm):
 
     def forward(self, x):
         self.sample_parameters()
-        return F.layer_norm(x, (self.sample_embed_dim,), weight = self.samples['weight'], bias=self.samples['bias'], eps=self.eps)
+        return F.layer_norm(
+            x, (self.sample_embed_dim,), weight=self.samples['weight'], bias=self.samples['bias'], eps=self.eps
+        )
 
     def calc_sampled_param_num(self):
         assert 'weight' in self.samples.keys()
@@ -144,15 +145,13 @@ class SuperLayerNorm(torch.nn.LayerNorm):
     def profile(self, mode=True):
         self.profiling = mode
 
-class SuperLinear(nn.Linear):
 
+class SuperLinear(nn.Linear):
     def __init__(self, super_in_dim, super_out_dim, bias=True):
         super().__init__(super_in_dim, super_out_dim, bias=bias)
 
-
         self.super_in_dim = super_in_dim
         self.super_out_dim = super_out_dim
-
 
         self.sample_in_dim = None
         self.sample_out_dim = None
@@ -160,14 +159,12 @@ class SuperLinear(nn.Linear):
         self.samples = {}
         super().reset_parameters()
 
-
         self.profiling = False
 
     def sample_parameters(self, resample=False):
         if self.profiling or resample:
             return self._sample_parameters()
         return self.samples
-
 
     def set_sample_config(self, sample_in_dim, sample_out_dim):
         self.sample_in_dim = sample_in_dim
@@ -200,6 +197,7 @@ class SuperLinear(nn.Linear):
     def profile(self, mode=True):
         self.profiling = mode
 
+
 def sample_weight(weight, sample_in_dim, sample_out_dim):
 
     sample_weight = weight[:, :sample_in_dim]
@@ -213,21 +211,22 @@ def sample_bias(bias, sample_out_dim):
 
     return sample_bias
 
+
 class ConvNormActivation(torch.nn.Sequential):
     def __init__(
         self,
         in_channels,
         out_channels,
-        kernel_size = 3,
-        stride = 1,
-        padding = None,
-        groups = 1,
-        norm_layer = torch.nn.BatchNorm2d,
-        activation_layer = torch.nn.ReLU,
-        dilation = 1,
-        inplace = True,
-        bias = None,
-        conv_layer = torch.nn.Conv2d,
+        kernel_size=3,
+        stride=1,
+        padding=None,
+        groups=1,
+        norm_layer=torch.nn.BatchNorm2d,
+        activation_layer=torch.nn.ReLU,
+        dilation=1,
+        inplace=True,
+        bias=None,
+        conv_layer=torch.nn.Conv2d,
     ):
 
         if padding is None:
@@ -284,15 +283,15 @@ class Conv2dNormActivation(ConvNormActivation):
         self,
         in_channels,
         out_channels,
-        kernel_size = 3,
-        stride = 1,
-        padding = None,
-        groups = 1,
-        norm_layer = torch.nn.BatchNorm2d,
-        activation_layer = torch.nn.ReLU,
-        dilation = 1,
-        inplace = True,
-        bias = None,
+        kernel_size=3,
+        stride=1,
+        padding=None,
+        groups=1,
+        norm_layer=torch.nn.BatchNorm2d,
+        activation_layer=torch.nn.ReLU,
+        dilation=1,
+        inplace=True,
+        bias=None,
     ):
 
         super().__init__(
@@ -310,14 +309,13 @@ class Conv2dNormActivation(ConvNormActivation):
             torch.nn.Conv2d,
         )
 
-class SuperSelfAttentionOutput(nn.Module):
 
+class SuperSelfAttentionOutput(nn.Module):
     def __init__(self, hidden_size, layer_norm_eps, hidden_dropout_prob, num_attention_heads):
         super().__init__()
         self.dense = SuperLinear(hidden_size, hidden_size)
-        self.LayerNorm = SuperLayerNorm(hidden_size, eps = layer_norm_eps)
+        self.LayerNorm = SuperLayerNorm(hidden_size, eps=layer_norm_eps)
         self.dropout = nn.Dropout(hidden_dropout_prob)
-
 
         self.sample_hidden_size = None
         self.sample_head_num = None
@@ -350,8 +348,8 @@ class SuperMultiheadAttention(nn.Module):
                 "heads (%d)" % (hidden_size, num_heads)
             )
         self.num_attention_heads = num_heads
-        self.attention_head_size = int(hidden_size / num_heads) # 384 / 6 = 64 
-        self.all_head_size = self.num_attention_heads * self.attention_head_size # 6 * 64 = 384
+        self.attention_head_size = int(hidden_size / num_heads)  # 384 / 6 = 64
+        self.all_head_size = self.num_attention_heads * self.attention_head_size  # 6 * 64 = 384
 
         self.query = SuperLinear(hidden_size, self.all_head_size)
         self.key = SuperLinear(hidden_size, self.all_head_size)
@@ -419,15 +417,14 @@ class SuperMultiheadAttention(nn.Module):
         outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
         return outputs
 
-
     def set_sample_config(self, vit_hidden_size, vit_head_num):
 
         self.sample_hidden_size = vit_hidden_size
         self.sample_num_attention_heads = vit_head_num
 
-        self.sample_attention_head_size = self.attention_head_size # 64
-        self.sample_all_head_size = self.sample_num_attention_heads * self.sample_attention_head_size # 64 x 4 = 256
+        self.sample_attention_head_size = self.attention_head_size  # 64
+        self.sample_all_head_size = self.sample_num_attention_heads * self.sample_attention_head_size  # 64 x 4 = 256
 
-        self.query.set_sample_config(sample_in_dim = self.sample_hidden_size, sample_out_dim = self.sample_all_head_size)
-        self.key.set_sample_config(sample_in_dim = self.sample_hidden_size, sample_out_dim = self.sample_all_head_size)
-        self.value.set_sample_config(sample_in_dim = self.sample_hidden_size, sample_out_dim = self.sample_all_head_size)
+        self.query.set_sample_config(sample_in_dim=self.sample_hidden_size, sample_out_dim=self.sample_all_head_size)
+        self.key.set_sample_config(sample_in_dim=self.sample_hidden_size, sample_out_dim=self.sample_all_head_size)
+        self.value.set_sample_config(sample_in_dim=self.sample_hidden_size, sample_out_dim=self.sample_all_head_size)
