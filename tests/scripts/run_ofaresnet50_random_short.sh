@@ -8,7 +8,7 @@ time ${RUN_COMMAND} \
         --dataset_path  ${DATASET_IMAGENET_PATH} \
         --search_tactic random \
         --population ${SHORT_RANDOM_POPULATION} \
-        --valid_size ${SHORT_RANDOM_VALID_SIZE} \
+        --test_size ${SHORT_RANDOM_TEST_SIZE} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
         --num_evals ${SHORT_RANDOM_POPULATION}

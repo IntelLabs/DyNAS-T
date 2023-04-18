@@ -88,7 +88,7 @@ def validate_classification(
         for epoch, (images, labels) in enumerate(data_loader):
             log.debug(
                 "Validate #{}/{} {}".format(
-                    epoch,
+                    epoch + 1,
                     total,
                     {
                         "loss": losses.avg,
@@ -108,7 +108,7 @@ def validate_classification(
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
-            if epoch > total:
+            if epoch + 1 >= total:
                 break
     return losses.avg, top1.avg, top5.avg
 
