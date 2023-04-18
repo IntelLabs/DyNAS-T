@@ -71,7 +71,6 @@ class OFARunner:
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
-            valid_size=test_size,
         )
         self._init_data()
 
