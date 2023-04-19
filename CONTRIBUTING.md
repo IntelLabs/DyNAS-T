@@ -21,6 +21,8 @@ pip install -r requirements_test.txt
 
 ## Code Style
 
+Changes to DyNAS-T should conform to Python's style Guide **WIP (For now please refer to the content of `linter.sh` script.)**
+
 You can run automated linting and checks with:
 
 ```bash
