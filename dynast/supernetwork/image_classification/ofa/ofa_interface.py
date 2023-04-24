@@ -54,6 +54,7 @@ class OFARunner:
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_size: int = None,
+        verbose: bool = False,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -63,6 +64,7 @@ class OFARunner:
         self.batch_size = batch_size
         self.device = device
         self.test_size = test_size
+        self.verbose = verbose
         self.dataset_path = dataset_path
         self.dataloader_workers = dataloader_workers
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
@@ -103,7 +105,13 @@ class OFARunner:
 
         subnet = self.get_subnet(subnet_cfg)
         folder_name = '/tmp/ofa-tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
-        run_manager = RunManager('{}/eval_subnet'.format(folder_name), subnet, self.run_config, init=False)
+        run_manager = RunManager(
+            '{}/eval_subnet'.format(folder_name),
+            subnet,
+            self.run_config,
+            init=False,
+            verbose=self.verbose,
+        )
         run_manager.reset_running_statistics(net=subnet)
 
         # Test sampled subnet
