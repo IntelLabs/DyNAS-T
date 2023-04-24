@@ -102,10 +102,10 @@ SUPERNET_TYPE = {
 }
 
 SUPERNET_METRICS = {
-    'ofa_resnet50': ['params', 'latency', 'macs', 'accuracy_top1'],
-    'ofa_mbv3_d234_e346_k357_w1.0': ['params', 'latency', 'macs', 'accuracy_top1'],
-    'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
-    'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
+    'ofa_resnet50': ['params', 'latency', 'macs', 'accuracy_top1', 'energy'],
+    'ofa_mbv3_d234_e346_k357_w1.0': ['params', 'latency', 'macs', 'accuracy_top1', 'energy'],
+    'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1', 'energy'],
+    'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1', 'energy'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
 }

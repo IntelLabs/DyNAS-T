@@ -17,6 +17,7 @@ import time
 from typing import List, Tuple, Union
 
 import numpy as np
+import pyRAPL
 import torch
 import torch.nn as nn
 import torchprofile
@@ -140,6 +141,57 @@ def get_macs(
     macs = torchprofile.profile_macs(model, inputs)
 
     return macs
+
+
+@measure_time
+def get_energy(
+    model: nn.Module,
+    input_size: tuple = (128, 3, 224, 224),
+    warmup_steps: int = 10,
+    measure_steps: int = 50,
+    device: str = 'cpu',
+    socket_ids: Union[List[int], Tuple[int]] = None,
+    include_dram: bool = False,
+) -> float:
+    inputs = torch.randn(*input_size, device=device)
+    model = model.eval()
+
+    model = copy.deepcopy(model)
+    rm_bn_from_net(model)
+    model = model.to(device)
+
+    rapl_config = {
+        'devices': [pyRAPL.Device.PKG, pyRAPL.Device.DRAM] if include_dram else [pyRAPL.Device.PKG],
+        'socket_ids': socket_ids,
+    }
+
+    pyRAPL.setup(**rapl_config)
+    meter = pyRAPL.Measurement('bar')
+
+    if 'cuda' in str(device):
+        torch.cuda.synchronize()
+
+    log.debug('Warming up for {} steps...'.format(warmup_steps))
+    for _ in range(warmup_steps):
+        model(inputs)
+    if 'cuda' in str(device):
+        torch.cuda.synchronize()
+
+    log.debug('Measuring energy for {} steps'.format(measure_steps))
+    meter.begin()
+    for _ in range(measure_steps):
+        if 'cuda' in str(device):
+            torch.cuda.synchronize()
+        model(inputs)
+        if 'cuda' in str(device):
+            torch.cuda.synchronize()
+    meter.end()
+
+    energy = sum([pkg / 1000000 for pkg in meter.result.pkg])
+    if include_dram:
+        energy += sum([dram / 1000000 for dram in meter.result.dram])
+
+    return energy
 
 
 @measure_time

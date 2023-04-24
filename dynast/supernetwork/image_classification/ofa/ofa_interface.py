@@ -33,7 +33,7 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
 )
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
-from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
+from dynast.utils.nn import get_energy, get_macs, get_parameters, measure_latency, validate_classification
 
 
 class OFARunner:
@@ -50,6 +50,7 @@ class OFARunner:
         macs_predictor: Predictor = None,
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
+        energy_predictor: Predictor = None,
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
@@ -97,6 +98,10 @@ class OFARunner:
     def estimate_parameters(self, subnet_cfg) -> int:
         parameters = self.params_predictor.predict(subnet_cfg)
         return parameters
+
+    def estimate_energy(self, subnet_cfg) -> float:
+        energy = self.energy_predictor.predict(subnet_cfg)
+        return energy
 
     def validate_top1(self, subnet_cfg, device=None) -> float:
         device = self.device if not device else device
@@ -177,6 +182,36 @@ class OFARunner:
             device=device,
         )
         return latency_mean, latency_std
+
+    @torch.no_grad()
+    def measure_energy(
+        self,
+        subnet_cfg: dict,
+        warmup_steps: int = 10,
+        measure_steps: int = 50,
+        device: str = None,
+    ) -> float:
+        device = self.device if not device else device
+
+        if not warmup_steps:
+            warmup_steps = auto_steps(self.batch_size, is_warmup=True)
+        if not measure_steps:
+            measure_steps = auto_steps(self.batch_size)
+
+        print(f'{warmup_steps=}')
+        print(f'{measure_steps=}')
+        model = self.get_subnet(subnet_cfg)
+
+        energy = get_energy(
+            model=model,
+            input_size=(self.batch_size, 3, 224, 224),
+            warmup_steps=warmup_steps,
+            measure_steps=measure_steps,
+            device=device,
+            socket_ids=[0],  # TODO(macsz) `socket_ids` should be configurable
+            include_dram=False,  # TODO(macsz) `include_dram` should be configurable
+        )
+        return energy
 
     def get_subnet(self, subnet_cfg):
         if self.supernet == 'ofa_resnet50':
@@ -313,7 +348,7 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
         subnet_sample = copy.deepcopy(sample)
 
         individual_results = dict()
-        for metric in ['params', 'latency', 'macs', 'accuracy_top1']:
+        for metric in ['params', 'latency', 'macs', 'accuracy_top1', 'energy']:
             individual_results[metric] = 0
 
         # Predictor Mode
@@ -334,6 +369,10 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
                 individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_top1(
                     self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
+            if 'energy' in self.optimization_metrics:
+                individual_results['energy'] = self.evaluator.estimate_energy(
+                    self.manager.onehot_generic(x).reshape(1, -1)
+                )[0]
 
         # Validation Mode
         else:
@@ -345,6 +384,8 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
                 individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_top1(subnet_sample)
+            if 'energy' in self.measurements:
+                individual_results['energy'] = self.evaluator.measure_energy(subnet_sample)
 
         # Write result for csv_path
         if self.csv_path:
@@ -358,6 +399,7 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
                     individual_results['latency'],
                     individual_results['macs'],
                     individual_results['accuracy_top1'],
+                    individual_results['energy'],
                 ]
                 writer.writerow(result)
 

@@ -39,7 +39,7 @@ class NASBaseConfig:
         dataset_path: str,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
-        measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
+        measurements: list = ['latency', 'macs', 'params', 'accuracy_top1', 'energy'],
         num_evals: int = 1000,
         results_path: str = 'results.csv',
         seed: int = 42,
@@ -103,7 +103,7 @@ class NASBaseConfig:
 
         # Verify that supernetwork and metrics are valid
         if self.supernet in SUPERNET_TYPE['image_classification']:
-            valid_metrics = ['accuracy_top1', 'macs', 'latency', 'params']
+            valid_metrics = ['accuracy_top1', 'macs', 'latency', 'params', 'energy']
             for metric in self.optimization_metrics:
                 if metric not in valid_metrics:
                     log.error(f'Invalid metric(s) specified: {metric}. Choose from {valid_metrics}')
@@ -137,6 +137,7 @@ class NASBaseConfig:
                 'Latency (ms)',
                 'MACs',
                 'Top-1 Acc (%)',
+                'Energy (uJ)',
             ]  # TODO(macsz) Should be based on specified measurements
         elif self.supernet in SUPERNET_TYPE['machine_translation']:
             self.csv_header = [
@@ -343,6 +344,7 @@ class LINAS(NASBaseConfig):
                     macs_predictor=self.predictor_dict['macs'],
                     params_predictor=self.predictor_dict['params'],
                     acc_predictor=self.predictor_dict['accuracy_top1'],
+                    energy_predictor=self.predictor_dict['energy'],
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
@@ -767,6 +769,7 @@ class LINASDistributed(LINAS):
 
                 self.train_predictors(results_path=self.main_results_path)
 
+                # TODO(macsz) Add energy predictor
                 if self.supernet in [
                     'ofa_resnet50',
                     'ofa_mbv3_d234_e346_k357_w1.0',
