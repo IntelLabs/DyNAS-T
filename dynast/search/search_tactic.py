@@ -192,6 +192,7 @@ class NASBaseConfig:
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_size=self.test_size,
+                verbose=self.verbose,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             self.runner_validate = TransformerLTRunner(
@@ -349,6 +350,7 @@ class LINAS(NASBaseConfig):
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
                     test_size=self.test_size,
+                    verbose=self.verbose,
                 )
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
@@ -786,6 +788,7 @@ class LINASDistributed(LINAS):
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
                         test_size=self.test_size,
+                        verbose=self.verbose,
                     )
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
