@@ -79,10 +79,14 @@ class OFARunner:
 
     def _init_data(self):
         ImageNet.PATH = self.dataset_path
-        self.dataloader = ImageNet.validation_dataloader(
-            batch_size=self.batch_size,
-            num_workers=self.dataloader_workers,
-        )
+        if self.dataset_path:
+            self.dataloader = ImageNet.validation_dataloader(
+                batch_size=self.batch_size,
+                num_workers=self.dataloader_workers,
+            )
+        else:
+            self.dataloader = None
+            log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
         top1 = self.acc_predictor.predict(subnet_cfg)
