@@ -45,10 +45,20 @@ __all__ = ["RunManager"]
 
 
 class RunManager:
-    def __init__(self, path, net, run_config, init=True, measure_latency=None, no_gpu=False):
+    def __init__(
+        self,
+        path,
+        net,
+        run_config,
+        init=True,
+        measure_latency=None,
+        no_gpu=False,
+        verbose=False,
+    ):
         self.path = path
         self.net = net
         self.run_config = run_config
+        self.verbose = verbose
 
         self.best_acc = 0
         self.start_epoch = 0
@@ -67,7 +77,12 @@ class RunManager:
             init_models(run_config.model_init)
 
         # net info
-        net_info = get_net_info(self.net, self.run_config.data_provider.data_shape, measure_latency, True)
+        net_info = get_net_info(
+            net=self.net,
+            input_shape=self.run_config.data_provider.data_shape,
+            measure_latency=measure_latency,
+            print_info=self.verbose,
+        )
         with open("%s/net_info.txt" % self.path, "w") as fout:
             fout.write(json.dumps(net_info, indent=4) + "\n")
             # noinspection PyBroadException
