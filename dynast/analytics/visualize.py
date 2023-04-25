@@ -14,9 +14,9 @@
 
 import itertools
 import math
-import pandas as pd
 
 import numpy as np
+import pandas as pd
 from scipy.spatial import Delaunay
 from shapely.geometry import MultiLineString, MultiPoint, mapping
 from shapely.ops import cascaded_union, polygonize
