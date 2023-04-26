@@ -117,9 +117,11 @@ venv.bak/
 
 *.csv
 .torch/
+*.pt
 *.pth
 *.tar.gz
 *.meta
 cifar10/
 coverity_tmp/
 *.png
+nc_workspace/
