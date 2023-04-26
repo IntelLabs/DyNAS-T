@@ -73,7 +73,7 @@ def main():
     )
     parser.add_argument(
         '--measurements',
-        default=['accuracy_top1', 'macs', 'params', 'latency'],  # TODO(macsz) Ditto
+        default=['accuracy_top1', 'macs', 'params', 'latency', 'energy'],  # TODO(macsz) Ditto
         nargs='*',
         type=str,
         help='Measurements during search.',
