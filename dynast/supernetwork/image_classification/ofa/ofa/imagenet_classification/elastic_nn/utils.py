@@ -27,12 +27,14 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.el
     DynamicBatchNorm2d,
 )
 from dynast.supernetwork.image_classification.ofa.ofa.utils import DistributedTensor, get_net_device
+from dynast.utils import measure_time
 from dynast.utils.nn import AverageMeter
 
 __all__ = ["set_running_statistics"]
 
 
-def set_running_statistics(model, data_loader, distributed=False):
+@measure_time
+def set_running_statistics(model, data_loader, distributed=False, calibration_samples=2000):
     bn_mean = {}
     bn_var = {}
 
