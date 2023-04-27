@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+RUN_COMMAND="python dynast/cli.py"
 SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
@@ -13,7 +14,7 @@ DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 SHORT_RANDOM_POPULATION=2
 
 # Limit the number of validation samples to speed up the test.
-SHORT_RANDOM_VALID_SIZE=20
+SHORT_RANDOM_TEST_SIZE=20
 
 
 #################################################################################################

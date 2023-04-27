@@ -49,7 +49,7 @@ class NASBaseConfig:
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -81,7 +81,7 @@ class NASBaseConfig:
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
         self.dataloader_workers = dataloader_workers
-        self.valid_size = valid_size
+        self.test_size = test_size
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -190,7 +190,8 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
-                valid_size=self.valid_size,
+                test_size=self.test_size,
+                verbose=self.verbose,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             self.runner_validate = TransformerLTRunner(
@@ -245,7 +246,7 @@ class LINAS(NASBaseConfig):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -276,7 +277,7 @@ class LINAS(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_size=test_size,
             dataloader_workers=dataloader_workers,
         )
 
@@ -346,7 +347,8 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
-                    valid_size=self.valid_size,
+                    test_size=self.test_size,
+                    verbose=self.verbose,
                 )
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
@@ -494,7 +496,7 @@ class Evolutionary(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -513,7 +515,7 @@ class Evolutionary(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_size=test_size,
             dataloader_workers=dataloader_workers,
         )
 
@@ -632,7 +634,7 @@ class RandomSearch(NASBaseConfig):
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -650,7 +652,7 @@ class RandomSearch(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_size=test_size,
             dataloader_workers=dataloader_workers,
         )
 
@@ -688,7 +690,7 @@ class LINASDistributed(LINAS):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -710,7 +712,7 @@ class LINASDistributed(LINAS):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_size=test_size,
             dataloader_workers=dataloader_workers,
         )
 
@@ -782,7 +784,8 @@ class LINASDistributed(LINAS):
                         dataset_path=self.dataset_path,
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
-                        valid_size=self.valid_size,
+                        test_size=self.test_size,
+                        verbose=self.verbose,
                     )
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
@@ -927,7 +930,7 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
-        valid_size: int = None,
+        test_size: int = None,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -948,7 +951,7 @@ class RandomSearchDistributed(RandomSearch):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
-            valid_size=valid_size,
+            test_size=test_size,
             dataloader_workers=dataloader_workers,
         )
 
