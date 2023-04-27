@@ -344,9 +344,9 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
+                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['macs'],
-                    individual_results['params'],
                     individual_results['accuracy_sst2'],
                 ]
                 writer.writerow(result)
