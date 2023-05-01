@@ -30,7 +30,7 @@ set_logger(logging.INFO)
 def main():
     random.seed(42)
 
-    haaml_path = Path("/store/code/bootstrapnas/Hardware-Aware-Automated-Machine-Learning")
+    haaml_path = Path("/localdisk/maciej/code/dynast_bootstrapnas_integration/hardware_aware_automated_machine_learning")
 
     config_path = haaml_path / "models/supernets/cifar10/resnet50/config.json"
     supernet_path = haaml_path / "models/supernets/cifar10/resnet50/elasticity.pth"
