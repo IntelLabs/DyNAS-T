@@ -53,7 +53,7 @@ class OFARunner:
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -62,7 +62,7 @@ class OFARunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.test_size = test_size
+        self.test_fraction = test_fraction
         self.dataset_path = dataset_path
         self.dataloader_workers = dataloader_workers
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
@@ -71,7 +71,6 @@ class OFARunner:
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
-            valid_size=test_size,
         )
         self._init_data()
 
@@ -80,6 +79,7 @@ class OFARunner:
         self.dataloader = ImageNet.validation_dataloader(
             batch_size=self.batch_size,
             num_workers=self.dataloader_workers,
+            fraction=self.test_fraction
         )
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
