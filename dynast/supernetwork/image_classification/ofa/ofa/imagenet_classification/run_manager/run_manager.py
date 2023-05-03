@@ -45,10 +45,20 @@ __all__ = ["RunManager"]
 
 
 class RunManager:
-    def __init__(self, path, net, run_config, init=True, measure_latency=None, no_gpu=False):
+    def __init__(
+        self,
+        path,
+        net,
+        run_config,
+        init=True,
+        measure_latency=None,
+        no_gpu=False,
+        verbose=False,
+    ):
         self.path = path
         self.net = net
         self.run_config = run_config
+        self.verbose = verbose
 
         self.best_acc = 0
         self.start_epoch = 0

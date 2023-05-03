@@ -103,7 +103,13 @@ class OFARunner:
 
         subnet = self.get_subnet(subnet_cfg)
         folder_name = '/tmp/ofa-tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
-        run_manager = RunManager('{}/eval_subnet'.format(folder_name), subnet, self.run_config, init=False)
+        run_manager = RunManager(
+            '{}/eval_subnet'.format(folder_name),
+            subnet,
+            self.run_config,
+            init=False,
+            verbose=self.verbose,
+        )
         run_manager.reset_running_statistics(net=subnet)
 
         # Test sampled subnet
