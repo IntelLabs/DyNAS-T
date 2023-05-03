@@ -98,7 +98,7 @@ class TorchVisionReference(Reference):
         device: str = 'cpu',
         batch_size: int = 128,
         input_size: int = 224,
-        test_size: int = None,
+        test_fraction: float = 1.0,
     ) -> Tuple[float, float, float]:
         model = self.model.to(device)
         loss, top1, top5 = validate_classification(
@@ -107,8 +107,8 @@ class TorchVisionReference(Reference):
             data_loader=self.dataset.validation_dataloader(
                 batch_size=batch_size,
                 image_size=input_size,
+                fraction=test_fraction
             ),
-            test_size=test_size,  # TODO(macsz) Once the `test_size` functionality is implemented we will have to modify this call accordingly.
         )
         log.info(
             '\'{model_name}\' on \'{dataset_name}\' - top1 {top1} top5 {top5} loss {loss}'.format(
