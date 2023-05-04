@@ -79,7 +79,7 @@ class OFARunner:
         self.dataloader = ImageNet.validation_dataloader(
             batch_size=self.batch_size,
             num_workers=self.dataloader_workers,
-            fraction=self.test_fraction
+            fraction=self.test_fraction,
         )
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:

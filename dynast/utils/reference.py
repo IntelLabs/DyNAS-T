@@ -107,7 +107,7 @@ class TorchVisionReference(Reference):
             data_loader=self.dataset.validation_dataloader(
                 batch_size=batch_size,
                 image_size=input_size,
-                fraction=test_fraction
+                fraction=test_fraction,
             ),
         )
         log.info(
