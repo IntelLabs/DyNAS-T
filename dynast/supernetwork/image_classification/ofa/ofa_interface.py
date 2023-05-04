@@ -54,6 +54,7 @@ class OFARunner:
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        verbose: bool = False,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -65,6 +66,7 @@ class OFARunner:
         self.test_fraction = test_fraction
         self.dataset_path = dataset_path
         self.dataloader_workers = dataloader_workers
+        self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
