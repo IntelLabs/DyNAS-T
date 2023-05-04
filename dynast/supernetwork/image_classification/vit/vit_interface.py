@@ -398,9 +398,9 @@ class EvaluationInterfaceViT(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
+                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['macs'],
-                    individual_results['params'],
                     individual_results['accuracy_top1'],
                 ]
                 writer.writerow(result)
