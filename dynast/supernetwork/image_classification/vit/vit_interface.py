@@ -120,7 +120,6 @@ def compute_val_acc(
     config,
     eval_dataloader,
     model,
-    test_size,
     device: str = 'cpu',
 ):
     """Measure ImageNet top@1, top@5 Accuracy scores of the ViT based model."""
@@ -129,7 +128,7 @@ def compute_val_acc(
     model.to(device)
     model.set_sample_config(config)
     return validate_classification(
-        model=model, data_loader=eval_dataloader, epoch=0, test_size=test_size, device=device
+        model=model, data_loader=eval_dataloader, device=device,
     )
 
 
@@ -238,6 +237,7 @@ class ViTRunner:
         checkpoint_path=None,
         total_batches=None,
         device: str = 'cpu',
+        test_fraction: float = 1.0,
     ):
 
         self.supernet = supernet
@@ -249,8 +249,7 @@ class ViTRunner:
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
-        self.test_size = total_batches
-        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size)
+        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size, fraction=test_fraction)
         # TODO: Figure out if a similar base config can be created for ViT
         # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
         self.supernet_model = load_supernet(self.checkpoint_path)
@@ -286,7 +285,6 @@ class ViTRunner:
             config=subnet_cfg,
             eval_dataloader=self.eval_dataloader,
             model=self.supernet_model,
-            test_size=self.test_size,
             device=self.device,
         )
         return top1_accuracy

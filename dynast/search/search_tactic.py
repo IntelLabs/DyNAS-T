@@ -217,7 +217,7 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
-                total_batches=self.valid_size,  # TODO(macsz) `valid_size` will be changed to number of samples once https://github.com/IntelLabs/DyNAS-T/pull/28 is merged.
+                test_fraction=self.test_fraction,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
