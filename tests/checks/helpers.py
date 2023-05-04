@@ -23,6 +23,7 @@ IGNORE_DIRS = [
     'log_dir',
     '.idea',
     '.venv',
+    'build',
 ]
 
 
