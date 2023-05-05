@@ -68,7 +68,6 @@ def accuracy(output, target, topk=(1,)) -> List[float]:
 def validate_classification(
     model,
     data_loader,
-    test_size=None,
     device='cpu',
 ):
     test_criterion = nn.CrossEntropyLoss()
@@ -79,16 +78,13 @@ def validate_classification(
     top1 = AverageMeter()
     top5 = AverageMeter()
 
-    if test_size is not None:
-        total = test_size
-    else:
-        total = len(data_loader)
+    total = len(data_loader)
 
     with torch.no_grad():
-        for epoch, (images, labels) in enumerate(data_loader):
+        for batch, (images, labels) in enumerate(data_loader):
             log.debug(
                 "Validate #{}/{} {}".format(
-                    epoch + 1,
+                    batch + 1,
                     total,
                     {
                         "loss": losses.avg,
@@ -108,8 +104,7 @@ def validate_classification(
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
-            if epoch + 1 >= total:
-                break
+
     return losses.avg, top1.avg, top5.avg
 
 
