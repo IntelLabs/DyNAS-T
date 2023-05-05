@@ -5,6 +5,8 @@ SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 
+CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
+
 
 ########################################################################################################
 # SHORT runs config. Shoud use random search tactic to allow for a very limited number of evaluations. #
