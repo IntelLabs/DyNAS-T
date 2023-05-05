@@ -53,7 +53,7 @@ class OFARunner:
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
         verbose: bool = False,
     ):
         self.supernet = supernet
@@ -63,17 +63,16 @@ class OFARunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.test_size = test_size
-        self.verbose = verbose
+        self.test_fraction = test_fraction
         self.dataset_path = dataset_path
         self.dataloader_workers = dataloader_workers
+        self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
-            valid_size=test_size,
         )
         self._init_data()
 
@@ -83,6 +82,7 @@ class OFARunner:
             self.dataloader = ImageNet.validation_dataloader(
                 batch_size=self.batch_size,
                 num_workers=self.dataloader_workers,
+                fraction=self.test_fraction,
             )
         else:
             self.dataloader = None
@@ -124,7 +124,6 @@ class OFARunner:
         loss, top1, top5 = validate_classification(
             model=subnet,
             data_loader=self.dataloader,
-            test_size=self.test_size,
             device=self.device,
         )
 
