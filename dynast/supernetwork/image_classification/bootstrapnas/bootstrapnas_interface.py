@@ -18,6 +18,7 @@ import csv
 from datetime import datetime
 from typing import Tuple
 
+from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork  # TODO(macsz) Lazy import
 import numpy as np
 import torch
 
@@ -36,7 +37,7 @@ class BootstrapNASRunner:
 
     def __init__(
         self,
-        bootstrapnas: "BootstrapNAS",
+        bootstrapnas: SuperNetwork,
         supernet: str,
         dataset_path: str = None,
         acc_predictor: Predictor = None,
