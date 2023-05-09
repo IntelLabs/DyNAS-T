@@ -469,7 +469,11 @@ class LINAS(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
@@ -607,7 +611,11 @@ class Evolutionary(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
@@ -664,7 +672,11 @@ class RandomSearch(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 

@@ -13,7 +13,10 @@
 # limitations under the License.
 
 
+from collections import OrderedDict
+import json
 from typing import List
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 import numpy as np
 
@@ -28,19 +31,19 @@ class BootstrapNASEncoding(EncodingBase):
         super().__init__(param_dict, verbose, seed)
 
     @staticmethod
-    def _bnas_to_dynast(bnas_dict: dict) -> dict:
+    def _bnas_to_dynast(bootstrapnas_supernet_parameters: dict) -> dict:
         """Translate the BootstrapNAS parameter dictionary to DyNAS-T
         paramenter dictionary format.
         Args:
         -----
-        * `bnas_dict`: BootstrapNAS parameter dictionary.
+        * `bootstrapnas_supernet_parameters`: BootstrapNAS parameter dictionary.
         Returns:
         --------
         * `supernet_parameters`: DyNAS-T format of supernet parameters.
         """
         supernet_parameters = dict()
 
-        for key, value in bnas_dict.items():
+        for key, value in bootstrapnas_supernet_parameters.items():
             if key == "width":
                 assert type(value) == dict
                 for i, arr in enumerate(value):
@@ -54,6 +57,7 @@ class BootstrapNASEncoding(EncodingBase):
             # TODO:(daniel-codes) need kernel example
             else:
                 log.error("Unknown key name in BNAS parameter dictionary.")
+                raise Exception("Unknown key name in BNAS parameter dictionary.")
                 break
 
         return supernet_parameters
@@ -186,3 +190,18 @@ class BootstrapNASEncoding(EncodingBase):
             onehot.extend(segment)
 
         return np.array(onehot)
+
+    @staticmethod
+    def convert_subnet_config_to_bootstrapnas(subnet_config: dict) -> OrderedDict:
+        output = OrderedDict()
+        for key, value in subnet_config.items():
+            if 'width' in key:
+                if output.get(ElasticityDim.WIDTH) is None:
+                    output[ElasticityDim.WIDTH] = {}
+                idx = len(output[ElasticityDim.WIDTH])
+                output[ElasticityDim.WIDTH][idx] = value[0]
+            elif 'depth' in key:
+                output[ElasticityDim.DEPTH] = json.loads(value[0])
+            else:
+                raise Exception("Unknown key name in BNAS parameter dictionary.")
+        return output
