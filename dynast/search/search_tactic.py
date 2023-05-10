@@ -24,6 +24,7 @@ from dynast.search.evolutionary import (
     EvolutionarySingleObjective,
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
+from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import QuantizedOFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
@@ -209,6 +210,15 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
             )
+        elif self.supernet == 'inc_quantization_ofa_resnet50':
+            self.runner_validate = QuantizedOFARunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                device=self.device,
+                dataloader_workers=self.dataloader_workers,
+                test_fraction=self.test_fraction,
+            )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
             raise NotImplementedError
@@ -372,6 +382,16 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
                 )
+            
+            elif self.supernet == 'inc_quantization_ofa_resnet50':
+                self.runner_validate = QuantizedOFARunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                device=self.device,
+                dataloader_workers=self.dataloader_workers,
+                test_fraction=self.test_fraction,
+            )
 
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](

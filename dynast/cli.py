@@ -57,6 +57,7 @@ def main():
             'ofa_proxyless_d234_e346_k357_w1.3',
             'transformer_lt_wmt_en_de',
             'bert_base_sst2',
+            'inc_quantization_ofa_resnet50',
         ],
     )
     parser.add_argument('--seed', default=42, type=int, help='Random Seed')
