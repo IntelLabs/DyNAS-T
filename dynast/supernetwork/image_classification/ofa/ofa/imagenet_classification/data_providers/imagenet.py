@@ -51,7 +51,6 @@ class ImagenetDataProvider(DataProvider):
         num_replicas=None,
         rank=None,
     ):
-
         warnings.filterwarnings("ignore")
         self._save_path = save_path
 

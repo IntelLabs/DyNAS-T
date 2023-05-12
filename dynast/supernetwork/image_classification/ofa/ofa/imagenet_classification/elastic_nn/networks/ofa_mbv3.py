@@ -48,7 +48,6 @@ class OFAMobileNetV3(MobileNetV3):
         expand_ratio_list=6,
         depth_list=4,
     ):
-
         self.width_mult = width_mult
         self.ks_list = val2list(ks_list, 1)
         self.expand_ratio_list = val2list(expand_ratio_list, 1)
