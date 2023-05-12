@@ -47,7 +47,6 @@ MLP_DIM_B_16 = 3072
 
 
 def load_supernet(checkpoint_path):
-
     model = SuperViT(
         image_size=IMAGE_SIZE,
         patch_size=PATCH_SIZE,
@@ -128,7 +127,9 @@ def compute_val_acc(
     model.to(device)
     model.set_sample_config(config)
     return validate_classification(
-        model=model, data_loader=eval_dataloader, device=device,
+        model=model,
+        data_loader=eval_dataloader,
+        device=device,
     )
 
 
@@ -239,7 +240,6 @@ class ViTRunner:
         device: str = 'cpu',
         test_fraction: float = 1.0,
     ):
-
         self.supernet = supernet
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -280,7 +280,6 @@ class ViTRunner:
         self,
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
-
         _, top1_accuracy, _ = compute_val_acc(
             config=subnet_cfg,
             eval_dataloader=self.eval_dataloader,

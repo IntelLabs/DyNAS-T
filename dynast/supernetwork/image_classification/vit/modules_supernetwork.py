@@ -199,7 +199,6 @@ class SuperLinear(nn.Linear):
 
 
 def sample_weight(weight, sample_in_dim, sample_out_dim):
-
     sample_weight = weight[:, :sample_in_dim]
     sample_weight = sample_weight[:sample_out_dim, :]
 
@@ -228,7 +227,6 @@ class ConvNormActivation(torch.nn.Sequential):
         bias=None,
         conv_layer=torch.nn.Conv2d,
     ):
-
         if padding is None:
             padding = (kernel_size - 1) // 2 * dilation
         if bias is None:
@@ -293,7 +291,6 @@ class Conv2dNormActivation(ConvNormActivation):
         inplace=True,
         bias=None,
     ):
-
         super().__init__(
             in_channels,
             out_channels,
@@ -330,7 +327,6 @@ class SuperSelfAttentionOutput(nn.Module):
         return hidden_states
 
     def set_sample_config(self, vit_hidden_size, vit_head_num):
-
         self.sample_hidden_size = vit_hidden_size
         self.sample_head_num = vit_head_num
         self.sample_all_head_size = self.origin_attention_head_size * self.sample_head_num
@@ -368,7 +364,6 @@ class SuperMultiheadAttention(nn.Module):
         self.super_hidden_size = hidden_size
 
     def transpose_for_scores(self, x):
-
         new_x_shape = x.size()[:-1] + (self.sample_num_attention_heads, self.sample_attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
@@ -382,7 +377,6 @@ class SuperMultiheadAttention(nn.Module):
         encoder_attention_mask=None,
         output_attentions=False,
     ):
-
         mixed_query_layer = self.query(hidden_states)
 
         if encoder_hidden_states is not None:
@@ -400,7 +394,6 @@ class SuperMultiheadAttention(nn.Module):
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-
             attention_scores = attention_scores + attention_mask
 
         attention_probs = nn.Softmax(dim=-1)(attention_scores)
@@ -418,7 +411,6 @@ class SuperMultiheadAttention(nn.Module):
         return outputs
 
     def set_sample_config(self, vit_hidden_size, vit_head_num):
-
         self.sample_hidden_size = vit_hidden_size
         self.sample_num_attention_heads = vit_head_num
 
