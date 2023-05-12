@@ -42,7 +42,7 @@ def test_dataset_invalid_name_exception():
 def test_dataset_test_fraction():
     dataset = ImageNet()
     bs = 128
-    imagenet_val_steps = 50000//bs
+    imagenet_val_steps = 50000 // bs
     assert len(dataset.validation_dataloader(bs, fraction=1.0)) == imagenet_val_steps
     assert len(dataset.validation_dataloader(bs, fraction=0.0)) == imagenet_val_steps
-    assert len(dataset.validation_dataloader(bs, fraction=0.2)) == imagenet_val_steps//5
+    assert len(dataset.validation_dataloader(bs, fraction=0.2)) == imagenet_val_steps // 5

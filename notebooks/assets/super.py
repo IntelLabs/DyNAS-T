@@ -18,7 +18,6 @@ import torch.nn.functional as F
 
 
 def _sample_weight(weight, sample_in_dim, sample_out_dim):
-
     sample_weight = weight[:, :sample_in_dim]
     sample_weight = sample_weight[:sample_out_dim, :]
 

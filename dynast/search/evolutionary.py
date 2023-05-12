@@ -166,7 +166,6 @@ class EvolutionaryManager:
         mutation_prob=0.02,
         mutation_eta=20.0,
     ):
-
         self.n_gens = num_evals / population
 
         if type(warm_pop) == 'numpy.ndarray':
@@ -373,13 +372,11 @@ class EvolutionarySingleObjective(Problem):
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         # Store results for a given generation for PyMoo
         objective_arr = list()
 
         # Measure new individuals
         for i in range(len(x)):
-
             _, objective = self.evaluation_interface.eval_subnet(x[i])
 
             objective_arr.append(objective)
@@ -410,13 +407,11 @@ class EvolutionaryMultiObjective(Problem):
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         # Store results for a given generation for PyMoo
         objective_x_arr, objective_y_arr = list(), list()
 
         # Measure new individuals
         for i in range(len(x)):
-
             _, objective_x, objective_y = self.evaluation_interface.eval_subnet(x[i])
 
             objective_x_arr.append(objective_x)
@@ -448,13 +443,11 @@ class EvolutionaryManyObjective(Problem):
         self.evaluation_interface = evaluation_interface
 
     def _evaluate(self, x, out, *args, **kwargs):
-
         # Store results for a given generation for PyMoo
         objective_x_arr, objective_y_arr, objective_z_arr = list(), list(), list()
 
         # Measure new individuals
         for i in range(len(x)):
-
             _, objective_x, objective_y, objective_z = self.evaluation_interface.eval_subnet(x[i])
 
             objective_x_arr.append(objective_x)
