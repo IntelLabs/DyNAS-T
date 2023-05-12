@@ -22,6 +22,15 @@ import torchvision.transforms as transforms
 from dynast.utils import measure_time
 
 
+def _dataset_fraction(dataset: torchvision.datasets.DatasetFolder, fraction: float):
+    # Use random subset of validation data if valid fraction specified
+    if (fraction > 0.0) and (fraction < 1.0):
+        random_indices = torch.randperm(len(dataset))
+        example_count = round(fraction * len(dataset))
+        dataset = torch.utils.data.Subset(dataset, random_indices[:example_count])
+    return dataset
+
+
 class Dataset(object):
     PATH = ""
 
@@ -143,11 +152,7 @@ class ImageNet(Dataset):
             ImageNet.val_transforms(image_size),
         )
 
-        # Use random subset of validation data if valid fraction specified
-        if (fraction > 0.0) and (fraction < 1.0):
-            random_indices = torch.randperm(len(val_dataset))
-            example_count = round(fraction * len(val_dataset))
-            val_dataset = torch.utils.data.Subset(val_dataset, random_indices[:example_count])
+        val_dataset = _dataset_fraction(val_dataset, fraction)
 
         val_sampler = torch.utils.data.SequentialSampler(val_dataset)
         val_loader = torch.utils.data.DataLoader(
@@ -211,6 +216,7 @@ class Imagenette(Dataset):
         val_dir: str = None,
         shuffle: bool = False,
         num_workers: int = 16,
+        fraction: float = 1.0,
     ) -> torch.utils.data.DataLoader:
         if not val_dir:
             val_dir = os.path.join(Imagenette.PATH, "val")
@@ -219,6 +225,9 @@ class Imagenette(Dataset):
             val_dir,
             ImageNet.val_transforms(image_size),
         )
+
+        val_dataset = _dataset_fraction(val_dataset, fraction)
+
         val_sampler = torch.utils.data.SequentialSampler(val_dataset)
         val_loader = torch.utils.data.DataLoader(
             val_dataset,
@@ -284,6 +293,7 @@ class CIFAR10(Dataset):
         batch_size: int,
         shuffle: bool = False,
         num_workers=16,
+        fraction: float = 1.0,
     ) -> torch.utils.data.DataLoader:
         testset = torchvision.datasets.CIFAR10(
             root=CIFAR10.PATH,
@@ -291,6 +301,9 @@ class CIFAR10(Dataset):
             download=True,
             transform=CIFAR10.val_transforms(),
         )
+
+        testset = _dataset_fraction(testset, fraction)
+
         testloader = torch.utils.data.DataLoader(
             testset,
             batch_size=batch_size,
@@ -332,8 +345,12 @@ class CustomDataset(Dataset):
         data_transforms: transforms.Compose,
         shuffle: bool = False,
         num_workers: int = 16,
+        fraction: float = 1.0,
     ) -> torch.utils.data.DataLoader:
         image_dataset = datasets.ImageFolder(val_dir, data_transforms)
+
+        image_dataset = _dataset_fraction(image_dataset, fraction)
+
         return torch.utils.data.DataLoader(
             image_dataset,
             batch_size=batch_size,
