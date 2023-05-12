@@ -32,7 +32,6 @@ class OFAMobileNetV3Encoding(EncodingBase):
         return d
 
     def onehot_custom(self, ks_list: list, ex_list: list, d_list: list) -> np.ndarray:
-
         ks_map = self.construct_maps(keys=(3, 5, 7))
         ex_map = self.construct_maps(keys=(3, 4, 6))
         dp_map = self.construct_maps(keys=(2, 3, 4))
