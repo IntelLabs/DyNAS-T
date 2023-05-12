@@ -93,7 +93,6 @@ def count_parameters(net):
 
 
 def count_net_flops(net, data_shape=(1, 3, 224, 224)):
-
     if isinstance(net, nn.DataParallel):
         net = net.module
 

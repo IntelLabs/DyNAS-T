@@ -97,7 +97,6 @@ class NASBaseConfig:
             log.debug('Passed unused parameters: {}'.format(kwargs))
 
     def verify_measurement_types(self):
-
         # Remove duplicates
         self.optimization_metrics = list(set(self.optimization_metrics))
         self.num_objectives = len(self.optimization_metrics)  # TODO(macsz) Can be a getter
@@ -517,7 +516,6 @@ class Evolutionary(NASBaseConfig):
         )
 
     def search(self):
-
         self._init_search()
 
         # Following sets up the algorithm based on number of objectives
@@ -659,7 +657,6 @@ class RandomSearch(NASBaseConfig):
         )
 
     def search(self):
-
         self._init_search()
 
         # Randomly sample search space for initial population
@@ -961,7 +958,6 @@ class RandomSearchDistributed(RandomSearch):
         )
 
     def search(self):
-
         self._init_search()
 
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
