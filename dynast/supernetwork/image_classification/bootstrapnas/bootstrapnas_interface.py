@@ -18,9 +18,9 @@ import csv
 from datetime import datetime
 from typing import Tuple
 
-from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork  # TODO(macsz) Lazy import
 import numpy as np
 import torch
+from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork  # TODO(macsz) Lazy import
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor

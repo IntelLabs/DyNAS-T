@@ -13,12 +13,12 @@
 # limitations under the License.
 
 
-from collections import OrderedDict
 import json
+from collections import OrderedDict
 from typing import List
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 import numpy as np
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 from dynast.search.encoding import EncodingBase
 from dynast.utils import log

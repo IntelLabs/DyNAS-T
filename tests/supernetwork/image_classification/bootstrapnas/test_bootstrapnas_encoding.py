@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
+
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 
 
@@ -20,7 +21,7 @@ def test_convert_subnet_config_to_bootstrapnas():
     expected_bootstrapnas_subnet_config = OrderedDict(
         [
             (ElasticityDim.WIDTH, {0: 256, 1: 512, 2: 608, 3: 1632, 4: 64, 5: 64}),
-            (ElasticityDim.DEPTH, [0, 1, 2, 4])
+            (ElasticityDim.DEPTH, [0, 1, 2, 4]),
         ]
     )
     assert expected_bootstrapnas_subnet_config == bootstrapnas_subnet_config
