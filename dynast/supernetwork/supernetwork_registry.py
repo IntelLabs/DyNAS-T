@@ -134,49 +134,5 @@ SUPERNET_METRICS = {
 SEARCH_ALGORITHMS = ['linas', 'evolutionary', 'random']
 
 
-def get_csv_header(supernet: str) -> List[str]:
-    if supernet in SUPERNET_TYPE['image_classification']:
-        csv_header = [
-            'Sub-network',
-            'Date',
-            'Model Parameters',
-            'Latency (ms)',
-            'MACs',
-            'Top-1 Acc (%)',
-        ]  # TODO(macsz) Should be based on specified measurements
-    elif supernet in SUPERNET_TYPE['machine_translation']:
-        csv_header = [
-            'Sub-network',
-            'Date',
-            'Model Parameters',
-            'Latency (ms)',
-            'MACs',
-            'BLEU Score',
-        ]  # TODO(macsz) Should be based on specified measurements
-    elif supernet in SUPERNET_TYPE['text_classification']:
-        csv_header = [
-            'Sub-network',
-            'Date',
-            'Model Parameters',
-            'Latency (ms)',
-            'MACs',
-            'SST-2 Acc',
-        ]  # TODO(macsz) Should be based on specified measurements
-    elif supernet in SUPERNET_TYPE['recommendation']:
-        csv_header = [
-            'Sub-network',
-            'Date',
-            'Model Parameters',
-            'Latency (ms)',
-            'MACs',
-            'HR@10',
-        ]  # TODO(macsz) Should be based on specified measurements
-    else:
-        # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
-        raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
-
-    return csv_header
-
-
 def get_supernet_parameters(supernet: str, **kwargs) -> Dict[str, Dict[str, Any]]:
     return _SUPERNET_PARAMETERS[supernet]
