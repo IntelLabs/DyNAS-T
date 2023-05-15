@@ -163,7 +163,7 @@ def test_encoderbase_translate2param(test_configs):
         assert supernet_param_dict == test_config['param_dict']
 
 
-def test_encoderbase_translate2pymoo(test_configs):
+def test_encoderbase__translate2pymoo(test_configs):
     for test_config in test_configs:
         supernet_param_dict = SUPERNET_PARAMETERS[test_config['supernet']]
         encoder = EncodingBase(param_dict=supernet_param_dict, verbose=False, seed=42)
