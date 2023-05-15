@@ -27,7 +27,6 @@ from dynast.supernetwork.machine_translation.transformer_interface import Evalua
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
 
-
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
     'ofa_mbv3_d234_e346_k357_w1.0': OFAMobileNetV3Encoding,
