@@ -57,8 +57,7 @@ class BootstrapNASEncoding(EncodingBase):
             # TODO:(daniel-codes) need kernel example
             else:
                 log.error("Unknown key name in BNAS parameter dictionary.")
-                raise Exception("Unknown key name in BNAS parameter dictionary.")
-                break
+                raise KeyError("Unknown key name in BNAS parameter dictionary.")
 
         return supernet_parameters
 
