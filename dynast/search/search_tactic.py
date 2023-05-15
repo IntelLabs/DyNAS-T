@@ -23,6 +23,7 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
