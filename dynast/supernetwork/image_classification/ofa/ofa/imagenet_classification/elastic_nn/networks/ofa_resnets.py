@@ -36,7 +36,6 @@ class OFAResNets(ResNets):
         expand_ratio_list=0.25,
         width_mult_list=1.0,
     ):
-
         self.depth_list = val2list(depth_list)
         self.expand_ratio_list = val2list(expand_ratio_list)
         self.width_mult_list = val2list(width_mult_list)

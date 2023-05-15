@@ -84,7 +84,6 @@ class MLPBlock(nn.Sequential):
         self.sample_intermediate_size = None
 
     def set_sample_config(self, vit_hidden_size, vit_intermediate_size):
-
         self.sample_hidden_size = vit_hidden_size
         self.sample_intermediate_size = vit_intermediate_size
 

@@ -29,7 +29,6 @@ __all__ = ["ResNets", "ResNet50", "ResNet50D"]
 
 
 class ResNets(MyNetwork):
-
     BASE_DEPTH_LIST = [2, 2, 4, 2]
     STAGE_WIDTH_LIST = [256, 512, 1024, 2048]
 
@@ -125,7 +124,6 @@ class ResNet50(ResNets):
         expand_ratio=None,
         depth_param=None,
     ):
-
         expand_ratio = 0.25 if expand_ratio is None else expand_ratio
 
         input_channel = make_divisible(64 * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
@@ -188,7 +186,6 @@ class ResNet50D(ResNets):
         expand_ratio=None,
         depth_param=None,
     ):
-
         expand_ratio = 0.25 if expand_ratio is None else expand_ratio
 
         input_channel = make_divisible(64 * width_mult, MyNetwork.CHANNEL_DIVISIBLE)

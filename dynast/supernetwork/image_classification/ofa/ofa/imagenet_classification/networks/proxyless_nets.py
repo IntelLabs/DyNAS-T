@@ -169,7 +169,6 @@ class MobileNetV2(ProxylessNASNets):
         depth_param=None,
         stage_width_list=None,
     ):
-
         ks = 3 if ks is None else ks
         expand_ratio = 6 if expand_ratio is None else expand_ratio
 
