@@ -85,10 +85,7 @@ class NASBaseConfig:
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
 
-        if 'bootstrapnas' in kwargs:
-            self.bootstrapnas = kwargs['bootstrapnas']
-        else:
-            self.bootstrapnas = None
+        self.bootstrapnas = kwargs.get('bootstrapnas', None)
 
         self.verify_measurement_types()
         self.format_csv_header()
