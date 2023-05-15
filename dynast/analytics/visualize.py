@@ -30,7 +30,7 @@ def frontier_builder(df, optimization_metrics, alpha=0, verbose=False):
     Takes a DataFrame of column form [x, y] = [latency, accuracy]
 
     Params:
-    df     - 2 column dataframe in order of 'Latency' and 'Accuracy'
+    df     - dataframe containing `optimization_metrics` columns at minimum
     alpha  - Dictates amount of tolerable 'concave-ness' allowed.
              A fully convex front will be given if 0 (also better for runtime)
     """
