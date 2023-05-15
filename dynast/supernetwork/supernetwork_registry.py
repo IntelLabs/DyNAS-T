@@ -179,9 +179,4 @@ def get_csv_header(supernet: str) -> List[str]:
 
 
 def get_supernet_parameters(supernet: str, **kwargs) -> Dict[str, Dict[str, Any]]:
-    if supernet.startswith('bootstrapnas'):
-        assert (
-            'bootstrapnas' in kwargs
-        ), 'BootstrapNAS object should be passed to run search with BootstrapNAS search space. Please check `bootstrapnas` argument.'
-
     return _SUPERNET_PARAMETERS[supernet]
