@@ -178,7 +178,7 @@ class NASBaseConfig:
         if self.bootstrapnas:
             param_dict = self.bootstrapnas.get_search_space()
         else:
-            param_dict = get_supernet_parameters(self.supernet)
+            param_dict = SUPERNET_PARAMETERS[self.supernet]
         self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
 
     def _init_search(self):

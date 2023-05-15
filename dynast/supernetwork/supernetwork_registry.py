@@ -27,16 +27,6 @@ from dynast.supernetwork.machine_translation.transformer_interface import Evalua
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
 
-__all__ = [
-    "get_csv_header",
-    "get_supernet_parameters",
-    "EVALUATION_INTERFACE",
-    "LINAS_INNERLOOP_EVALS",
-    "SEARCH_ALGORITHMS",
-    "SUPERNET_ENCODING",
-    "SUPERNET_METRICS",
-    "SUPERNET_TYPE",
-]
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -48,7 +38,7 @@ SUPERNET_ENCODING = {
     'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
 
-_SUPERNET_PARAMETERS = {
+SUPERNET_PARAMETERS = {
     'ofa_resnet50': {
         'd': {'count': 5, 'vars': [0, 1, 2]},
         'e': {'count': 18, 'vars': [0.2, 0.25, 0.35]},
@@ -132,7 +122,3 @@ SUPERNET_METRICS = {
 
 
 SEARCH_ALGORITHMS = ['linas', 'evolutionary', 'random']
-
-
-def get_supernet_parameters(supernet: str, **kwargs) -> Dict[str, Dict[str, Any]]:
-    return _SUPERNET_PARAMETERS[supernet]
