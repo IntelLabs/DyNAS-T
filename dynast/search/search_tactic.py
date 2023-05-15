@@ -166,6 +166,15 @@ class NASBaseConfig:
                 'MACs',
                 'HR@10',
             ]  # TODO(macsz) Should be based on specified measurements
+        elif self.supernet in SUPERNET_TYPE['quantization']:
+            self.csv_header = [
+                'Sub-network',
+                'Date',
+                'Model Parameters',
+                'Latency (ms)',
+                'Model Size',
+                'Top-1 Acc (%)',
+            ] 
         else:
             # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
             raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
@@ -384,14 +393,18 @@ class LINAS(NASBaseConfig):
                 )
             
             elif self.supernet == 'inc_quantization_ofa_resnet50':
-                self.runner_validate = QuantizedOFARunner(
-                supernet=self.supernet,
-                dataset_path=self.dataset_path,
-                batch_size=self.batch_size,
-                device=self.device,
-                dataloader_workers=self.dataloader_workers,
-                test_fraction=self.test_fraction,
-            )
+
+                runner_predict = QuantizedOFARunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    test_fraction=self.test_fraction,
+                )
 
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
