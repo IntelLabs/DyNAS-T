@@ -157,3 +157,9 @@ class TestBootstrapNASEncoding:
             ]
         )
         assert expected_bootstrapnas_subnet_config == bootstrapnas_subnet_config
+
+        dynast_subnet_config_str = "{'width_0': [256], 'width_1': [512], 'width_2': [608], 'width_3': [1632], 'width_4': [64], 'width_5': [64], 'depth': ['[0, 1, 2, 4]']}"
+        bootstrapnas_subnet_config = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(
+            subnet_config=dynast_subnet_config_str,
+        )
+        assert expected_bootstrapnas_subnet_config == bootstrapnas_subnet_config

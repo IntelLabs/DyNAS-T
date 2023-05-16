@@ -15,7 +15,7 @@
 
 import json
 from collections import OrderedDict
-from typing import List
+from typing import List, Union
 
 import numpy as np
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -191,7 +191,9 @@ class BootstrapNASEncoding(EncodingBase):
         return np.array(onehot)
 
     @staticmethod
-    def convert_subnet_config_to_bootstrapnas(subnet_config: dict) -> OrderedDict:
+    def convert_subnet_config_to_bootstrapnas(subnet_config: Union[dict, str]) -> OrderedDict:
+        if isinstance(subnet_config, str):
+            subnet_config = json.loads(subnet_config.replace('\'', '\"'))
         output = OrderedDict()
         for key, value in subnet_config.items():
             if 'width' in key:
