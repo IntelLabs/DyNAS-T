@@ -237,6 +237,25 @@ class NASBaseConfig:
         # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
+    def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
+        """Returns the best sub-networks.
+
+        Number of returned networks is controlled by the `limit` parameter. If it's not set, then
+        `self.population` is used instead.
+        """
+        limit = self.population if limit is None else limit
+        df = pd.read_csv(self.results_path).tail(limit)
+
+        if self.csv_header is not None:
+            df.columns = self.csv_header
+
+        if sort_by is not None:
+            df = df.sort_values(by=sort_by, ascending=ascending)
+
+        if 'bootstrapnas' in self.supernet:
+            df['Sub-network'] = df['Sub-network'].apply(BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas)
+        return df
+
 
 class LINAS(NASBaseConfig):
     """The LINAS algorithm is a bi-objective optimization approach that explores the sub-networks
