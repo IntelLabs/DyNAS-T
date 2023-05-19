@@ -249,6 +249,7 @@ class ViTRunner:
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
+        ImageNet.PATH = self.dataset_path
         self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size, fraction=test_fraction)
         # TODO: Figure out if a similar base config can be created for ViT
         # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)

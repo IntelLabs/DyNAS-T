@@ -73,9 +73,9 @@ SUPERNET_PARAMETERS = {
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
     'vit_base_imagenet': {
-        'num_layers': {'count': 1, 'vars': [4, 5, 6, 7, 8, 9, 10, 12]},
-        'num_attention_heads': {'count': 12, 'vars': [2, 4, 8, 12]},
-        'vit_intermediate_sizes': {'count': 12, 'vars': [512, 768, 1024, 3072]},
+        'num_layers': {'count': 1, 'vars': [6, 7, 8, 9, 10, 11, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'vit_intermediate_sizes': {'count': 12, 'vars': [768, 1024, 2048, 3072]},
     },
 }
 
