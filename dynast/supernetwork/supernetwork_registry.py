@@ -119,7 +119,7 @@ SUPERNET_METRICS = {
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
-    'vit_base_imagenet': ['latency', 'macs', 'params', 'accuracy_top1'],
+    'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
 }
 
 
