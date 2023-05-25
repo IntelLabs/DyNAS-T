@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 
 import pytest
-
-import os
 
 from dynast.utils.datasets import CIFAR10, Dataset, ImageNet, Imagenette
 
