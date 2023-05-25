@@ -42,7 +42,8 @@ def test_dataset_invalid_name_exception():
 
 
 @pytest.mark.skipif(
-    os.path.exists(not "/datasets/imagenet-ilsvrc2012/val"), reason="ImageNet dataset not found; skipping test (TODO(macsz) should be mocked in the future!)",
+    os.path.exists(not "/datasets/imagenet-ilsvrc2012/val"),
+    reason="ImageNet dataset not found; skipping test (TODO(macsz) should be mocked in the future!)",
 )
 def test_dataset_test_fraction():
     ImageNet.PATH = "/datasets/imagenet-ilsvrc2012/"
