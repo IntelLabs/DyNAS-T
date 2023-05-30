@@ -28,7 +28,6 @@ class TransformerLTEncoding(EncodingBase):
         super().__init__(param_dict, verbose, seed)
 
     def onehot_custom(self, subnet_cfg, provide_onehot=True, encode_layer_num_int=6):
-
         features = []
         features.extend(subnet_cfg['encoder_embed_dim'])
 
