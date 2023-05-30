@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -19,18 +20,15 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 from dynast.search.encoding import EncodingBase
-from dynast.search.encoding import EncodingBase
-from .depth_parser import DepthParser
 from dynast.utils import log
 
-import ast
+from .depth_parser import DepthParser
 
 
 class OFAQuantizedResNet50Encoding(EncodingBase):
     def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
         super().__init__(param_dict, verbose, seed)
-        self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2]*5, base_blocks=[2,2,4,2])
-
+        self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2] * 5, base_blocks=[2, 2, 4, 2])
 
     def onehot_custom(self, subnet_cfg, provide_onehot=True):
         depth = subnet_cfg['d']
@@ -40,12 +38,12 @@ class OFAQuantizedResNet50Encoding(EncodingBase):
         features.extend(subnet_cfg['e'])
         features.extend(subnet_cfg['w'])
         masks = np.array(self.depth_parser.layerwise_masks(subnet_depth=depth))
-        q_weights_mode = list(map(lambda x:100 if x=='asymmetric' else x, q_weights_mode))
-        q_weights_mode = list(map(lambda x:200 if x=='symmetric' else x, q_weights_mode))
+        q_weights_mode = list(map(lambda x: 100 if x == 'asymmetric' else x, q_weights_mode))
+        q_weights_mode = list(map(lambda x: 200 if x == 'symmetric' else x, q_weights_mode))
 
-        features.extend((np.array(subnet_cfg['q_bits'])*masks).tolist())
-        features.extend((np.array(q_weights_mode)*masks).tolist())
-       
+        features.extend((np.array(subnet_cfg['q_bits']) * masks).tolist())
+        features.extend((np.array(q_weights_mode) * masks).tolist())
+
         if provide_onehot == True:
             examples = np.array([features])
             one_hot_count = 0
@@ -65,7 +63,7 @@ class OFAQuantizedResNet50Encoding(EncodingBase):
 
         else:
             return features
-    
+
     def import_csv(self, filepath, config, objective, column_names=None, drop_duplicates=True):
         '''
         Import a csv file generated from a supernetwork search for the purpose
@@ -150,6 +148,3 @@ class OFAQuantizedResNet50Encoding(EncodingBase):
             )
             log.info('Test ({}) Train ({}) ratio is {}.'.format(len(labels_train), len(labels_test), split))
             return features_train, features_test, labels_train, labels_test
-
-
-

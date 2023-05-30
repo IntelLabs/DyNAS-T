@@ -18,16 +18,10 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
     EvaluationInterfaceOFAResNet50,
 )
-from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
-from dynast.supernetwork.image_classification.ofa.ofa_interface import (
-    EvaluationInterfaceOFAMobileNetV3,
-    EvaluationInterfaceOFAResNet50,
-)
+from dynast.supernetwork.image_classification.ofa_quantization.quantization_encoding import OFAQuantizedResNet50Encoding
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import (
     EvaluationInterfaceQuantizedOFAResNet50,
 )
-from dynast.supernetwork.image_classification.ofa_quantization.quantization_encoding import OFAQuantizedResNet50Encoding
-
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
@@ -40,7 +34,7 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
-    'inc_quantization_ofa_resnet50':OFAQuantizedResNet50Encoding,
+    'inc_quantization_ofa_resnet50': OFAQuantizedResNet50Encoding,
 }
 
 SUPERNET_PARAMETERS = {
@@ -129,7 +123,7 @@ SUPERNET_METRICS = {
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['params', 'latency', 'macs', 'bleu'],
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
-    'inc_quantization_ofa_resnet50': ['params','latency','model_size','accuracy_top1']
+    'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
 }
 
 

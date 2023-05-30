@@ -14,17 +14,18 @@
 
 import copy
 import csv
+import os
+import shutil
 import uuid
 from datetime import datetime
 from typing import Tuple
+
 import numpy as np
 import torch
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
-import os
-import shutil
 from dynast.supernetwork.image_classification.ofa.ofa import model_zoo as ofa_model_zoo
 from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.data_providers.imagenet import (
     ImagenetDataProvider,
@@ -36,8 +37,9 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
-from .inc_quantization import inc_quantize, inc_qconfig_dict
+
 from .depth_parser import DepthParser
+from .inc_quantization import inc_qconfig_dict, inc_quantize
 
 
 class Quantization:

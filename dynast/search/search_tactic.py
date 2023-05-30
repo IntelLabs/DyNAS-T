@@ -173,7 +173,7 @@ class NASBaseConfig:
                 'Latency (ms)',
                 'Model Size',
                 'Top-1 Acc (%)',
-            ] 
+            ]
         else:
             # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
             raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
@@ -390,9 +390,8 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
                 )
-            
-            elif self.supernet == 'inc_quantization_ofa_resnet50':
 
+            elif self.supernet == 'inc_quantization_ofa_resnet50':
                 runner_predict = QuantizedOFARunner(
                     supernet=self.supernet,
                     latency_predictor=self.predictor_dict['latency'],
