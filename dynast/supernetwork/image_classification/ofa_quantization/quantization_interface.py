@@ -43,10 +43,7 @@ from .inc_quantization import inc_qconfig_dict, inc_quantize
 
 
 class Quantization:
-    def __init__(self,
-                 calibration_dataloader = None,
-                 num_samples = None):
-
+    def __init__(self, calibration_dataloader=None, num_samples=None):
         super(Quantization, self).__init__()
         self.calibration_dataloader = calibration_dataloader
         self.num_samples = num_samples
@@ -57,21 +54,23 @@ class Quantization:
             assert len(masks) == len(qparam_dict[key])
             qparam_dict[key] = np.array(qparam_dict[key])[indices].tolist()
             assert len(regex_module_names) == len(qparam_dict[key])
-    
-     
-        qconfig_dict = inc_qconfig_dict(regex_module_names = regex_module_names,
-                                        q_weights_bit = qparam_dict['q_weights_bit'],
-                                        q_activations_bit = qparam_dict['q_activations_bit'],
-                                        q_weights_mode = qparam_dict['q_weights_mode'],
-                                        q_activations_mode = qparam_dict['q_activations_mode'],
-                                        q_weights_granularity = qparam_dict['q_weights_granularity'],
-                                        q_activations_granularity = qparam_dict['q_activations_granularity'])
 
-        model_qt = inc_quantize(model, qconfig_dict,
-                                data_loader=self.calibration_dataloader,
-                                num_samples=self.num_samples)
+        qconfig_dict = inc_qconfig_dict(
+            regex_module_names=regex_module_names,
+            q_weights_bit=qparam_dict['q_weights_bit'],
+            q_activations_bit=qparam_dict['q_activations_bit'],
+            q_weights_mode=qparam_dict['q_weights_mode'],
+            q_activations_mode=qparam_dict['q_activations_mode'],
+            q_weights_granularity=qparam_dict['q_weights_granularity'],
+            q_activations_granularity=qparam_dict['q_activations_granularity'],
+        )
+
+        model_qt = inc_quantize(
+            model, qconfig_dict, data_loader=self.calibration_dataloader, num_samples=self.num_samples
+        )
 
         return model_qt
+
 
 class QuantizedOFARunner:
     """The QuantizedOFARunner class manages the sub-network selection from the OFA super-network and
@@ -105,7 +104,7 @@ class QuantizedOFARunner:
         self.dataloader_workers = dataloader_workers
         self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
-        if supernet=='inc_quantization_ofa_resnet50':
+        if supernet == 'inc_quantization_ofa_resnet50':
             self.ofa_network = ofa_model_zoo.ofa_net('ofa_resnet50', pretrained=True)
         else:
             self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
@@ -114,13 +113,11 @@ class QuantizedOFARunner:
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
         )
-        self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2]*5, base_blocks=[2,2,4,2])
+        self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2] * 5, base_blocks=[2, 2, 4, 2])
 
         self._init_data()
 
-        self.quantizer = Quantization(calibration_dataloader = self.calibration_dataloader,
-                             num_samples = 100
-                             )
+        self.quantizer = Quantization(calibration_dataloader=self.calibration_dataloader, num_samples=100)
 
     def _init_data(self):
         ImageNet.PATH = self.dataset_path
@@ -151,24 +148,27 @@ class QuantizedOFARunner:
     def estimate_parameters(self, subnet_cfg) -> int:
         parameters = self.params_predictor.predict(subnet_cfg)
         return parameters
-    
+
     def quantize_and_calibrate(self, subnet, subnet_cfg):
         masks, regex_module_names = self.depth_parser.layer_parse(subnet_depth=subnet_cfg['d'], subnet_model=subnet)
 
         qparam_len = len(subnet_cfg['q_bits'])
-        subnet_qt = self.quantizer.quantize(subnet, regex_module_names=regex_module_names, masks=masks,
-                                            qparam_dict={
-                                                'q_weights_bit': subnet_cfg['q_bits'],
-                                                'q_activations_bit': subnet_cfg['q_bits'],
-                                                'q_weights_mode': subnet_cfg['q_weights_mode'],
-                                                'q_activations_mode': ['asymmetric']*qparam_len,
-                                                'q_weights_granularity': ['perchannel']*qparam_len,
-                                                'q_activations_granularity': ['pertensor']*qparam_len,
-                                            })
+        subnet_qt = self.quantizer.quantize(
+            subnet,
+            regex_module_names=regex_module_names,
+            masks=masks,
+            qparam_dict={
+                'q_weights_bit': subnet_cfg['q_bits'],
+                'q_activations_bit': subnet_cfg['q_bits'],
+                'q_weights_mode': subnet_cfg['q_weights_mode'],
+                'q_activations_mode': ['asymmetric'] * qparam_len,
+                'q_weights_granularity': ['perchannel'] * qparam_len,
+                'q_activations_granularity': ['pertensor'] * qparam_len,
+            },
+        )
         return subnet_qt
-    
+
     def validate_quantized_top1(self, subnet_cfg, device=None) -> float:
-        
         device = self.device if not device else device
 
         subnet = self.get_subnet(subnet_cfg)
@@ -178,12 +178,11 @@ class QuantizedOFARunner:
             subnet,
             self.run_config,
             init=False,
-            self.verbose,
+            verbose=self.verbose,
         )
         run_manager.reset_running_statistics(net=subnet)
-        
-        subnet_qt = self.quantize_and_calibrate(subnet, subnet_cfg)
 
+        subnet_qt = self.quantize_and_calibrate(subnet, subnet_cfg)
 
         # Test sampled subnet
         self.run_config.data_provider.assign_active_img_size(subnet_cfg['r'][0])
@@ -193,7 +192,7 @@ class QuantizedOFARunner:
             data_loader=self.dataloader,
             device=self.device,
         )
-        
+
         return top1
 
     def validate_params(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:
@@ -231,11 +230,10 @@ class QuantizedOFARunner:
         subnet_qt = self.quantize_and_calibrate(subnet, subnet_cfg)
 
         subnet_qt.save(temp_name)
-        model_size = os.path.getsize(f'{temp_name}/best_model.pt')/1e6
+        model_size = os.path.getsize(f'{temp_name}/best_model.pt') / 1e6
 
         shutil.rmtree(temp_name)
 
-            
         return model_size
 
     @torch.no_grad()
@@ -272,7 +270,7 @@ class QuantizedOFARunner:
         return latency_mean, latency_std
 
     def get_subnet(self, subnet_cfg):
-        if self.supernet == 'ofa_resnet50' or self.supernet=='inc_quantization_ofa_resnet50':
+        if self.supernet == 'ofa_resnet50' or self.supernet == 'inc_quantization_ofa_resnet50':
             self.ofa_network.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         else:
             self.ofa_network.set_active_subnet(ks=subnet_cfg['ks'], e=subnet_cfg['e'], d=subnet_cfg['d'])
@@ -303,8 +301,15 @@ class EvaluationInterfaceQuantizedOFAResNet50(EvaluationInterface):
 
         # PyMoo vector to Super-Network Parameter Mapping, OFA specific
         param_dict = self.manager.translate2param(x)
-        sample = {'wid': None,'d': param_dict['d'], 'e': param_dict['e'], 'w': param_dict['w'], 'r': [224],'q_bits': param_dict['q_bits'],
-            'q_weights_mode': param_dict['q_weights_mode']}
+        sample = {
+            'wid': None,
+            'd': param_dict['d'],
+            'e': param_dict['e'],
+            'w': param_dict['w'],
+            'r': [224],
+            'q_bits': param_dict['q_bits'],
+            'q_weights_mode': param_dict['q_weights_mode'],
+        }
         subnet_sample = copy.deepcopy(sample)
 
         individual_results = dict()
@@ -333,14 +338,10 @@ class EvaluationInterfaceQuantizedOFAResNet50(EvaluationInterface):
         # Validation Mode
         else:
             if 'model_size' in self.measurements:
-                individual_results['model_size'] = self.evaluator.measure_modelsize(
-                    subnet_sample
-                )
-            
+                individual_results['model_size'] = self.evaluator.measure_modelsize(subnet_sample)
+
             if 'params' in self.measurements:
-                individual_results['params'] = self.evaluator.validate_params(
-                    subnet_sample
-                )
+                individual_results['params'] = self.evaluator.validate_params(subnet_sample)
             if 'latency' in self.measurements:
                 individual_results['latency'], _ = self.evaluator.measure_latency(
                     subnet_sample
@@ -386,5 +387,3 @@ class EvaluationInterfaceQuantizedOFAResNet50(EvaluationInterface):
         else:
             log.error('Number of optimization_metrics is out of range. 1-3 supported.')
             return None
-
-
