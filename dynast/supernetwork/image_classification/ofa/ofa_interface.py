@@ -191,7 +191,7 @@ class OFARunner:
 
     def get_subnet(self, subnet_cfg):
         if self.supernet == 'ofa_resnet50':
-            self.ofa_network.set_active_subnet(ks=subnet_cfg['d'], e=subnet_cfg['e'], d=subnet_cfg['w'])
+            self.ofa_network.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         else:
             self.ofa_network.set_active_subnet(ks=subnet_cfg['ks'], e=subnet_cfg['e'], d=subnet_cfg['d'])
 
