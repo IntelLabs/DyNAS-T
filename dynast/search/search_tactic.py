@@ -24,12 +24,15 @@ from dynast.search.evolutionary import (
     EvolutionarySingleObjective,
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
-from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import QuantizedOFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.utils import log, split_list
+from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
+
+QuantizedOFARunner = LazyImport(
+    'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
+)
 
 
 class NASBaseConfig:
