@@ -21,6 +21,7 @@ import os
 import sys
 
 import numpy as np
+import requests
 import torch
 
 try:
@@ -86,7 +87,13 @@ def download_url(url, model_dir="~/.torch/", overwrite=False):
         cached_file = model_dir
         if not os.path.exists(cached_file) or overwrite:
             sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
-            urlretrieve(url, cached_file)
+            req_file = requests.get(
+                url, allow_redirects=True, verify=False
+            )  # TODO(macsz) This **has** to be changed to `verify=True`.
+            # Currenly HAN Lab's server has misconfigured SSL certificate
+            # and there is no other workaround available right now...
+            with open(cached_file, 'wb') as f:
+                f.write(req_file.content)
         return cached_file
     except Exception as e:
         # remove lock file so download can be executed next time.
