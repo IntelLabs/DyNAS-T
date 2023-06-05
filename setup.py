@@ -21,19 +21,14 @@ def get_version():
     return '1.3.0'
 
 
-def get_dependencies():
+def get_dependencies(feature=None):
     deps = []
-    with open('requirements.txt') as f:
-        lines = f.readlines()
-        for line in lines:
-            line = line.strip()
-            deps.append(line)
-    return deps
+    if not feature:
+        fn = 'requirements.txt'
+    else:
+        fn = f'requirements_{feature}.txt'
 
-
-def get_test_dependencies():
-    deps = []
-    with open('requirements_test.txt') as f:
+    with open(fn) as f:
         lines = f.readlines()
         for line in lines:
             line = line.strip()
