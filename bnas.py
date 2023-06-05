@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import sys
 from pathlib import Path
 
 import torch
@@ -17,6 +18,7 @@ set_logger(logging.INFO)
 
 
 def main():
+    log.info('$PYTHONPATH: {}'.format(sys.path))
     random.seed(42)
 
     haaml_path = Path(
@@ -69,17 +71,17 @@ def main():
             'population': 50,
         }
 
-    dynas = DyNAS(
-        supernet='bootstrapnas_image_classification',
-        optimization_metrics=['accuracy_top1', 'macs'],
-        measurements=['accuracy_top1', 'macs'],
-        batch_size=nncf_config.batch_size,
-        dataset_path='/tmp/cifar10',
-        bootstrapnas=bootstrapNAS,  # This is the only new param that has to be passed
-        device=nncf_config.device,
-        verbose=False,
-        **dynast_config,
-    )
+    dynast_config['supernet'] = 'bootstrapnas_image_classification'
+    dynast_config['test_fraction'] = 1.0
+    dynast_config['optimization_metrics'] = ['accuracy_top1', 'macs']
+    dynast_config['measurements'] = ['accuracy_top1', 'macs']
+    dynast_config['batch_size'] = nncf_config.batch_size
+    dynast_config['dataset_path'] = '/tmp/cifar10'
+    dynast_config['bootstrapnas'] = bootstrapNAS  # This is the only new param that has to be passed
+    dynast_config['device'] = nncf_config.device
+    dynast_config['verbose'] = False
+
+    dynas = DyNAS(**dynast_config)
     dynas.search()
 
 
