@@ -18,7 +18,7 @@ from setuptools import find_packages, setup
 
 def get_version():
     # TODO(macsz) Replace with __version__
-    return '1.2.0'
+    return '1.3.0'
 
 
 def get_dependencies():
