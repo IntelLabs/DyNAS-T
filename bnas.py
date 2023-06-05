@@ -71,15 +71,18 @@ def main():
             'population': 50,
         }
 
-    dynast_config['supernet'] = 'bootstrapnas_image_classification'
-    dynast_config['test_fraction'] = 1.0
-    dynast_config['optimization_metrics'] = ['accuracy_top1', 'macs']
-    dynast_config['measurements'] = ['accuracy_top1', 'macs']
-    dynast_config['batch_size'] = nncf_config.batch_size
-    dynast_config['dataset_path'] = '/tmp/cifar10'
-    dynast_config['bootstrapnas'] = bootstrapNAS  # This is the only new param that has to be passed
-    dynast_config['device'] = nncf_config.device
-    dynast_config['verbose'] = False
+    dynast_config.update({
+        'seed': 42,
+        'supernet': 'bootstrapnas_image_classification',
+        'test_fraction': 1.0,
+        'optimization_metrics': ['accuracy_top1', 'macs'],
+        'measurements': ['accuracy_top1', 'macs'],
+        'batch_size': nncf_config.batch_size,
+        'dataset_path': '/tmp/cifar10',
+        'bootstrapnas': bootstrapNAS,  # This is the only new param that has to be passed
+        'device': nncf_config.device,
+        'verbose': False,
+    })
 
     dynas = DyNAS(**dynast_config)
     dynas.search()
