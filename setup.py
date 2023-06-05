@@ -49,7 +49,8 @@ setup(
     packages=find_packages(),
     install_requires=get_dependencies(),
     extras_require={
-        'test': get_test_dependencies(),
+        'test': get_dependencies('test'),
+        'bootstrapnas': get_dependencies('bootstrapnas'),
     },
     entry_points={
         'console_scripts': [
