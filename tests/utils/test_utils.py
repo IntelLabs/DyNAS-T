@@ -20,7 +20,7 @@ from unittest.mock import mock_open, patch
 import pytest
 import requests
 
-from dynast.utils import check_kwargs_deprecated, get_cores, get_remote_file, split_list
+from dynast.utils import LazyImport, check_kwargs_deprecated, get_cores, get_remote_file, split_list
 
 valid_remote_url = 'http://someurl.com/test.txt'
 valid_remote_url_file_not_exists = 'http://example.com/supernets/not_exists.txt'
@@ -176,3 +176,13 @@ def test_check_kwargs_deprecated_acc_bleu() -> None:
     updated_old = check_kwargs_deprecated(**old)
 
     assert new == updated_old
+
+
+def test_lazy_import() -> None:
+    with pytest.raises(UnboundLocalError):
+        torch.nn.Module()
+    torch = LazyImport('torch')
+    assert torch.nn.Module()
+
+    with pytest.raises(AttributeError):
+        torch.nonexistingmethod()
