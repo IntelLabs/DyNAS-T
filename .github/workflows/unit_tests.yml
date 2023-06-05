@@ -49,6 +49,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements_test.txt
           pip install -e .
+          pip install -r requirements_bootstrapnas.txt
       - name: Test with pytest
         run: |
           python -m pytest -v --cov dynast/ --cov-report html --cov-report term
