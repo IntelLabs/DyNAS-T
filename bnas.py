@@ -35,8 +35,10 @@ def create_nncf_config(config_file_path: str):
     nncf_config.dataset = "cifar10"
     nncf_config.name = "dynast_bnas_external"
 
+    return nncf_config
 
-def create_dynast_config(nncf_config, bootstrapNAS):
+
+def create_dynast_config(nncf_config: Dict, bootstrapNAS: SuperNetwork):
     search_tactic = 'random'
     if 'random' in search_tactic:
         dynast_config = {
