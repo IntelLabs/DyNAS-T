@@ -37,7 +37,7 @@ class BootstrapNASRunner:
 
     def __init__(
         self,
-        bootstrapnas: SuperNetwork,
+        bootstrapnas_supernetwork,
         supernet: str,
         dataset_path: str = None,
         acc_predictor: Predictor = None,
@@ -53,7 +53,7 @@ class BootstrapNASRunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.bootstrapnas = bootstrapnas
+        self.bootstrapnas_supernetwork = bootstrapnas_supernetwork
         self.dataset_path = dataset_path
 
     def estimate_accuracy_top1(self, subnet_cfg):
@@ -154,8 +154,10 @@ class BootstrapNASRunner:
     def _get_subnet(self, pymoo_vector, device):
         subnet_sample = copy.deepcopy(pymoo_vector)
 
-        self.bootstrapnas.activate_config(self.bootstrapnas.get_config_from_pymoo(subnet_sample))
-        model = self.bootstrapnas.get_active_subnet()
+        self.bootstrapnas_supernetwork.activate_config(
+            self.bootstrapnas_supernetwork.get_config_from_pymoo(subnet_sample)
+        )
+        model = self.bootstrapnas_supernetwork.get_active_subnet()
         model = model.to(device)
         return model
 

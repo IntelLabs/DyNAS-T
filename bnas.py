@@ -64,7 +64,7 @@ def create_dynast_config(nncf_config: Dict, bootstrapNAS: SuperNetwork):
             'measurements': ['accuracy_top1', 'macs'],
             'batch_size': nncf_config.batch_size,
             'dataset_path': '/tmp/cifar10',
-            'bootstrapnas': bootstrapNAS,  # This is the only new param that has to be passed
+            'bootstrapnas_supernetwork': bootstrapNAS,  # This is the only new param that has to be passed
             'device': nncf_config.device,
             'verbose': False,
         }

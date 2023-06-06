@@ -85,7 +85,7 @@ class NASBaseConfig:
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
 
-        self.bootstrapnas = kwargs.get('bootstrapnas', None)
+        self.bootstrapnas_supernetwork = kwargs.get('bootstrapnas_supernetwork', None)
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -175,8 +175,8 @@ class NASBaseConfig:
 
     def init_supernet(self):
         # Initializes the super-network manager
-        if self.bootstrapnas:
-            param_dict = self.bootstrapnas.get_search_space()
+        if self.bootstrapnas_supernetwork:
+            param_dict = self.bootstrapnas_supernetwork.get_search_space()
         else:
             param_dict = SUPERNET_PARAMETERS[self.supernet]
         self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
@@ -215,7 +215,7 @@ class NASBaseConfig:
             )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
-                bootstrapnas=self.bootstrapnas,
+                bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
@@ -406,7 +406,7 @@ class LINAS(NASBaseConfig):
                 )
             elif 'bootstrapnas' in self.supernet:
                 runner_predict = BootstrapNASRunner(
-                    bootstrapnas=self.bootstrapnas,
+                    bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
                     supernet=self.supernet,
                     latency_predictor=self.predictor_dict['latency'],
                     macs_predictor=self.predictor_dict['macs'],
