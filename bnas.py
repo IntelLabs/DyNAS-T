@@ -36,31 +36,7 @@ def create_nncf_config(config_file_path: str):
     nncf_config.name = "dynast_bnas_external"
 
 
-def load_model(nncf_config):
-    log.info(f"Loading base model {BASE_MODEL_PATH}...")
-    model = resnet50_cifar10()
-    state_dict = torch.load(BASE_MODEL_PATH)
-    model.load_state_dict(state_dict)
-    model.to(nncf_config.device)
-    return model
-
-
-def main():
-    log.info('$PYTHONPATH: {}'.format(sys.path))
-    random.seed(42)
-
-    nncf_config = create_nncf_config(CONFIG_FILE_PATH)
-
-    model = load_model(nncf_config)
-
-    log.info("Bootstrapping model...")
-    bootstrapNAS = SuperNetwork.from_checkpoint(
-        model=model,
-        nncf_config=nncf_config,
-        supernet_path=SUPERNET_PATH,
-        supernet_weights=SUPERNET_WEIGHTS,
-    )
-
+def create_dynast_config(nncf_config, bootstrapNAS):
     search_tactic = 'random'
     if 'random' in search_tactic:
         dynast_config = {
@@ -91,6 +67,35 @@ def main():
             'verbose': False,
         }
     )
+    return dynast_config
+
+
+def load_model(nncf_config):
+    log.info(f"Loading base model {BASE_MODEL_PATH}...")
+    model = resnet50_cifar10()
+    state_dict = torch.load(BASE_MODEL_PATH)
+    model.load_state_dict(state_dict)
+    model.to(nncf_config.device)
+    return model
+
+
+def main():
+    log.info('$PYTHONPATH: {}'.format(sys.path))
+    random.seed(42)
+
+    nncf_config = create_nncf_config(CONFIG_FILE_PATH)
+
+    model = load_model(nncf_config)
+
+    log.info("Bootstrapping model...")
+    bootstrapNAS = SuperNetwork.from_checkpoint(
+        model=model,
+        nncf_config=nncf_config,
+        supernet_path=SUPERNET_PATH,
+        supernet_weights=SUPERNET_WEIGHTS,
+    )
+
+    dynast_config = create_dynast_config(nncf_config, bootstrapNAS)
 
     dynas = DyNAS(**dynast_config)
     dynas.search()
