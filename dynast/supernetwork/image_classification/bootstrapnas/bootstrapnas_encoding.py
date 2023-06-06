@@ -18,10 +18,11 @@ from collections import OrderedDict
 from typing import List, Union
 
 import numpy as np
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 from dynast.search.encoding import EncodingBase
-from dynast.utils import log
+from dynast.utils import LazyImport, log
+
+nncf = LazyImport("nncf")
 
 
 class BootstrapNASEncoding(EncodingBase):
@@ -192,6 +193,7 @@ class BootstrapNASEncoding(EncodingBase):
 
     @staticmethod
     def convert_subnet_config_to_bootstrapnas(subnet_config: Union[dict, str]) -> OrderedDict:
+        ElasticityDim = nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim.ElasticityDim
         if isinstance(subnet_config, str):
             subnet_config = json.loads(subnet_config.replace('\'', '\"'))
         output = OrderedDict()
