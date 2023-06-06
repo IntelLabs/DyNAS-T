@@ -16,22 +16,16 @@ from dynast.utils import log, set_logger
 set_log_level(logging.ERROR)
 set_logger(logging.INFO)
 
+HAAML_PATH = Path("/localdisk/maciej/code/dynast_bootstrapnas_integration/hardware_aware_automated_machine_learning")
+CONFIG_FILE_PATH = HAAML_PATH / "models/supernets/cifar10/resnet50/config.json"
+SUPERNET_PATH = HAAML_PATH / "models/supernets/cifar10/resnet50/elasticity.pth"
+SUPERNET_WEIGHTS = HAAML_PATH / "models/supernets/cifar10/resnet50/supernet_weights.pth"
+BASE_MODEL_PATH = HAAML_PATH / "models/pretrained/resnet50.pt"
 
-def main():
-    log.info('$PYTHONPATH: {}'.format(sys.path))
-    random.seed(42)
 
-    haaml_path = Path(
-        "/localdisk/maciej/code/dynast_bootstrapnas_integration/hardware_aware_automated_machine_learning"
-    )
-
-    config_path = haaml_path / "models/supernets/cifar10/resnet50/config.json"
-    supernet_path = haaml_path / "models/supernets/cifar10/resnet50/elasticity.pth"
-    supernet_weights = haaml_path / "models/supernets/cifar10/resnet50/supernet_weights.pth"
-    fp32_pth_url = haaml_path / "models/pretrained/resnet50.pt"
-
-    log.info(f"Loading config {config_path}...")
-    with open(config_path) as f:
+def create_nncf_config(config_file_path: str):
+    log.info(f"Loading config {config_file_path}...")
+    with open(config_file_path) as f:
         nncf_config = Dict(json.load(f))
     nncf_config.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO(macsz) Update this.
     log.info(f"Using device: {nncf_config.device}")
@@ -41,18 +35,30 @@ def main():
     nncf_config.dataset = "cifar10"
     nncf_config.name = "dynast_bnas_external"
 
-    log.info(f"Loading base model {fp32_pth_url}...")
+
+def load_model(nncf_config):
+    log.info(f"Loading base model {BASE_MODEL_PATH}...")
     model = resnet50_cifar10()
-    state_dict = torch.load(fp32_pth_url)
+    state_dict = torch.load(BASE_MODEL_PATH)
     model.load_state_dict(state_dict)
     model.to(nncf_config.device)
+    return model
+
+
+def main():
+    log.info('$PYTHONPATH: {}'.format(sys.path))
+    random.seed(42)
+
+    nncf_config = create_nncf_config(CONFIG_FILE_PATH)
+
+    model = load_model(nncf_config)
 
     log.info("Bootstrapping model...")
     bootstrapNAS = SuperNetwork.from_checkpoint(
         model=model,
         nncf_config=nncf_config,
-        supernet_path=supernet_path,
-        supernet_weights=supernet_weights,
+        supernet_path=SUPERNET_PATH,
+        supernet_weights=SUPERNET_WEIGHTS,
     )
 
     search_tactic = 'random'
