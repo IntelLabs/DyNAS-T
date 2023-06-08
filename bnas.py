@@ -8,6 +8,7 @@ import torch
 from addict import Dict
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import set_log_level
+from nncf.config.config import NNCFConfig
 from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork
 
 from dynast.dynast_manager import DyNAS
@@ -25,15 +26,23 @@ BASE_MODEL_PATH = HAAML_PATH / "models/pretrained/resnet50.pt"
 
 def create_nncf_config(config_file_path: str):
     log.info(f"Loading config {config_file_path}...")
-    with open(config_file_path) as f:
-        nncf_config = Dict(json.load(f))
+    nncf_config = NNCFConfig.from_json(config_file_path)
     nncf_config.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")  # TODO(macsz) Update this.
     log.info(f"Using device: {nncf_config.device}")
     nncf_config.log_dir = "runs"
     nncf_config.checkpoint_save_dir = nncf_config.log_dir
     nncf_config.batch_size = 256
-    nncf_config.dataset = "cifar10"
+    nncf_config.batch_size_val = 256
+    nncf_config.batch_size_init = 256
     nncf_config.name = "dynast_bnas_external"
+    nncf_config.dataset = "cifar10"
+    nncf_config.dataset_dir = "/tmp/cifar10"
+    nncf_config.workers = 4
+    nncf_config.execution_mode = "single_gpu"
+    nncf_config.distributed = False
+    nncf_config.seed = 42
+
+    set_seed(nncf_config)
 
     return nncf_config
 
