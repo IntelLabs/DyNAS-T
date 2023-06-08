@@ -20,6 +20,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
@@ -82,6 +83,15 @@ class BootstrapNASRunner:
         )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
 
         model = self._get_subnet(pymoo_vector, device)
+
+        bn_adapt_algo_kwargs = {
+            'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
+            'num_bn_adaptation_samples': 2000,
+            'device': 'cuda',
+        }
+        bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+
+        bn_adaptation.run(model)
 
         losses, top1, top5 = validate_classification(
             model=model,
