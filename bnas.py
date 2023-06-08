@@ -6,13 +6,19 @@ from pathlib import Path
 
 import torch
 from addict import Dict
+from examples.torch.classification.main import create_data_loaders, create_datasets
+from examples.torch.common.execution import set_seed
 from examples.torch.common.models.classification.resnet_cifar10 import resnet50_cifar10
 from nncf import set_log_level
+from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.config import NNCFConfig
+from nncf.config.structures import BNAdaptationInitArgs
 from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork
+from nncf.torch.initialization import wrap_dataloader_for_init
 
 from dynast.dynast_manager import DyNAS
 from dynast.utils import log, set_logger
+from dynast.utils.nn import get_macs, validate_classification
 
 set_log_level(logging.ERROR)
 set_logger(logging.INFO)
@@ -47,7 +53,7 @@ def create_nncf_config(config_file_path: str):
     return nncf_config
 
 
-def create_dynast_config(nncf_config: Dict, bootstrapNAS: SuperNetwork):
+def create_dynast_config(nncf_config: Dict, bootstrapnas_supernetwork: SuperNetwork):
     search_tactic = 'random'
     if 'random' in search_tactic:
         dynast_config = {
@@ -73,7 +79,7 @@ def create_dynast_config(nncf_config: Dict, bootstrapNAS: SuperNetwork):
             'measurements': ['accuracy_top1', 'macs'],
             'batch_size': nncf_config.batch_size,
             'dataset_path': nncf_config.dataset_dir,
-            'bootstrapnas_supernetwork': bootstrapNAS,  # This is the only new param that has to be passed
+            'bootstrapnas_supernetwork': bootstrapnas_supernetwork,  # This is the only new param that has to be passed
             'device': nncf_config.device,
             'verbose': False,
         }
@@ -90,21 +96,67 @@ def load_model(nncf_config):
     return model
 
 
+def prepare_dataloaders(nncf_config):
+    train_dataset, val_dataset = create_datasets(nncf_config)
+    train_loader, _, val_loader, _ = create_data_loaders(nncf_config, train_dataset, val_dataset)
+    return train_loader, val_loader
+
+
 def main():
     log.info('$PYTHONPATH: {}'.format(sys.path))
     random.seed(42)
 
     nncf_config = create_nncf_config(CONFIG_FILE_PATH)
 
+    train_loader, val_loader = prepare_dataloaders(nncf_config)
+
+    bn_adapt_args = BNAdaptationInitArgs(data_loader=wrap_dataloader_for_init(train_loader), device=nncf_config.device)
+    nncf_config.register_extra_structs([bn_adapt_args])
+
+    bn_adapt_algo_kwargs = {
+        'data_loader': train_loader,
+        'num_bn_adaptation_samples': 2000,
+        'device': 'cuda',
+    }
+    bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+
     model = load_model(nncf_config)
 
     log.info("Bootstrapping model...")
-    bootstrapNAS = SuperNetwork.from_checkpoint(
+    bootstrapnas_supernetwork = SuperNetwork.from_checkpoint(
         model=model,
         nncf_config=nncf_config,
         supernet_path=SUPERNET_PATH,
         supernet_weights=SUPERNET_WEIGHTS,
     )
+
+    if False:
+        bootstrapnas_supernetwork.activate_maximal_subnet()
+        model = bootstrapnas_supernetwork.get_active_subnet()
+
+        macs = get_macs(
+            model,
+            input_size=(1, 3, 32, 32),
+            device=nncf_config,
+        )
+
+        losses, top1, top5 = validate_classification(
+            model=model,
+            data_loader=val_loader,
+            device=nncf_config.device,
+        )
+
+        log.info('Max subnet w/o BN adapt:', macs, top1)
+
+        bn_adaptation.run(model)
+
+        losses, top1, top5 = validate_classification(
+            model=model,
+            data_loader=val_loader,
+            device=nncf_config.device,
+        )
+
+        log.info('Max subnet w/ BN adapt:', macs, top1)
 
     dynast_config = create_dynast_config(nncf_config, bootstrapnas_supernetwork)
 
