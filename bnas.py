@@ -57,13 +57,13 @@ def create_dynast_config(nncf_config: Dict, bootstrapNAS: SuperNetwork):
 
     dynast_config.update(
         {
-            'seed': 42,
+            'seed': nncf_config.seed,
             'supernet': 'bootstrapnas_image_classification',
             'test_fraction': 1.0,
             'optimization_metrics': ['accuracy_top1', 'macs'],
             'measurements': ['accuracy_top1', 'macs'],
             'batch_size': nncf_config.batch_size,
-            'dataset_path': '/tmp/cifar10',
+            'dataset_path': nncf_config.dataset_dir,
             'bootstrapnas_supernetwork': bootstrapNAS,  # This is the only new param that has to be passed
             'device': nncf_config.device,
             'verbose': False,
@@ -97,7 +97,7 @@ def main():
         supernet_weights=SUPERNET_WEIGHTS,
     )
 
-    dynast_config = create_dynast_config(nncf_config, bootstrapNAS)
+    dynast_config = create_dynast_config(nncf_config, bootstrapnas_supernetwork)
 
     dynas = DyNAS(**dynast_config)
     dynas.search()
