@@ -53,6 +53,7 @@ class NASBaseConfig:
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -84,6 +85,7 @@ class NASBaseConfig:
         self.device = device
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
+        self.metric_eval_fns = metric_eval_fns
 
         self.bootstrapnas_supernetwork = kwargs.get('bootstrapnas_supernetwork', None)
 
@@ -220,6 +222,7 @@ class NASBaseConfig:
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 device=self.device,
+                metric_eval_fns=self.metric_eval_fns,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -280,6 +283,7 @@ class LINAS(NASBaseConfig):
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -311,6 +315,7 @@ class LINAS(NASBaseConfig):
             device=device,
             test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
             **kwargs,
         )
 
@@ -689,6 +694,7 @@ class RandomSearch(NASBaseConfig):
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         super().__init__(
@@ -707,6 +713,7 @@ class RandomSearch(NASBaseConfig):
             device=device,
             test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
             **kwargs,
         )
 

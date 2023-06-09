@@ -46,6 +46,7 @@ class BootstrapNASRunner:
         params_predictor: Predictor = None,
         batch_size: int = 1,
         device: str = 'cpu',
+        metric_eval_fns: dict = None,
     ):
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -55,6 +56,7 @@ class BootstrapNASRunner:
         self.device = device
         self.bootstrapnas_supernetwork = bootstrapnas_supernetwork
         self.dataset_path = dataset_path
+        self.metric_eval_fns = metric_eval_fns
 
     def estimate_accuracy_top1(self, subnet_cfg):
         top1 = self.acc_predictor.predict(subnet_cfg)
@@ -84,21 +86,26 @@ class BootstrapNASRunner:
 
         model = self._get_subnet(pymoo_vector, device)
 
-        bn_adapt_algo_kwargs = {
-            'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
-            'num_bn_adaptation_samples': 2000,
-            'device': 'cuda',
-        }
-        bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+        if self.metric_eval_fns is not None and 'accuracy_top1' in self.metric_eval_fns:
+            log.info('Using custom accuracy_top1 metric evaluation function.')
+            top1 = self.metric_eval_fns['accuracy_top1'](model)
+        else:
+            log.info('Using built-in accuracy_top1 metric evaluation function.')
+            bn_adapt_algo_kwargs = {
+                'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
+                'num_bn_adaptation_samples': 2000,
+                'device': 'cuda',
+            }
+            bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
 
-        bn_adaptation.run(model)
+            bn_adaptation.run(model)
 
-        losses, top1, top5 = validate_classification(
-            model=model,
-            data_loader=validation_dataloader,
-            device=device,
-        )
-
+            losses, top1, top5 = validate_classification(
+                model=model,
+                data_loader=validation_dataloader,
+                device=device,
+            )
+        log.info(f'Validation accuracy: {top1:.2f}%')
         return top1
 
     def validate_macs_params(self, pymoo_vector: dict, device: str = None) -> float:

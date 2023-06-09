@@ -54,19 +54,19 @@ def create_nncf_config(config_file_path: str):
 
 
 def create_dynast_config(nncf_config: Dict, bootstrapnas_supernetwork: SuperNetwork):
-    search_tactic = 'random'
+    search_tactic = 'linas'
     if 'random' in search_tactic:
         dynast_config = {
             'search_tactic': 'random',
-            'results_path': 'bootstrapnas_resnet50_cifar10_random_test.csv',
+            'results_path': 'bootstrapnas_resnet50_cifar10_random_test_1.csv',
             'num_evals': 1,
             'population': 1,
         }
     elif 'linas' in search_tactic:
         dynast_config = {
             'search_tactic': 'linas',
-            'results_path': 'bootstrapnas_resnet50_cifar10_linas_test.csv',
-            'num_evals': 250,
+            'results_path': 'bootstrapnas_resnet50_cifar10_linas_test_1.csv',
+            'num_evals': 500,
             'population': 50,
         }
 
@@ -115,7 +115,7 @@ def main():
 
     bn_adapt_algo_kwargs = {
         'data_loader': train_loader,
-        'num_bn_adaptation_samples': 2000,
+        'num_bn_adaptation_samples': 6000,
         'device': 'cuda',
     }
     bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
@@ -159,6 +159,20 @@ def main():
         log.info('Max subnet w/ BN adapt:', macs, top1)
 
     dynast_config = create_dynast_config(nncf_config, bootstrapnas_supernetwork)
+
+    def accuracy_top1_fn(_model):
+        bn_adaptation.run(_model)
+
+        losses, top1, top5 = validate_classification(
+            model=_model,
+            data_loader=val_loader,
+            device=nncf_config.device,
+        )
+        return top1
+
+    dynast_config['metric_eval_fns'] ={
+        'accuracy_top1': accuracy_top1_fn,
+    }
 
     dynas = DyNAS(**dynast_config)
     dynas.search()
