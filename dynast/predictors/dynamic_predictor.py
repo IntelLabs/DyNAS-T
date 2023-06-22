@@ -22,18 +22,17 @@ from sklearn.model_selection import GridSearchCV
 
 
 class Predictor:
+
     DEFAULT_ALPHAS = np.arange(0.1, 10.1, 0.1)
     DEFAULT_COST_FACTORS = np.arange(1.0, 101.0, 1.0)
     DEFAULT_MAX_ITERATIONS = 1000000
 
-    def __init__(
-        self,
-        alphas=DEFAULT_ALPHAS,
-        cost_factors=DEFAULT_COST_FACTORS,
-        max_iterations=DEFAULT_MAX_ITERATIONS,
-        verbose=False,
-    ):
+    def __init__(self, alphas=DEFAULT_ALPHAS, cost_factors=DEFAULT_COST_FACTORS, max_iterations=DEFAULT_MAX_ITERATIONS, verbose=False):
+
         SEARCHER_VERBOSITY = 10
+
+        # Initialize feature indices
+        self.feature_indices = 0
 
         # Initialize label normalization factor
         self.normalization_factor = 1.0
@@ -42,28 +41,19 @@ class Predictor:
         self.best_index = 0
 
         # Create lists of regressors and associated hyper-parameters
-        regressors = [
-            linear_model.Ridge(max_iter=max_iterations),
-            svm.SVR(kernel='rbf', gamma='auto', epsilon=0.0, max_iter=max_iterations),
-        ]
+        regressors = [linear_model.Ridge(max_iter=max_iterations), svm.SVR(kernel='rbf', gamma='auto', epsilon=0.0, max_iter=max_iterations)]
         hyper_parameters = [{'alpha': alphas}, {'C': cost_factors}]
 
         # Create list of hyper-parameter searchers
         self.searchers = []
         for regressor, parameters in zip(regressors, hyper_parameters):
-            self.searchers.append(
-                GridSearchCV(
-                    estimator=regressor,
-                    param_grid=parameters,
-                    n_jobs=-1,
-                    scoring='neg_mean_absolute_percentage_error',
-                    verbose=SEARCHER_VERBOSITY if (verbose) else 0,
-                )
-            )
+            self.searchers.append(GridSearchCV(estimator=regressor, param_grid=parameters, n_jobs=-1,
+            scoring='neg_mean_absolute_percentage_error', verbose=SEARCHER_VERBOSITY if (verbose) else 0))
 
     def train(self, examples, labels):
+
         '''
-        Trains the predictor on the specified examples and labels using the underlying regressor.
+        Trains the predictor on the specified examples and labels.
 
         Parameters
         ----------
@@ -75,9 +65,12 @@ class Predictor:
             None
         '''
 
+        # Determine indices of features with non-zero variance
+        self.feature_indices = np.nonzero(np.var(examples, 0))[0]
+
         # Compute normalization factor
         max_label = np.amax(np.abs(labels))
-        if max_label > 0.0:
+        if (max_label > 0.0):
             self.normalization_factor = 10 ** (np.floor(np.log10(max_label)) - 1.0)
         else:
             self.normalization_factor = 1.0
@@ -88,7 +81,7 @@ class Predictor:
         # Train regressors with optimal parameters
         scores = np.zeros(len(self.searchers))
         for s in range(len(self.searchers)):
-            self.searchers[s].fit(examples, normalized_labels)
+            self.searchers[s].fit(examples[:, self.feature_indices], normalized_labels)
             scores[s] = self.searchers[s].best_score_
 
         # Determine index of best searcher
@@ -96,7 +89,7 @@ class Predictor:
 
     def predict(self, examples):
         '''
-        Predicts the output values of the specified examples using the underlying regressor.
+        Predicts the output values of the specified examples.
 
         Parameters
         ----------
@@ -109,14 +102,14 @@ class Predictor:
 
         # Compute predictions
         regressor = self.searchers[self.best_index].best_estimator_
-        normalized_predictions = regressor.predict(examples)
+        normalized_predictions = regressor.predict(examples[:, self.feature_indices])
         predictions = normalized_predictions * self.normalization_factor
 
         return predictions
 
     def get_parameters(self):
         '''
-        Returns the optimal parameter values of the underlying regressor.
+        Returns the optimal parameter values.
 
         Parameters
         ----------
@@ -124,7 +117,7 @@ class Predictor:
 
         Returns
         -------
-            Optimal parameter values of the underlying regressor.
+            Optimal parameter values.
         '''
 
         # Retrieve optimal parameters
@@ -139,7 +132,7 @@ class Predictor:
 
     def get_metrics(self, examples, labels):
         '''
-        Computes the performance metrics of the underlying regressor.
+        Computes the performance metrics.
 
         Parameters
         ----------
@@ -149,7 +142,7 @@ class Predictor:
 
         Returns
         -------
-            Performance metrics of the underlying regressor. The metrics are
+            Performance metrics. The metrics are
                 Mean absolute percentage error (MAPE)
                 Root mean squared error (RMSE)
                 Kendall rank correlation coefficient (kendall)
@@ -169,7 +162,7 @@ class Predictor:
 
     def load(self, filename):
         '''
-        Loads the model of the underlying regressor and searcher.
+        Loads the model of the predictor.
 
         Parameters
         ----------
@@ -180,15 +173,16 @@ class Predictor:
             None
         '''
 
-        # Load searcher and regressor from specified file
+        # Load predictor model from specified file
         with open(filename, 'rb') as input_file:
+            self.feature_indices = pickle.load(input_file)
             self.normalization_factor = pickle.load(input_file)
             self.best_index = pickle.load(input_file)
             self.searchers = pickle.load(input_file)
 
     def save(self, filename):
         '''
-        Saves the model of the underlying regressor and searcher.
+        Saves the model of the predictor.
 
         Parameters
         ----------
@@ -199,8 +193,9 @@ class Predictor:
             None
         '''
 
-        # Save searcher and regressor to specified file
+        # Save predictor model to specified file
         with open(filename, 'wb') as output_file:
+            pickle.dump(self.feature_indices, output_file)
             pickle.dump(self.normalization_factor, output_file)
             pickle.dump(self.best_index, output_file)
             pickle.dump(self.searchers, output_file)
