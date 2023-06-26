@@ -73,6 +73,7 @@ def validate_classification(
 ):
     test_criterion = nn.CrossEntropyLoss()
 
+    model.to(device)
     model = model.eval()
 
     losses = AverageMeter()
