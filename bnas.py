@@ -170,7 +170,7 @@ def main():
         )
         return top1
 
-    dynast_config['metric_eval_fns'] ={
+    dynast_config['metric_eval_fns'] = {
         'accuracy_top1': accuracy_top1_fn,
     }
 
