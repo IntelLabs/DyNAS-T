@@ -13,7 +13,7 @@ from nncf import set_log_level
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.config.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import SuperNetwork
+from nncf.experimental.torch.nas.bootstrapNAS.search.supernet import TrainedSuperNet
 from nncf.torch.initialization import wrap_dataloader_for_init
 
 from dynast.dynast_manager import DyNAS
@@ -123,11 +123,11 @@ def main():
     model = load_model(nncf_config)
 
     log.info("Bootstrapping model...")
-    bootstrapnas_supernetwork = SuperNetwork.from_checkpoint(
+    bootstrapnas_supernetwork = TrainedSuperNet.from_checkpoint(
         model=model,
         nncf_config=nncf_config,
-        supernet_path=SUPERNET_PATH,
-        supernet_weights=SUPERNET_WEIGHTS,
+        supernet_elasticity_path=SUPERNET_PATH,
+        supernet_weights_path=SUPERNET_WEIGHTS,
     )
 
     if False:
