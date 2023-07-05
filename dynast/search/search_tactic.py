@@ -38,7 +38,7 @@ class NASBaseConfig:
 
     def __init__(
         self,
-        dataset_path: str,
+        dataset_path: str = None,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
         measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
@@ -268,12 +268,12 @@ class LINAS(NASBaseConfig):
 
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
@@ -538,12 +538,12 @@ class LINAS(NASBaseConfig):
 class Evolutionary(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
@@ -679,12 +679,12 @@ class Evolutionary(NASBaseConfig):
 class RandomSearch(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
@@ -741,12 +741,12 @@ class RandomSearch(NASBaseConfig):
 class LINASDistributed(LINAS):
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
@@ -981,12 +981,12 @@ class LINASDistributed(LINAS):
 class RandomSearchDistributed(RandomSearch):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
