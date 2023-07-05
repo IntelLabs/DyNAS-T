@@ -81,10 +81,10 @@ class BootstrapNASRunner:
         model = self._get_subnet(pymoo_vector, device)
 
         if self.metric_eval_fns is not None and 'accuracy_top1' in self.metric_eval_fns:
-            log.info('Using custom accuracy_top1 metric evaluation function.')
+            log.debug('Using custom accuracy_top1 metric evaluation function.')
             top1 = self.metric_eval_fns['accuracy_top1'](model)
         else:
-            log.info('Using built-in accuracy_top1 metric evaluation function.')
+            log.debug('Using built-in accuracy_top1 metric evaluation function.')
             CIFAR10.PATH = self.dataset_path
 
             validation_dataloader = CIFAR10.validation_dataloader(
@@ -105,7 +105,7 @@ class BootstrapNASRunner:
                 data_loader=validation_dataloader,
                 device=device,
             )
-        log.info(f'Validation accuracy: {top1:.2f}%')
+        log.debug(f'Validation accuracy: {top1:.2f}%')
         return top1
 
     def validate_macs_params(self, pymoo_vector: dict, device: str = None) -> float:
