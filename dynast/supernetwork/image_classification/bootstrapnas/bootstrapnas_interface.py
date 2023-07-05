@@ -78,12 +78,6 @@ class BootstrapNASRunner:
         if device is None:
             device = self.device
 
-        CIFAR10.PATH = self.dataset_path
-
-        validation_dataloader = CIFAR10.validation_dataloader(
-            batch_size=self.batch_size
-        )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
-
         model = self._get_subnet(pymoo_vector, device)
 
         if self.metric_eval_fns is not None and 'accuracy_top1' in self.metric_eval_fns:
@@ -91,6 +85,12 @@ class BootstrapNASRunner:
             top1 = self.metric_eval_fns['accuracy_top1'](model)
         else:
             log.info('Using built-in accuracy_top1 metric evaluation function.')
+            CIFAR10.PATH = self.dataset_path
+
+            validation_dataloader = CIFAR10.validation_dataloader(
+                batch_size=self.batch_size
+            )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
+
             bn_adapt_algo_kwargs = {
                 'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
                 'num_bn_adaptation_samples': 2000,
