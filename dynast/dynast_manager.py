@@ -28,11 +28,10 @@ class DyNAS:
     '''
 
     def __new__(
-            self,
-            search_tactic: str = 'linas',
-            **kwargs,
-        ):
-
+        self,
+        search_tactic: str = 'linas',
+        **kwargs,
+    ):
         kwargs.update(search_tactic=search_tactic)
 
         log_level = logging.INFO
