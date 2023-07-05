@@ -27,7 +27,14 @@ class DyNAS:
     with this class based on the user input.
     '''
 
-    def __new__(self, **kwargs):
+    def __new__(
+            self,
+            search_tactic: str = 'linas',
+            **kwargs,
+        ):
+
+        kwargs.update(search_tactic=search_tactic)
+
         log_level = logging.INFO
         if kwargs.get('verbose'):
             log_level = logging.DEBUG
@@ -51,10 +58,8 @@ class DyNAS:
             'supernet',
             'optimization_metrics',
             'measurements',
-            'search_tactic',
             'num_evals',
             'results_path',
-            'dataset_path',
         ]
 
         # Validity checks
@@ -77,34 +82,34 @@ class DyNAS:
 
         if kwargs.get('distributed', False):
             # LINAS bi-level evolutionary algorithm search distributed to multiple workers
-            if kwargs['search_tactic'] == 'linas':
+            if search_tactic == 'linas':
                 log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
                 return LINASDistributed(**kwargs)
 
                 # Uniform random sampling of the architectural space distributed to multiple workers
-            elif kwargs['search_tactic'] == 'random':
+            elif search_tactic == 'random':
                 log.info('Initializing DyNAS random (distributed) search algorithm object.')
                 return RandomSearchDistributed(**kwargs)
 
         # LINAS bi-level evolutionary algorithm search
-        if kwargs['search_tactic'] == 'linas':
+        if search_tactic == 'linas':
             log.info('Initializing DyNAS LINAS algorithm object.')
             return LINAS(**kwargs)
 
         # Standard evolutionary algorithm search
-        elif kwargs['search_tactic'] == 'evolutionary':
+        elif search_tactic == 'evolutionary':
             log.info('Initializing DyNAS evoluationary algorithm object.')
             return Evolutionary(**kwargs)
 
         # Uniform random sampling of the architectural space
-        elif kwargs['search_tactic'] == 'random':
+        elif search_tactic == 'random':
             log.info('Initializing DyNAS random search algorithm object.')
             return RandomSearch(**kwargs)
 
         else:
             error_message = (
                 "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
-                    kwargs['search_tactic']
+                    search_tactic
                 )
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)
