@@ -53,21 +53,21 @@ def create_nncf_config(config_file_path: str):
     return nncf_config
 
 
-def create_dynast_config(nncf_config: Dict, bootstrapnas_supernetwork: SuperNetwork):
+def create_dynast_config(nncf_config: Dict, bootstrapnas_supernetwork: TrainedSuperNet):
     search_tactic = 'linas'
     if 'random' in search_tactic:
         dynast_config = {
             'search_tactic': 'random',
             'results_path': 'bootstrapnas_resnet50_cifar10_random_test_1.csv',
-            'num_evals': 1,
-            'population': 1,
+            'num_evals': 500,
+            'population': 500,
         }
     elif 'linas' in search_tactic:
         dynast_config = {
             'search_tactic': 'linas',
             'results_path': 'bootstrapnas_resnet50_cifar10_linas_test_1.csv',
-            'num_evals': 500,
-            'population': 50,
+            'num_evals': 25,
+            'population': 5,
         }
 
     dynast_config.update(
