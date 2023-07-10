@@ -1,4 +1,3 @@
-import json
 import logging
 import random
 import sys
@@ -129,34 +128,6 @@ def main():
         supernet_elasticity_path=SUPERNET_PATH,
         supernet_weights_path=SUPERNET_WEIGHTS,
     )
-
-    if False:
-        bootstrapnas_supernetwork.activate_maximal_subnet()
-        model = bootstrapnas_supernetwork.get_active_subnet()
-
-        macs = get_macs(
-            model,
-            input_size=(1, 3, 32, 32),
-            device=nncf_config,
-        )
-
-        losses, top1, top5 = validate_classification(
-            model=model,
-            data_loader=val_loader,
-            device=nncf_config.device,
-        )
-
-        log.info('Max subnet w/o BN adapt:', macs, top1)
-
-        bn_adaptation.run(model)
-
-        losses, top1, top5 = validate_classification(
-            model=model,
-            data_loader=val_loader,
-            device=nncf_config.device,
-        )
-
-        log.info('Max subnet w/ BN adapt:', macs, top1)
 
     dynast_config = create_dynast_config(nncf_config, bootstrapnas_supernetwork)
 
