@@ -536,7 +536,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_cmaes(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_cmaes(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='ga',
@@ -544,7 +544,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ga(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 2:
             problem = EvolutionaryMultiObjective(
                 evaluation_interface=self.validation_interface,
@@ -558,7 +558,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_age(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_age(population=self.population, num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='nsga2',
@@ -566,9 +566,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_nsga2(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 3:
             problem = EvolutionaryManyObjective(
                 evaluation_interface=self.validation_interface,
@@ -582,7 +580,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ctaea(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ctaea(num_evals=self.num_evals)
             elif self.search_algo == 'moead':
                 search_manager = EvolutionaryManager(
                     algorithm='moead',
@@ -590,7 +588,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_moead(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_moead(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='unsga3',
@@ -598,9 +596,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_unsga3(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
 
