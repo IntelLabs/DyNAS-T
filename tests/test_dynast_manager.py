@@ -14,7 +14,7 @@
 
 import pytest
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 
 
