@@ -39,15 +39,17 @@ class DyNAS:
         dataset_path: str = None,
         **kwargs,
     ):
-        kwargs.update({
-            'supernet': supernet,
-            'results_path': results_path,
-            'optimization_metrics': optimization_metrics,
-            'measurements': measurements,
-            'search_tactic': search_tactic,
-            'num_evals': num_evals,
-            'dataset_path': dataset_path,
-        })
+        kwargs.update(
+            {
+                'supernet': supernet,
+                'results_path': results_path,
+                'optimization_metrics': optimization_metrics,
+                'measurements': measurements,
+                'search_tactic': search_tactic,
+                'num_evals': num_evals,
+                'dataset_path': dataset_path,
+            }
+        )
 
         log_level = logging.INFO
         if kwargs.get('verbose'):
