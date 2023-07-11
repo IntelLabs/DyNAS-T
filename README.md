@@ -2,6 +2,8 @@
 
 # DyNAS-T
 
+[![PyPI DyNAS-T](https://img.shields.io/pypi/v/dynast)](https://pypi.org/project/dynast/) [![Python Versions](https://img.shields.io/pypi/pyversions/dynast)](https://pypi.org/project/dynast/) [![image](https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0) [![Monthly Downloads](https://img.shields.io/pypi/dm/dynast)](https://pypi.org/project/dynast/)
+
 DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a super-network neural architecture
 search NAS optimization package designed for efficiently discovering optimal deep neural network (DNN)
 architectures for a variety of performance objectives such as accuracy, latency, multiply-and-accumulates,

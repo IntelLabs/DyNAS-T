@@ -18,7 +18,7 @@ from setuptools import find_packages, setup
 
 def get_version():
     # TODO(macsz) Replace with __version__
-    return '1.2.0'
+    return '1.3.0'
 
 
 def get_dependencies():
@@ -63,9 +63,15 @@ setup(
     },
     python_requires='>=3.7.0',
     classifiers=[
-        'Intended Audience :: Science/Research',
-        'Programming Language :: Python :: 3',
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
-        'License :: OSI Approved :: Apache Software License',
+        "Intended Audience :: Science/Research",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
     ],
 )

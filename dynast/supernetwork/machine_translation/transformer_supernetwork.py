@@ -178,7 +178,6 @@ class TransformerEncoder(FairseqEncoder):
         self.vocab_original_scaling = False
 
     def set_sample_config(self, config: dict):
-
         self.sample_embed_dim = config['encoder']['encoder_embed_dim']
 
         # Caution: this is a list for all layers
@@ -409,7 +408,6 @@ class TransformerDecoder(FairseqIncrementalDecoder):
         self.vocab_original_scaling = False
 
     def set_sample_config(self, config: dict):
-
         self.sample_embed_dim = config['decoder']['decoder_embed_dim']
         self.sample_encoder_embed_dim = config['encoder']['encoder_embed_dim']
 
@@ -718,7 +716,6 @@ class TransformerEncoderLayer(nn.Module):
         sample_dropout=None,
         sample_activation_dropout=None,
     ):
-
         if is_identity_layer:
             self.is_identity_layer = True
             return
@@ -919,7 +916,6 @@ class TransformerDecoderLayer(nn.Module):
         sample_dropout=None,
         sample_activation_dropout=None,
     ):
-
         if is_identity_layer:
             self.is_identity_layer = True
             return

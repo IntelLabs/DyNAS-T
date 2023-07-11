@@ -22,7 +22,6 @@ from sklearn.model_selection import GridSearchCV
 
 
 class Predictor:
-
     DEFAULT_ALPHAS = np.arange(0.1, 10.1, 0.1)
     DEFAULT_COST_FACTORS = np.arange(1.0, 101.0, 1.0)
     DEFAULT_MAX_ITERATIONS = 1000000
@@ -34,7 +33,6 @@ class Predictor:
         max_iterations=DEFAULT_MAX_ITERATIONS,
         verbose=False,
     ):
-
         SEARCHER_VERBOSITY = 10
 
         # Initialize label normalization factor
@@ -64,7 +62,6 @@ class Predictor:
             )
 
     def train(self, examples, labels):
-
         '''
         Trains the predictor on the specified examples and labels using the underlying regressor.
 
