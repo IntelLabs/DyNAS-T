@@ -14,6 +14,7 @@
 
 
 from typing import List
+
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
 from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
@@ -157,4 +158,3 @@ def get_csv_header(supernet: str) -> List[str]:
         raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
 
     return csv_header
-
