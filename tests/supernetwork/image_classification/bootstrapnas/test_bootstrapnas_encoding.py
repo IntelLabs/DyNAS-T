@@ -16,11 +16,14 @@
 from collections import OrderedDict
 
 import pytest
-from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.utils import LazyImport
+
+elasticity_dim = LazyImport('nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim')
 
 
+@pytest.mark.skip(reason="No way of currently testing this; Have to wait for NNCF 2.6.0 to be officially released")
 class TestBootstrapNASEncoding:
     # fmt: off
     bootstrapnas_supernet_parameters = {
@@ -152,8 +155,8 @@ class TestBootstrapNASEncoding:
         )
         expected_bootstrapnas_subnet_config = OrderedDict(
             [
-                (ElasticityDim.WIDTH, {0: 256, 1: 512, 2: 608, 3: 1632, 4: 64, 5: 64}),
-                (ElasticityDim.DEPTH, [0, 1, 2, 4]),
+                (elasticity_dim.ElasticityDim.WIDTH, {0: 256, 1: 512, 2: 608, 3: 1632, 4: 64, 5: 64}),
+                (elasticity_dim.ElasticityDim.DEPTH, [0, 1, 2, 4]),
             ]
         )
         assert expected_bootstrapnas_subnet_config == bootstrapnas_subnet_config

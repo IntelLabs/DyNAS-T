@@ -20,14 +20,15 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
-from dynast.utils import log
+from dynast.utils import LazyImport, log
 from dynast.utils.datasets import CIFAR10
 from dynast.utils.nn import get_macs, measure_latency, validate_classification
+
+batchnorm_adaptation = LazyImport('nncf.common.initialization.batchnorm_adaptation')
 
 
 class BootstrapNASRunner:
@@ -96,7 +97,7 @@ class BootstrapNASRunner:
                 'num_bn_adaptation_samples': 2000,
                 'device': 'cuda',
             }
-            bn_adaptation = BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+            bn_adaptation = batchnorm_adaptation.BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
 
             bn_adaptation.run(model)
 
