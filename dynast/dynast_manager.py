@@ -14,6 +14,7 @@
 
 import logging
 import sys
+from typing import List
 
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
@@ -29,10 +30,26 @@ class DyNAS:
 
     def __new__(
         self,
+        supernet: str,
+        results_path: str,
+        optimization_metrics: List[str],
+        measurements: List[str],
         search_tactic: str = 'linas',
+        num_evals: int = 250,
+        dataset_path: str = None,
         **kwargs,
     ):
-        kwargs.update(search_tactic=search_tactic)
+        kwargs.update(
+            {
+                'supernet': supernet,
+                'results_path': results_path,
+                'optimization_metrics': optimization_metrics,
+                'measurements': measurements,
+                'search_tactic': search_tactic,
+                'num_evals': num_evals,
+                'dataset_path': dataset_path,
+            }
+        )
 
         log_level = logging.INFO
         if kwargs.get('verbose'):
@@ -50,22 +67,6 @@ class DyNAS:
         log.info('=' * 40)
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
         log.info('=' * 40)
-
-        # Required arguments for the DyNAS class
-        # TODO(macsz) If these are common for all created classes, then we can move it out of kwargs
-        REQUIRED_KWARGS = [
-            'supernet',
-            'optimization_metrics',
-            'measurements',
-            'num_evals',
-            'results_path',
-        ]
-
-        # Validity checks
-        for argument in REQUIRED_KWARGS:
-            if argument not in kwargs:
-                log.error(f"Missing `--{argument}` parameter.")
-                sys.exit("Missing argument, see log file for info.")
 
         kwargs = check_kwargs_deprecated(**kwargs)
 
