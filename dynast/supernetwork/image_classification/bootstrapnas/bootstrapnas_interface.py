@@ -150,8 +150,6 @@ class BootstrapNASRunner:
         Returns:
             mean latency; std latency
         """
-        # TODO(macsz) this function can be replaced with the one in `dynast.utils`.
-        # Per Daniel's point, we should also consider settubg `omp_num_threads` here,
         if device is None:
             device = self.device
 
