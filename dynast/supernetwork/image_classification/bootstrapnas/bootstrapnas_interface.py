@@ -88,9 +88,7 @@ class BootstrapNASRunner:
             log.debug('Using built-in accuracy_top1 metric evaluation function.')
             CIFAR10.PATH = self.dataset_path
 
-            validation_dataloader = CIFAR10.validation_dataloader(
-                batch_size=self.batch_size
-            )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
+            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.batch_size)
 
             bn_adapt_algo_kwargs = {
                 'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
@@ -121,13 +119,19 @@ class BootstrapNASRunner:
 
         model = self._get_subnet(pymoo_vector, device)
 
-        params = sum(param.numel() for param in model.parameters())
+        if self.metric_eval_fns is not None and ('macs' in self.metric_eval_fns or 'params' in self.metric_eval_fns):
+            log.debug('Using custom macs/params metric evaluation function.')
+            macs = self.metric_eval_fns['macs'](model)
+            params = self.metric_eval_fns['params'](model)
+        else:
+            log.debug('Using built-in macs/params metric evaluation function.')
+            params = sum(param.numel() for param in model.parameters())
 
-        macs = get_macs(
-            model=model,
-            input_size=(1, 3, 32, 32),  # batch size does not matter for MACs (scales linearly).
-            device=device,
-        )
+            macs = get_macs(
+                model=model,
+                input_size=(1, 3, 32, 32),  # batch size does not matter for MACs (scales linearly).
+                device=device,
+            )
 
         return macs, params
 
@@ -153,6 +157,12 @@ class BootstrapNASRunner:
 
         model = self._get_subnet(pymoo_vector, device)
 
+        if self.metric_eval_fns is not None and 'latency' in self.metric_eval_fns:
+            log.debug('Using custom latency metric evaluation function.')
+            latency_mean, latency_std = self.metric_eval_fns['latency'](model)
+            return latency_mean, latency_std
+
+        log.debug('Using built-in latency metric evaluation function.')
         if not warmup_steps:
             warmup_steps = auto_steps(input_size[0], is_warmup=True)
         if not measure_steps:
