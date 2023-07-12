@@ -13,10 +13,10 @@
 # limitations under the License.
 
 
-from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
-from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from typing import List
 
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
 from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
