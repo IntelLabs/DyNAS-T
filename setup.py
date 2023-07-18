@@ -55,6 +55,7 @@ setup(
     install_requires=get_dependencies(),
     extras_require={
         'test': get_test_dependencies(),
+        'plot': ['matplotlib', 'shapely', 'alphashape', 'descartes'],
     },
     entry_points={
         'console_scripts': [
