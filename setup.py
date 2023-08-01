@@ -13,6 +13,8 @@
 # limitations under the License.
 # import datetime
 
+import os
+
 from setuptools import find_packages, setup
 
 
@@ -33,12 +35,20 @@ def _read_requirements(fn):
 
 def get_dependencies(feature=None):
     deps = []
-    base_fn = 'requirements.txt'
-    deps = _read_requirements(base_fn)
 
-    if feature is not None:
-        extra_fn = f'requirements_{feature}.txt'
-        deps = list(sorted(set(deps + _read_requirements(extra_fn))))
+    if feature is None:
+        fns = ['requirements.txt']
+    elif feature == 'all':
+        fns = [f for f in os.listdir('.') if f.startswith('requirements') and f.endswith('.txt')]
+    else:
+        fns = ['requirements.txt', f'requirements_{feature}.txt']
+
+    deps = []
+
+    for fn in fns:
+        deps.extend(_read_requirements(fn))
+
+    deps = list(sorted(set(deps)))
     return deps
 
 
@@ -55,6 +65,7 @@ setup(
     packages=find_packages(),
     install_requires=get_dependencies(),
     extras_require={
+        'all': get_dependencies('all'),
         'test': get_dependencies('test'),
         'bootstrapnas': get_dependencies('bootstrapnas'),
     },
