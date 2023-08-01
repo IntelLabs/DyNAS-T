@@ -13,8 +13,10 @@
 # limitations under the License.
 
 
-from typing import List
+from typing import Any, Dict, List
 
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
 from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
@@ -32,6 +34,7 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
+    'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
 
 SUPERNET_PARAMETERS = {
@@ -80,6 +83,7 @@ EVALUATION_INTERFACE = {
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
+    'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
 }
 
 LINAS_INNERLOOP_EVALS = {
@@ -89,6 +93,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
+    'bootstrapnas_image_classification': 5000,
 }
 
 SUPERNET_TYPE = {
@@ -97,6 +102,7 @@ SUPERNET_TYPE = {
         'ofa_mbv3_d234_e346_k357_w1.0',
         'ofa_mbv3_d234_e346_k357_w1.2',
         'ofa_proxyless_d234_e346_k357_w1.3',
+        'bootstrapnas_image_classification',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
@@ -108,6 +114,7 @@ SUPERNET_METRICS = {
     'ofa_mbv3_d234_e346_k357_w1.0': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_mbv3_d234_e346_k357_w1.2': ['params', 'latency', 'macs', 'accuracy_top1'],
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
+    'bootstrapnas_image_classification': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['params', 'latency', 'macs', 'bleu'],
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
 }

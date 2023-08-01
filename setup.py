@@ -67,6 +67,7 @@ setup(
     extras_require={
         'all': get_dependencies('all'),
         'test': get_dependencies('test'),
+        'bootstrapnas': get_dependencies('bootstrapnas'),
     },
     entry_points={
         'console_scripts': [
