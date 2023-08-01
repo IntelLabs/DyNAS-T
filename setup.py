@@ -21,13 +21,8 @@ def get_version():
     return '1.3.0'
 
 
-def get_dependencies(feature=None):
+def _read_requirements(fn):
     deps = []
-    if not feature:
-        fn = 'requirements.txt'
-    else:
-        fn = f'requirements_{feature}.txt'
-
     with open(fn) as f:
         lines = f.readlines()
         for line in lines:
@@ -35,6 +30,16 @@ def get_dependencies(feature=None):
             deps.append(line)
     return deps
 
+
+def get_dependencies(feature=None):
+    deps = []
+    base_fn = 'requirements.txt'
+    deps = _read_requirements(base_fn)
+
+    if feature is not None:
+        extra_fn = f'requirements_{feature}.txt'
+        deps = list(sorted(set(deps + _read_requirements(extra_fn))))
+    return deps
 
 setup(
     name='dynast',
