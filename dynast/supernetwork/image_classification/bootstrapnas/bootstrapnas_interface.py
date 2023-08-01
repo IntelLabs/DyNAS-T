@@ -24,9 +24,11 @@ import torch
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
-from dynast.utils import log
+from dynast.utils import LazyImport, log
 from dynast.utils.datasets import CIFAR10
 from dynast.utils.nn import get_macs, measure_latency, validate_classification
+
+batchnorm_adaptation = LazyImport('nncf.common.initialization.batchnorm_adaptation')
 
 
 class BootstrapNASRunner:
@@ -36,7 +38,7 @@ class BootstrapNASRunner:
 
     def __init__(
         self,
-        bootstrapnas: "BootstrapNAS",
+        bootstrapnas_supernetwork,
         supernet: str,
         dataset_path: str = None,
         acc_predictor: Predictor = None,
@@ -45,6 +47,7 @@ class BootstrapNASRunner:
         params_predictor: Predictor = None,
         batch_size: int = 1,
         device: str = 'cpu',
+        metric_eval_fns: dict = None,
     ):
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -52,8 +55,9 @@ class BootstrapNASRunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.bootstrapnas = bootstrapnas
+        self.bootstrapnas_supernetwork = bootstrapnas_supernetwork
         self.dataset_path = dataset_path
+        self.metric_eval_fns = metric_eval_fns
 
     def estimate_accuracy_top1(self, subnet_cfg):
         top1 = self.acc_predictor.predict(subnet_cfg)
@@ -75,20 +79,32 @@ class BootstrapNASRunner:
         if device is None:
             device = self.device
 
-        CIFAR10.PATH = self.dataset_path
-
-        validation_dataloader = CIFAR10.validation_dataloader(
-            batch_size=self.batch_size
-        )  # TODO(macsz) Move to constructor so it's not initialized from scratch every time.
-
         model = self._get_subnet(pymoo_vector, device)
 
-        losses, top1, top5 = validate_classification(
-            model=model,
-            data_loader=validation_dataloader,
-            device=device,
-        )
+        if self.metric_eval_fns is not None and 'accuracy_top1' in self.metric_eval_fns:
+            log.debug('Using custom accuracy_top1 metric evaluation function.')
+            top1 = self.metric_eval_fns['accuracy_top1'](model)
+        else:
+            log.debug('Using built-in accuracy_top1 metric evaluation function.')
+            CIFAR10.PATH = self.dataset_path
 
+            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.batch_size)
+
+            bn_adapt_algo_kwargs = {
+                'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
+                'num_bn_adaptation_samples': 2000,
+                'device': 'cuda',
+            }
+            bn_adaptation = batchnorm_adaptation.BatchnormAdaptationAlgorithm(**bn_adapt_algo_kwargs)
+
+            bn_adaptation.run(model)
+
+            losses, top1, top5 = validate_classification(
+                model=model,
+                data_loader=validation_dataloader,
+                device=device,
+            )
+        log.debug(f'Validation accuracy: {top1:.2f}%')
         return top1
 
     def validate_macs_params(self, pymoo_vector: dict, device: str = None) -> float:
@@ -103,13 +119,19 @@ class BootstrapNASRunner:
 
         model = self._get_subnet(pymoo_vector, device)
 
-        params = sum(param.numel() for param in model.parameters())
+        if self.metric_eval_fns is not None and ('macs' in self.metric_eval_fns or 'params' in self.metric_eval_fns):
+            log.debug('Using custom macs/params metric evaluation function.')
+            macs = self.metric_eval_fns['macs'](model)
+            params = self.metric_eval_fns['params'](model)
+        else:
+            log.debug('Using built-in macs/params metric evaluation function.')
+            params = sum(param.numel() for param in model.parameters())
 
-        macs = get_macs(
-            model=model,
-            input_size=(1, 3, 32, 32),  # batch size does not matter for MACs (scales linearly).
-            device=device,
-        )
+            macs = get_macs(
+                model=model,
+                input_size=(1, 3, 32, 32),  # batch size does not matter for MACs (scales linearly).
+                device=device,
+            )
 
         return macs, params
 
@@ -128,13 +150,17 @@ class BootstrapNASRunner:
         Returns:
             mean latency; std latency
         """
-        # TODO(macsz) this function can be replaced with the one in `dynast.utils`.
-        # Per Daniel's point, we should also consider settubg `omp_num_threads` here,
         if device is None:
             device = self.device
 
         model = self._get_subnet(pymoo_vector, device)
 
+        if self.metric_eval_fns is not None and 'latency' in self.metric_eval_fns:
+            log.debug('Using custom latency metric evaluation function.')
+            latency_mean, latency_std = self.metric_eval_fns['latency'](model)
+            return latency_mean, latency_std
+
+        log.debug('Using built-in latency metric evaluation function.')
         if not warmup_steps:
             warmup_steps = auto_steps(input_size[0], is_warmup=True)
         if not measure_steps:
@@ -153,8 +179,10 @@ class BootstrapNASRunner:
     def _get_subnet(self, pymoo_vector, device):
         subnet_sample = copy.deepcopy(pymoo_vector)
 
-        self.bootstrapnas.activate_config(self.bootstrapnas.get_config_from_pymoo(subnet_sample))
-        model = self.bootstrapnas.get_active_subnet()
+        self.bootstrapnas_supernetwork.activate_config(
+            self.bootstrapnas_supernetwork.get_config_from_pymoo(subnet_sample)
+        )
+        model = self.bootstrapnas_supernetwork.get_active_subnet()
         model = model.to(device)
         return model
 

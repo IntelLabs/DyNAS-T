@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dynast.supernetwork.supernetwork_registry import get_supernet_parameters
+from dynast.supernetwork.supernetwork_registry import SUPERNET_PARAMETERS
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 
 
 def test_BertSST2Encoding_random_sample():
     bertss2encoding = BertSST2Encoding(
-        param_dict=get_supernet_parameters('bert_base_sst2'),
+        param_dict=SUPERNET_PARAMETERS['bert_base_sst2'],
         seed=42,
     )
 
@@ -29,7 +29,7 @@ def test_BertSST2Encoding_random_sample():
 
 def test_bertss2encoding_translate2param() -> None:
     bertss2encoding = BertSST2Encoding(
-        param_dict=get_supernet_parameters('bert_base_sst2'),
+        param_dict=SUPERNET_PARAMETERS['bert_base_sst2'],
         seed=42,
     )
 
@@ -45,7 +45,7 @@ def test_bertss2encoding_translate2param() -> None:
 
 def test_bertss2encoding_translate2param():
     bertss2encoding = BertSST2Encoding(
-        param_dict=get_supernet_parameters('bert_base_sst2'),
+        param_dict=SUPERNET_PARAMETERS['bert_base_sst2'],
         seed=42,
     )
 
