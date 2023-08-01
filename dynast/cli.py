@@ -14,11 +14,10 @@
 
 import argparse
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 
 
 def _main(args):
-
     agent = DyNAS(
         supernet=args.supernet,
         optimization_metrics=args.optimization_metrics,
@@ -34,7 +33,7 @@ def _main(args):
         verbose=args.verbose,
         supernet_ckpt_path=args.supernet_ckpt_path,
         device=args.device,
-        test_size=args.test_size,
+        test_fraction=args.test_fraction,
         dataloader_workers=args.dataloader_workers,
         distributed=args.distributed,
     )
@@ -82,10 +81,10 @@ def main():
     parser.add_argument('--num_evals', default=250, type=int, help='Total number of evaluations during search.')
     parser.add_argument('--batch_size', default=128, type=int, help='Batch size for latency measurement calculation.')
     parser.add_argument(
-        '--test_size',
-        default=None,
-        type=int,
-        help='How many batches of data to use when evaluating model\'s accuracy.',
+        '--test_fraction',
+        default=1.0,
+        type=float,
+        help='Fraction of the validation data to be used for testing and evaluation.',
     )
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')

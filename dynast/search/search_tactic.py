@@ -50,7 +50,7 @@ class NASBaseConfig:
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -82,7 +82,7 @@ class NASBaseConfig:
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
         self.dataloader_workers = dataloader_workers
-        self.test_size = test_size
+        self.test_fraction = test_fraction
 
         if 'bootstrapnas' in kwargs:
             self.bootstrapnas = kwargs['bootstrapnas']
@@ -97,7 +97,6 @@ class NASBaseConfig:
             log.debug('Passed unused parameters: {}'.format(kwargs))
 
     def verify_measurement_types(self):
-
         # Remove duplicates
         self.optimization_metrics = list(set(self.optimization_metrics))
         self.num_objectives = len(self.optimization_metrics)  # TODO(macsz) Can be a getter
@@ -160,10 +159,10 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
-                test_size=self.test_size,
-                verbose=self.verbose,
+                test_fraction=self.test_fraction,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
+            # TODO(macsz) Add `test_fraction`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -171,6 +170,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
             )
         elif self.supernet == 'bert_base_sst2':
+            # TODO(macsz) Add `test_fraction`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -224,7 +224,7 @@ class LINAS(NASBaseConfig):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -255,7 +255,7 @@ class LINAS(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            test_size=test_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
             **kwargs,
         )
@@ -326,8 +326,7 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
-                    test_size=self.test_size,
-                    verbose=self.verbose,
+                    test_fraction=self.test_fraction,
                 )
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
@@ -488,7 +487,7 @@ class Evolutionary(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -507,13 +506,12 @@ class Evolutionary(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            test_size=test_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
             **kwargs,
         )
 
     def search(self):
-
         self._init_search()
 
         # Following sets up the algorithm based on number of objectives
@@ -531,7 +529,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_cmaes(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_cmaes(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='ga',
@@ -539,7 +537,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ga(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 2:
             problem = EvolutionaryMultiObjective(
                 evaluation_interface=self.validation_interface,
@@ -553,7 +551,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_age(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_age(population=self.population, num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='nsga2',
@@ -561,9 +559,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_nsga2(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 3:
             problem = EvolutionaryManyObjective(
                 evaluation_interface=self.validation_interface,
@@ -577,7 +573,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ctaea(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ctaea(num_evals=self.num_evals)
             elif self.search_algo == 'moead':
                 search_manager = EvolutionaryManager(
                     algorithm='moead',
@@ -585,7 +581,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_moead(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_moead(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='unsga3',
@@ -593,9 +589,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_unsga3(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
 
@@ -627,7 +621,7 @@ class RandomSearch(NASBaseConfig):
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -645,13 +639,12 @@ class RandomSearch(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            test_size=test_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
             **kwargs,
         )
 
     def search(self):
-
         self._init_search()
 
         # Randomly sample search space for initial population
@@ -684,7 +677,7 @@ class LINASDistributed(LINAS):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -706,7 +699,7 @@ class LINASDistributed(LINAS):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            test_size=test_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
@@ -778,8 +771,7 @@ class LINASDistributed(LINAS):
                         dataset_path=self.dataset_path,
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
-                        test_size=self.test_size,
-                        verbose=self.verbose,
+                        test_fraction=self.test_fraction,
                     )
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
@@ -924,7 +916,7 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
-        test_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -945,12 +937,11 @@ class RandomSearchDistributed(RandomSearch):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
-            test_size=test_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
     def search(self):
-
         self._init_search()
 
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()

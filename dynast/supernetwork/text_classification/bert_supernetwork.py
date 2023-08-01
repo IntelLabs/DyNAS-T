@@ -125,7 +125,6 @@ class BertSupernetEncoder(BertEncoder):
         output_hidden_states=False,
         return_dict=True,
     ):
-
         for layer_idx, layer_module in enumerate(self.layer):
             if layer_idx >= self.subnet_num_layers:
                 break

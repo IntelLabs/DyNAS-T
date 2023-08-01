@@ -5,6 +5,7 @@ SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 DATASET_CIFAR10_PATH="/tmp/cifar10/"
+DEVICE="cpu"
 
 
 ########################################################################################################
@@ -15,7 +16,7 @@ DATASET_CIFAR10_PATH="/tmp/cifar10/"
 SHORT_RANDOM_POPULATION=2
 
 # Limit the number of validation samples to speed up the test.
-SHORT_RANDOM_TEST_SIZE=20
+SHORT_RANDOM_IMAGENET_TEST_FRACTION=0.005
 
 
 #################################################################################################
