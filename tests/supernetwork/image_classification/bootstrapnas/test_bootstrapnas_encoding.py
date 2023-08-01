@@ -23,7 +23,6 @@ from dynast.utils import LazyImport
 elasticity_dim = LazyImport('nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim')
 
 
-@pytest.mark.skip(reason="No way of currently testing this; Have to wait for NNCF 2.6.0 to be officially released")
 class TestBootstrapNASEncoding:
     # fmt: off
     bootstrapnas_supernet_parameters = {

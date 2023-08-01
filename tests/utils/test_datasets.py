@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 import pytest
 
 from dynast.utils.datasets import CIFAR10, Dataset, ImageNet, Imagenette
@@ -41,10 +39,6 @@ def test_dataset_invalid_name_exception():
         Dataset.get(invalid_dataset_name)
 
 
-@pytest.mark.skipif(
-    os.path.exists(not "/datasets/imagenet-ilsvrc2012/val"),
-    reason="ImageNet dataset not found; skipping test (TODO(macsz) should be mocked in the future!)",
-)
 def test_dataset_test_fraction():
     ImageNet.PATH = "/datasets/imagenet-ilsvrc2012/"
     dataset = ImageNet()
