@@ -41,6 +41,7 @@ def get_dependencies(feature=None):
         deps = list(sorted(set(deps + _read_requirements(extra_fn))))
     return deps
 
+
 setup(
     name='dynast',
     version=get_version(),
