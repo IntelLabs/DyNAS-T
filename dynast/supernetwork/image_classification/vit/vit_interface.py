@@ -26,97 +26,47 @@ import torchprofile
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
+from dynast.utils.datasets import ImageNet
+from dynast.utils.nn import validate_classification, measure_latency, get_parameters
 
 from .vit_supernetwork import SuperViT
-from dynast.utils.datasets import ImageNet
-from dynast.utils.nn import validate_classification
 
 warnings.filterwarnings("ignore")
 
 IMAGE_SIZE = 224
-PATCH_SIZE=16
+PATCH_SIZE = 16
 NUM_CLASSES = 1000
-DROPOUT=0.1
-ATTN_DROPOUT=0.1
+DROPOUT = 0.1
+ATTN_DROPOUT = 0.1
 
 # ViT_B16
-NUM_LAYERS_B_16=12
-NUM_HEADS_B_16=12
-HIDDEN_DIM_B_16=768
-MLP_DIM_B_16=3072
+NUM_LAYERS_B_16 = 12
+NUM_HEADS_B_16 = 12
+HIDDEN_DIM_B_16 = 768
+MLP_DIM_B_16 = 3072
 
 def load_supernet(checkpoint_path):
+    model = SuperViT(
+        image_size=IMAGE_SIZE,
+        patch_size=PATCH_SIZE,
+        num_layers=NUM_LAYERS_B_16,
+        num_heads=NUM_HEADS_B_16,
+        hidden_dim=HIDDEN_DIM_B_16,
+        mlp_dim=MLP_DIM_B_16,
+        num_classes=NUM_CLASSES,
+    )
+    max_layers = NUM_LAYERS_B_16   
 
-    model = SuperViT(image_size=IMAGE_SIZE,
-                    patch_size=PATCH_SIZE,
-                    num_layers=NUM_LAYERS_B_16,
-                    num_heads=NUM_HEADS_B_16,
-                    hidden_dim=HIDDEN_DIM_B_16,
-                    mlp_dim=MLP_DIM_B_16,
-                    num_classes=NUM_CLASSES,
-                    )
-    
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')['state_dict'],
         strict=True,
     )
-    return model
-
-# def accuracy(output, target, topk=(1,)):
-#     """Computes the accuracy over the k top predictions for the specified values of k"""
-#     with torch.no_grad():
-#         maxk = max(topk)
-#         batch_size = target.size(0)
-
-#         _, pred = output.topk(maxk, 1, True, True)
-#         pred = pred.t()
-#         correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-#         res = []
-#         for k in topk:
-#             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-#             res.append(correct_k.mul_(100.0 / batch_size))
-#         return res
-
-# def compute_accuracy_imagenet(
-#     config,
-#     eval_dataloader,
-#     model,
-#     device: str = 'cpu',
-# ):
-#     """Measure ImageNet top@1, top@5 Accuracy scores of the ViT based model."""
-
-#     model.eval()
-#     model.to(device)
-#     model.set_sample_config(config)
-
-#     running_top1 = []
-#     running_top5 = []
-#     running_count = 0
-
-#     for _, (images, target) in enumerate(eval_dataloader):
-
-#         images = images.to(device)
-#         target = target.to(device)
-
-#         with torch.no_grad():
-#             network_outputs = model(images)
-
-#         acc1, acc5 = accuracy(network_outputs, target, topk=(1, 5))
-#         running_top1.append(acc1[0].item() * images.size(0))
-#         running_top5.append(acc5[0].item() * images.size(0))
-#         running_count += images.size(0)
-    
-#     ave_top1 = np.sum(running_top1) / running_count 
-#     ave_top5 = np.sum(running_top5) / running_count
-
-#     return ave_top1, ave_top5 # Return top5 if needed
+    return model, max_layers
 
 def compute_val_acc(
     config,
     eval_dataloader,
     model,
-    test_size,
     device: str = 'cpu',
 ):
     """Measure ImageNet top@1, top@5 Accuracy scores of the ViT based model."""
@@ -124,11 +74,9 @@ def compute_val_acc(
     model.eval()
     model.to(device)
     model.set_sample_config(config)
-    return validate_classification(model=model, 
-                            data_loader=eval_dataloader, 
-                            epoch=0, 
-                            test_size=test_size,
-                            device=device)
+    return validate_classification(
+        model=model, data_loader=eval_dataloader, device=device,
+    )
 
 
 def compute_latency(
@@ -171,8 +119,7 @@ def compute_latency(
 
     return latency_mean, latency_std
 
-# TODO: Make this correct for ViT: Fix param computation
-def compute_macs(config, model, base_config, device: str = 'cpu'):
+def compute_macs(config, model, device: str = 'cpu'):
     """Calculate MACs for ViT-based models."""
 
     model.eval()
@@ -193,27 +140,7 @@ def compute_macs(config, model, base_config, device: str = 'cpu'):
         if hasattr(module, 'profile') and model != module:
             module.profile(False)
 
-    # Compute Params
-    # base_hidden_size = base_config.hidden_size
-    # embedding_params = (
-    #     base_config.vocab_size * base_hidden_size
-    #     + base_config.max_position_embeddings * base_hidden_size
-    #     + base_config.type_vocab_size * base_hidden_size
-    # )
-    # numels = []
-
-    # for module_name, module in model.named_modules():
-    #     if hasattr(module, 'calc_sampled_param_num'):
-    #         if module_name == 'classifier':
-    #             continue
-    #         if module_name.split('.')[1] == 'encoder':
-    #             if int(module_name.split('.')[3]) > (config['num_layers'] - 1):
-    #                 continue
-
-    #         numels.append(module.calc_sampled_param_num())
-
-    # params = sum(numels) + embedding_params
-    params = 0
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return macs, params
 
 
@@ -235,6 +162,7 @@ class ViTRunner:
         checkpoint_path=None,
         total_batches=None,
         device: str = 'cpu',
+        test_fraction: float = 1.0,
     ):
 
         self.supernet = supernet
@@ -246,11 +174,8 @@ class ViTRunner:
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
-        self.test_size = total_batches
-        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size)
-        #TODO: Figure out if a similar base config can be created for ViT
-        #self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
-        self.supernet_model = load_supernet(self.checkpoint_path)
+        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size, fraction=test_fraction)
+        self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
     def estimate_accuracy_imagenet(
         self,
@@ -263,7 +188,6 @@ class ViTRunner:
         self,
         subnet_cfg: dict,
     ) -> int:
-        # TODO: Fix mac computation
         macs = self.macs_predictor.predict(subnet_cfg)
         return macs
 
@@ -279,12 +203,12 @@ class ViTRunner:
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
 
-        _, top1_accuracy, _ = compute_val_acc(config=subnet_cfg, 
-                                              eval_dataloader=self.eval_dataloader, 
-                                              model=self.supernet_model, 
-                                              test_size=self.test_size,
-                                              device=self.device,
-                                              )
+        _, top1_accuracy, _ = compute_val_acc(
+            config=subnet_cfg,
+            eval_dataloader=self.eval_dataloader,
+            model=self.supernet_model,
+            device=self.device,
+        )
         return top1_accuracy
 
     def validate_macs(
@@ -297,9 +221,7 @@ class ViTRunner:
         Returns:
             `macs`
         """
-        # TODO: Fix Macs computation
-        self.base_config=None
-        macs, params = compute_macs(subnet_cfg, self.supernet_model, self.base_config)
+        macs, params = compute_macs(subnet_cfg, self.supernet_model)
         logging.info('Model\'s macs: {}'.format(macs))
         return macs, params
 
@@ -362,19 +284,19 @@ class EvaluationInterfaceViT(EvaluationInterface):
         if self.predictor_mode == True:
             if 'params' in self.optimization_metrics:
                 individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_custom(param_dict).reshape(1, -1)
+                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'latency' in self.optimization_metrics:
                 individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_custom(param_dict).reshape(1, -1)
+                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'macs' in self.optimization_metrics:
                 individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_custom(param_dict).reshape(1, -1)
+                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'accuracy_top1' in self.optimization_metrics:
                 individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_imagenet(
-                    self.manager.onehot_custom(param_dict).reshape(1, -1)
+                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
 
         # Validation Mode
@@ -396,9 +318,9 @@ class EvaluationInterfaceViT(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
+                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['macs'],
-                    individual_results['params'],
                     individual_results['accuracy_top1'],
                 ]
                 writer.writerow(result)

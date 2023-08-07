@@ -30,7 +30,6 @@ class BertSST2Encoding(EncodingBase):
     def onehot_custom(self, subnet_cfg, provide_onehot=True, max_layers=12):
         features = []
         num_layers = subnet_cfg['num_layers'][0]
-
         attn_head_list = subnet_cfg['num_attention_heads'][:num_layers] + [0] * (max_layers - num_layers)
         intermediate_size_list = subnet_cfg['intermediate_size'][:num_layers] + [0] * (max_layers - num_layers)
         features = [num_layers] + attn_head_list + intermediate_size_list
@@ -109,8 +108,8 @@ class BertSST2Encoding(EncodingBase):
 
         collect_rows = list()
         for i in range(len(dataframe)):
-            collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i]))
-        features = np.asarray(collect_rows)
+            collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i])) 
+        features = np.asarray(collect_rows) 
         labels = dataframe.drop(columns=[config, 'config_pymoo', 'config_onehot']).values
 
         assert len(features) == len(labels)

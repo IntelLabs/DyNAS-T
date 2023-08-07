@@ -18,12 +18,12 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAMobileNetV3,
     EvaluationInterfaceOFAResNet50,
 )
+from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
+from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
-from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
-from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 
 SUPERNET_ENCODING = {
     'ofa_resnet50': OFAResNet50Encoding,
@@ -73,9 +73,9 @@ SUPERNET_PARAMETERS = {
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
     'vit_base_imagenet': {
-        'num_layers': {'count': 1, 'vars': [4, 5, 6, 7, 8, 9, 10, 12]},
-        'num_attention_heads': {'count': 12, 'vars': [2, 4, 8, 12]},
-        'vit_intermediate_sizes': {'count': 12, 'vars': [512, 768, 1024, 3072]},
+        'num_layers': {'count': 1, 'vars': [8,9,10,11,12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'vit_intermediate_sizes': {'count': 12, 'vars': [768,1024,2048,3072]},
     },
 }
 
@@ -119,7 +119,7 @@ SUPERNET_METRICS = {
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['latency', 'macs', 'params', 'bleu'],
     'bert_base_sst2': ['latency', 'macs', 'params', 'accuracy_sst2'],
-    'vit_base_imagenet': ['latency', 'macs', 'params', 'accuracy_top1'],
+    'vit_base_imagenet': ['params','latency', 'macs', 'accuracy_top1'],
 }
 
 
