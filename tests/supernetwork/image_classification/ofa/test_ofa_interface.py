@@ -12,31 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from glob import glob
+import pytest
 
-IGNORE_DIRS = [
-    '.tox',
-    'dist',
-    '.git',
-    'htmlcov',
-    'log_dir',
-    '.idea',
-    '.venv',
-    'build',
-]
+from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 
 
-def get_python_files(root_dir, exclude_files=None):
-    if not exclude_files:
-        exclude_files = []
+class TestOFARunner:
+    def test_init_data_path_not_exist(self):
+        with pytest.raises(FileNotFoundError):
+            OFARunner(
+                supernet='ofa_resnet50',
+                dataset_path='/not-existing-path-to-a-dataset',
+            )
 
-    files = []
-    code_dirs = [d for d in os.listdir(root_dir) if os.path.isdir(d) and d not in IGNORE_DIRS]
-    pattern = "*.py"
-
-    for code_dir in code_dirs:
-        for d, _, _ in os.walk(code_dir):
-            files.extend(glob(os.path.join(d, pattern)))
-
-    return list(sorted(set(files) - set(exclude_files)))
+    def test_init_data_path_none(self):
+        OFARunner(
+            supernet='ofa_resnet50',
+            dataset_path=None,
+        )

@@ -314,7 +314,6 @@ def compute_latency(config, dataset_path, batch_size=128, get_model_parameters=F
     model.eval()
 
     with torch.no_grad():
-
         # dry runs
         for _ in range(15):
             encoder_out_test = model.encoder(src_tokens=src_tokens_test, src_lengths=src_lengths_test)
@@ -470,7 +469,6 @@ class TransformerLTRunner:
         batch_size=1,
         checkpoint_path=None,
     ):
-
         self.supernet = supernet
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -507,7 +505,6 @@ class TransformerLTRunner:
         self,
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
-
         bleu = compute_bleu(subnet_cfg, self.dataset_path, self.checkpoint_path)
         return bleu
 
@@ -629,9 +626,9 @@ class EvaluationInterfaceTransformerLT(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
+                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['macs'],
-                    individual_results['params'],
                     individual_results['bleu'],
                 ]
                 writer.writerow(result)

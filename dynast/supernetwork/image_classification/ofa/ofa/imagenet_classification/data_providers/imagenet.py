@@ -51,7 +51,6 @@ class ImagenetDataProvider(DataProvider):
         num_replicas=None,
         rank=None,
     ):
-
         warnings.filterwarnings("ignore")
         self._save_path = save_path
 
@@ -85,7 +84,7 @@ class ImagenetDataProvider(DataProvider):
                 assert isinstance(valid_size, float) and 0 < valid_size < 1
                 valid_size = int(len(train_dataset) * valid_size)
 
-            valid_dataset = self.train_dataset(valid_transforms)
+            valid_dataset = self.train_dataset(valid_transforms)  # TODO(macsz) This is wrong!
             train_indexes, valid_indexes = self.random_sample_valid_set(len(train_dataset), valid_size)
 
             if num_replicas is not None:
@@ -193,7 +192,7 @@ class ImagenetDataProvider(DataProvider):
     def normalize(self):
         return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-    def build_train_transform(self, image_size=None, print_log=True):
+    def build_train_transform(self, image_size=None, print_log=False):
         if image_size is None:
             image_size = self.image_size
         if print_log:

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
+RUN_COMMAND="python dynast/cli.py"
 SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
+
+CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
 
 
 ########################################################################################################
@@ -13,7 +16,7 @@ DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 SHORT_RANDOM_POPULATION=2
 
 # Limit the number of validation samples to speed up the test.
-SHORT_RANDOM_VALID_SIZE=20
+SHORT_RANDOM_IMAGENET_TEST_FRACTION=0.005
 
 
 #################################################################################################

@@ -32,7 +32,8 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
     RunManager,
 )
 from dynast.utils import log
-from dynast.utils.nn import get_macs, get_parameters, measure_latency
+from dynast.utils.datasets import ImageNet
+from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
 
 
 class OFARunner:
@@ -52,7 +53,8 @@ class OFARunner:
         batch_size: int = 1,
         dataloader_workers: int = 4,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_fraction: float = 1.0,
+        verbose: bool = False,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -61,14 +63,30 @@ class OFARunner:
         self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.device = device
-        self.test_size = None
+        self.test_fraction = test_fraction
+        self.dataset_path = dataset_path
+        self.dataloader_workers = dataloader_workers
+        self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
+
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
             test_batch_size=batch_size,
             n_worker=dataloader_workers,
-            valid_size=valid_size,
         )
+        self._init_data()
+
+    def _init_data(self):
+        ImageNet.PATH = self.dataset_path
+        if self.dataset_path:
+            self.dataloader = ImageNet.validation_dataloader(
+                batch_size=self.batch_size,
+                num_workers=self.dataloader_workers,
+                fraction=self.test_fraction,
+            )
+        else:
+            self.dataloader = None
+            log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
         top1 = self.acc_predictor.predict(subnet_cfg)
@@ -91,13 +109,24 @@ class OFARunner:
 
         subnet = self.get_subnet(subnet_cfg)
         folder_name = '/tmp/ofa-tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
-        run_manager = RunManager('{}/eval_subnet'.format(folder_name), subnet, self.run_config, init=False)
+        run_manager = RunManager(
+            '{}/eval_subnet'.format(folder_name),
+            subnet,
+            self.run_config,
+            init=False,
+            verbose=self.verbose,
+        )
         run_manager.reset_running_statistics(net=subnet)
 
         # Test sampled subnet
         self.run_config.data_provider.assign_active_img_size(subnet_cfg['r'][0])
-        loss, acc = run_manager.validate(net=subnet, no_logs=True)
-        top1 = acc[0]
+
+        loss, top1, top5 = validate_classification(
+            model=subnet,
+            data_loader=self.dataloader,
+            device=self.device,
+        )
+
         return top1
 
     def validate_macs_params(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:

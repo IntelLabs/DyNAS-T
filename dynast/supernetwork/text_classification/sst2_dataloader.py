@@ -30,7 +30,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     label_map = {label: i for i, label in enumerate(label_list)}
 
     features = []
-    for (ex_index, example) in enumerate(examples):
+    for ex_index, example in enumerate(examples):
         tokens_a = tokenizer.tokenize(example.text_a)
         # Account for [CLS] and [SEP] with "- 2"
         if len(tokens_a) > max_seq_length - 2:
@@ -61,7 +61,6 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
 
 
 def create_tensor_dataset(features):
-
     batch_input_ids = []
     batch_input_mask = []
     batch_segment_ids = []
@@ -82,7 +81,6 @@ def create_tensor_dataset(features):
 
 
 def prepare_data_loader(dataset_path, max_seq_length=128, eval_batch_size=16):
-
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     processor = glue_processors["sst-2"]()
     num_labels = len(processor.get_labels())

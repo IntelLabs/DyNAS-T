@@ -24,10 +24,10 @@ from dynast.search.evolutionary import (
     EvolutionarySingleObjective,
 )
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
+from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.utils import log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 
@@ -50,7 +50,7 @@ class NASBaseConfig:
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -82,7 +82,7 @@ class NASBaseConfig:
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
         self.dataloader_workers = dataloader_workers
-        self.valid_size = valid_size
+        self.test_fraction = test_fraction
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -92,7 +92,6 @@ class NASBaseConfig:
             log.debug('Passed unused parameters: {}'.format(kwargs))
 
     def verify_measurement_types(self):
-
         # Remove duplicates
         self.optimization_metrics = list(set(self.optimization_metrics))
         self.num_objectives = len(self.optimization_metrics)  # TODO(macsz) Can be a getter
@@ -191,9 +190,10 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
-                valid_size=self.valid_size,
+                test_fraction=self.test_fraction,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
+            # TODO(macsz) Add `test_fraction`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -201,6 +201,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
             )
         elif self.supernet == 'bert_base_sst2':
+            # TODO(macsz) Add `test_fraction`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -215,7 +216,7 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
-                total_batches=self.valid_size,
+                test_fraction=self.test_fraction,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -255,7 +256,7 @@ class LINAS(NASBaseConfig):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -286,7 +287,7 @@ class LINAS(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
@@ -356,7 +357,7 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
-                    valid_size=self.valid_size,
+                    test_fraction=self.test_fraction,
                 )
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
@@ -390,7 +391,7 @@ class LINAS(NASBaseConfig):
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
-                    total_batches=self.valid_size,
+                    total_batches=self.valid_size,  # TODO(macsz) `valid_size` will be changed to number of samples once https://github.com/IntelLabs/DyNAS-T/pull/28 is merged.
                 )
 
             # Setup validation interface
@@ -516,7 +517,7 @@ class Evolutionary(NASBaseConfig):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -535,12 +536,11 @@ class Evolutionary(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
     def search(self):
-
         self._init_search()
 
         # Following sets up the algorithm based on number of objectives
@@ -654,7 +654,7 @@ class RandomSearch(NASBaseConfig):
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -672,12 +672,11 @@ class RandomSearch(NASBaseConfig):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
     def search(self):
-
         self._init_search()
 
         # Randomly sample search space for initial population
@@ -710,7 +709,7 @@ class LINASDistributed(LINAS):
         batch_size: int = 1,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -732,7 +731,7 @@ class LINASDistributed(LINAS):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
-            valid_size=valid_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
@@ -804,7 +803,7 @@ class LINASDistributed(LINAS):
                         dataset_path=self.dataset_path,
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
-                        valid_size=self.valid_size,
+                        test_fraction=self.test_fraction,
                     )
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
@@ -949,7 +948,7 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
-        valid_size: int = None,
+        test_fraction: float = 1.0,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -970,12 +969,11 @@ class RandomSearchDistributed(RandomSearch):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
-            valid_size=valid_size,
+            test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
         )
 
     def search(self):
-
         self._init_search()
 
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
