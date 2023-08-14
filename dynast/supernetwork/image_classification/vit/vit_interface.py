@@ -160,7 +160,6 @@ class ViTRunner:
         params_predictor=None,
         batch_size: int = 16,
         checkpoint_path=None,
-        total_batches=None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
     ):
@@ -190,6 +189,12 @@ class ViTRunner:
     ) -> int:
         macs = self.macs_predictor.predict(subnet_cfg)
         return macs
+    
+    def estimate_parameters(self, 
+                            subnet_cfg: dict,
+    ) -> int:
+        parameters = self.params_predictor.predict(subnet_cfg)
+        return parameters
 
     def estimate_latency(
         self,
