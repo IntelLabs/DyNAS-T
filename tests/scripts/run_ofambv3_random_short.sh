@@ -11,4 +11,5 @@ time ${RUN_COMMAND} \
         --test_fraction ${SHORT_RANDOM_IMAGENET_TEST_FRACTION} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
-        --num_evals ${SHORT_RANDOM_POPULATION}
+        --num_evals ${SHORT_RANDOM_POPULATION} \
+        --device ${DEVICE}

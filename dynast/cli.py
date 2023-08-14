@@ -14,7 +14,7 @@
 
 import argparse
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 
 
 def _main(args):

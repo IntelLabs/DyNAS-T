@@ -23,6 +23,8 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
@@ -37,7 +39,7 @@ class NASBaseConfig:
 
     def __init__(
         self,
-        dataset_path: str,
+        dataset_path: str = None,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
         measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
@@ -52,6 +54,7 @@ class NASBaseConfig:
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -83,6 +86,9 @@ class NASBaseConfig:
         self.device = device
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
+        self.metric_eval_fns = metric_eval_fns
+
+        self.bootstrapnas_supernetwork = kwargs.get('bootstrapnas_supernetwork', None)
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -129,53 +135,17 @@ class NASBaseConfig:
             log.error(f'Invalid supernet specified. Choose from the following: {SUPERNET_TYPE}')
 
     def format_csv_header(self):
-        if self.supernet in SUPERNET_TYPE['image_classification']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'Top-1 Acc (%)',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['machine_translation']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'BLEU Score',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['text_classification']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'SST-2 Acc',
-            ]  # TODO(macsz) Should be based on specified measurements
-        elif self.supernet in SUPERNET_TYPE['recommendation']:
-            self.csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACs',
-                'HR@10',
-            ]  # TODO(macsz) Should be based on specified measurements
-        else:
-            # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
-            raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
+        self.csv_header = get_csv_header(self.supernet)
 
         log.info(f'Results csv file header ordering will be: {self.csv_header}')
 
     def init_supernet(self):
         # Initializes the super-network manager
-        self.supernet_manager = SUPERNET_ENCODING[self.supernet](
-            param_dict=SUPERNET_PARAMETERS[self.supernet], seed=self.seed
-        )
+        if self.bootstrapnas_supernetwork:
+            param_dict = self.bootstrapnas_supernetwork.get_search_space()
+        else:
+            param_dict = SUPERNET_PARAMETERS[self.supernet]
+        self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
 
     def _init_search(self):
         if self.supernet in [
@@ -218,6 +188,15 @@ class NASBaseConfig:
                 device=self.device,
                 test_fraction=self.test_fraction,
             )
+        elif 'bootstrapnas' in self.supernet:
+            self.runner_validate = BootstrapNASRunner(
+                bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                device=self.device,
+                metric_eval_fns=self.metric_eval_fns,
+            )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
             raise NotImplementedError
@@ -234,6 +213,25 @@ class NASBaseConfig:
         # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
+    def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
+        """Returns the best sub-networks.
+
+        Number of returned networks is controlled by the `limit` parameter. If it's not set, then
+        `self.population` is used instead.
+        """
+        limit = self.population if limit is None else limit
+        df = pd.read_csv(self.results_path).tail(limit)
+
+        if self.csv_header is not None:
+            df.columns = self.csv_header
+
+        if sort_by is not None:
+            df = df.sort_values(by=sort_by, ascending=ascending)
+
+        if 'bootstrapnas' in self.supernet:
+            df['Sub-network'] = df['Sub-network'].apply(BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas)
+        return df
+
 
 class LINAS(NASBaseConfig):
     """The LINAS algorithm is a bi-objective optimization approach that explores the sub-networks
@@ -243,12 +241,12 @@ class LINAS(NASBaseConfig):
 
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
@@ -258,6 +256,7 @@ class LINAS(NASBaseConfig):
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -289,6 +288,8 @@ class LINAS(NASBaseConfig):
             device=device,
             test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
+            **kwargs,
         )
 
     def train_predictors(self, results_path: str = None):
@@ -390,10 +391,23 @@ class LINAS(NASBaseConfig):
                     acc_predictor=self.predictor_dict['accuracy_top1'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
                     device=self.device,
-                    total_batches=self.valid_size,  # TODO(macsz) `valid_size` will be changed to number of samples once https://github.com/IntelLabs/DyNAS-T/pull/28 is merged.
                 )
-
+            elif 'bootstrapnas' in self.supernet:
+                runner_predict = BootstrapNASRunner(
+                    bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                )
+            else:
+                raise NotImplementedError
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -498,19 +512,23 @@ class LINAS(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class Evolutionary(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
@@ -538,6 +556,7 @@ class Evolutionary(NASBaseConfig):
             device=device,
             test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
@@ -558,7 +577,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_cmaes(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_cmaes(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='ga',
@@ -566,7 +585,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ga(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 2:
             problem = EvolutionaryMultiObjective(
                 evaluation_interface=self.validation_interface,
@@ -580,7 +599,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_age(population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_age(population=self.population, num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='nsga2',
@@ -588,9 +607,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_nsga2(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 3:
             problem = EvolutionaryManyObjective(
                 evaluation_interface=self.validation_interface,
@@ -604,7 +621,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ctaea(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_ctaea(num_evals=self.num_evals)
             elif self.search_algo == 'moead':
                 search_manager = EvolutionaryManager(
                     algorithm='moead',
@@ -612,7 +629,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_moead(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+                search_manager.configure_moead(num_evals=self.num_evals)
             else:
                 search_manager = EvolutionaryManager(
                     algorithm='unsga3',
@@ -620,9 +637,7 @@ class Evolutionary(NASBaseConfig):
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_unsga3(
-                    population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                )
+                search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
 
@@ -634,19 +649,23 @@ class Evolutionary(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class RandomSearch(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
@@ -656,6 +675,7 @@ class RandomSearch(NASBaseConfig):
         device: str = 'cpu',
         test_fraction: float = 1.0,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         super().__init__(
@@ -674,6 +694,8 @@ class RandomSearch(NASBaseConfig):
             device=device,
             test_fraction=test_fraction,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
+            **kwargs,
         )
 
     def search(self):
@@ -689,19 +711,23 @@ class RandomSearch(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class LINASDistributed(LINAS):
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
@@ -936,12 +962,12 @@ class LINASDistributed(LINAS):
 class RandomSearchDistributed(RandomSearch):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
         batch_size=1,
