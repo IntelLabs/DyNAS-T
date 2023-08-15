@@ -116,7 +116,7 @@ def main():
     )
 
     dist_parser = parser.add_argument_group('Distributed search options')
-    parser.add_argument(
+    dist_parser.add_argument(
         '--distributed',
         action='store_true',
         help='If set, a distributed implementation of the search algorithm will be used.',
