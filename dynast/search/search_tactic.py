@@ -56,6 +56,7 @@ class NASBaseConfig:
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -71,6 +72,7 @@ class NASBaseConfig:
         - population - (int) Population size for each iteration.
         - seed - (int) Random seed.
         - batch_size - (int) Batch size for latency measurement, has a significant impact on latency.
+        - mp_calibration_samples - (int) How many samples to use to calibrate the mixed precision model.
         """
         # TODO(macsz) Update docstring above.
 
@@ -87,6 +89,7 @@ class NASBaseConfig:
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
+        self.mp_calibration_samples = mp_calibration_samples
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
         self.metric_eval_fns = metric_eval_fns
@@ -199,6 +202,7 @@ class NASBaseConfig:
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_fraction=self.test_fraction,
+                mp_calibration_samples=self.mp_calibration_samples,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -258,6 +262,7 @@ class LINAS(NASBaseConfig):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -290,6 +295,7 @@ class LINAS(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
             **kwargs,
@@ -541,6 +547,7 @@ class Evolutionary(NASBaseConfig):
         search_algo='nsga2',
         supernet_ckpt_path=None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -560,6 +567,7 @@ class Evolutionary(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             **kwargs,
         )
@@ -679,6 +687,7 @@ class RandomSearch(NASBaseConfig):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -698,6 +707,7 @@ class RandomSearch(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
             **kwargs,
@@ -741,6 +751,7 @@ class LINASDistributed(LINAS):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -763,6 +774,7 @@ class LINASDistributed(LINAS):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 
@@ -980,6 +992,7 @@ class RandomSearchDistributed(RandomSearch):
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -1001,6 +1014,7 @@ class RandomSearchDistributed(RandomSearch):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 

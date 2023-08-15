@@ -43,10 +43,10 @@ from .inc_quantization import inc_qconfig_dict, inc_quantize
 
 
 class Quantization:
-    def __init__(self, calibration_dataloader=None, num_samples=None):
+    def __init__(self, calibration_dataloader=None, mp_calibration_samples=None):
         super(Quantization, self).__init__()
         self.calibration_dataloader = calibration_dataloader
-        self.num_samples = num_samples
+        self.mp_calibration_samples = mp_calibration_samples
 
     def quantize(self, model, regex_module_names, masks, qparam_dict):
         indices = np.where(np.array(masks))
@@ -66,7 +66,10 @@ class Quantization:
         )
 
         model_qt = inc_quantize(
-            model, qconfig_dict, data_loader=self.calibration_dataloader, num_samples=self.num_samples
+            model,
+            qconfig_dict,
+            data_loader=self.calibration_dataloader,
+            mp_calibration_samples=self.mp_calibration_samples,
         )
 
         return model_qt
@@ -87,6 +90,7 @@ class QuantizedOFARunner:
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
         batch_size: int = 1,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -101,6 +105,7 @@ class QuantizedOFARunner:
         self.device = device
         self.test_fraction = test_fraction
         self.dataset_path = dataset_path
+        self.mp_calibration_samples = mp_calibration_samples
         self.dataloader_workers = dataloader_workers
         self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
@@ -117,7 +122,9 @@ class QuantizedOFARunner:
 
         self._init_data()
 
-        self.quantizer = Quantization(calibration_dataloader=self.calibration_dataloader, num_samples=100)
+        self.quantizer = Quantization(
+            calibration_dataloader=self.calibration_dataloader, mp_calibration_samples=self.mp_calibration_samples
+        )
 
     def _init_data(self):
         ImageNet.PATH = self.dataset_path

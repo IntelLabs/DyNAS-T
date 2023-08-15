@@ -222,20 +222,20 @@ def inc_qconfig_dict(
         return qconfig_dict
 
 
-def inc_quantize(model_fp, qconfig_dict, data_loader=None, num_samples=None):
+def inc_quantize(model_fp, qconfig_dict, data_loader=None, mp_calibration_samples=None):
     '''
     Parameters:
         model_fp: float point model
         qconfig_dict: inc qconfig_dict
         data_loader: torch.utils.data.DataLoader
-        num_samples: number of samples for calibration
+        mp_calibration_samples: number of samples for calibration
     Return:
         model_qt: quantized model
     '''
     model_fp.eval()
 
-    if num_samples is not None:
-        qconfig_dict['quantization']['calibration']['sampling_size'] = num_samples
+    if mp_calibration_samples is not None:
+        qconfig_dict['quantization']['calibration']['sampling_size'] = mp_calibration_samples
 
     # # ============== Quantization =============
     time_stamp = time.time()
@@ -246,10 +246,10 @@ def inc_quantize(model_fp, qconfig_dict, data_loader=None, num_samples=None):
         quantizer = Quantization(temp_yaml_name)
         quantizer.model = copy.deepcopy(model_fp)
         quantizer.calib_dataloader = data_loader
-        # quantizer.eval_func = lambda model: validate_classification(model, data_loader=data_loader, test_size=num_samples//data_loader.batch_size)[1]
+        # quantizer.eval_func = lambda model: validate_classification(model, data_loader=data_loader, test_size=mp_calibration_samples//data_loader.batch_size)[1]
         model_qt = quantizer.fit()
 
-        # calibrate(model_qt, train_dataloader=data_loader, num_samples=num_samples, device='cpu')
+        # calibrate(model_qt, train_dataloader=data_loader, num_samples=mp_calibration_samples, device='cpu')
 
         os.remove(temp_yaml_name)
     except Exception as e:
