@@ -16,11 +16,8 @@ import copy
 import os
 import time
 
-import numpy as np
 import yaml
-from neural_compressor.experimental import Quantization, common
-
-# from dynast.utils.nn import validate_classification
+from neural_compressor.experimental import Quantization
 
 
 def default_policy():
