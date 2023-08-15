@@ -79,8 +79,8 @@ def qparam_parse(observer_type: str, bit: str, mode: str, granularity: str):
 
     assert observer_type in observer.keys()
     assert bit in dtype.keys()
-    assert mode in ('symmetric', 'asymmetric')
-    assert granularity in ('perchannel', 'pertensor')
+    assert mode in qscheme.keys()
+    assert granularity in qgranularity.keys()
 
     return (observer[observer_type], dtype[bit], qscheme[mode], qgranularity[granularity])
 
