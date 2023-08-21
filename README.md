@@ -43,11 +43,14 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 |OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |TransformerLT | transformer_lt_wmt_en_de | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
 |BERT-SST2 | bert_base_sst2 | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
+|BootstrapNAS | - | - | `accuracy_top1`, `macs`, `params`, `latency` |
 
 
 > **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
 
 > **_WMT En-De:_** To obtain and prepare dataset please follow instructions available [here](https://github.com/mit-han-lab/hardware-aware-transformers).
+
+> **_BootstrapNAS_**: BootstrapNAS is currently only avaiable through the Python interface. To read more how to use DyNAS-T on BootstrapNAS search space, please refer to [the example notebook](https://github.com/macsz/Hardware-Aware-Automated-Machine-Learning/blob/macsz/dynast/examples/bootstrapNAS/third_party_search/dynas-t_external_search_resnet50_supernet.ipynb).
 
 ## Intel Library Support
 The following software libraries are compatible with DyNAS-T:
