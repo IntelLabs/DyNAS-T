@@ -32,7 +32,6 @@ from sklearn.preprocessing import MinMaxScaler
 
 from dynast.utils import log
 
-
 PLOT_HYPERVOLUME = True
 NORMALIZE = False
 
@@ -48,7 +47,6 @@ colors = {
     'olive': '#bcbd22',
     'cyan': '#17becf',
 }
-
 
 
 def frontier_builder(df, optimization_metrics, alpha=0, verbose=False):
@@ -308,7 +306,7 @@ def plot_hv():
     population = 50
     EVALUATIONS = 2000
     xlim = None
-    ylim = None #(73.0, 77.5)
+    ylim = None  # (73.0, 77.5)
     avg_time = 5.9
     ref_x = [6e9]
     ref_y = [0.90]
@@ -336,7 +334,7 @@ def plot_hv():
 
     df_linas_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)  # Stack all runs from a given search
     df_linas_hv['mean'] = df_linas_hv.mean(axis=1)
-    df_linas_hv['std'] = df_linas_hv.std(axis=1)/3**0.5
+    df_linas_hv['std'] = df_linas_hv.std(axis=1) / 3**0.5
     edge_points.append(min(df_linas_hv['mean'][population:] - df_linas_hv['std'][population:]))
     edge_points.append(max(df_linas_hv['mean'][population:] + df_linas_hv['std'][population:]))
 
@@ -350,7 +348,7 @@ def plot_hv():
 
     df_full_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)
     df_full_hv['mean'] = df_full_hv.mean(axis=1)
-    df_full_hv['std'] = df_full_hv.std(axis=1)/3**0.5
+    df_full_hv['std'] = df_full_hv.std(axis=1) / 3**0.5
     edge_points.append(min(df_full_hv['mean'][population:] - df_full_hv['std'][population:]))
     edge_points.append(max(df_full_hv['mean'][population:] + df_full_hv['std'][population:]))
 
@@ -364,29 +362,37 @@ def plot_hv():
 
     df_rand_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)
     df_rand_hv['mean'] = df_rand_hv.mean(axis=1)
-    df_rand_hv['std'] = df_rand_hv.std(axis=1)/3**0.5
+    df_rand_hv['std'] = df_rand_hv.std(axis=1) / 3**0.5
     edge_points.append(min(df_rand_hv['mean'][population:] - df_rand_hv['std'][population:]))
     edge_points.append(max(df_rand_hv['mean'][population:] + df_rand_hv['std'][population:]))
 
-    ylim_hv = (min(edge_points)-0.05*min(edge_points), max(edge_points)+0.05*min(edge_points))
+    ylim_hv = (min(edge_points) - 0.05 * min(edge_points), max(edge_points) + 0.05 * min(edge_points))
 
     os.makedirs(save_dir, exist_ok=True)
 
-    for samples in tqdm.tqdm(range(0, EVALUATIONS+1, population*4)):
-        elapsed_total_m = avg_time*samples
-        elapsed_h = int(elapsed_total_m//60)
-        elapsed_m = int(elapsed_total_m-(elapsed_h*60))
+    for samples in tqdm.tqdm(range(0, EVALUATIONS + 1, population * 4)):
+        elapsed_total_m = avg_time * samples
+        elapsed_h = int(elapsed_total_m // 60)
+        elapsed_m = int(elapsed_total_m - (elapsed_h * 60))
         if PLOT_HYPERVOLUME:
-            fig, ax = plt.subplots(1, 3, figsize=(15,5), gridspec_kw={'width_ratios': [2.5, 3, 2.5]})
+            fig, ax = plt.subplots(1, 3, figsize=(15, 5), gridspec_kw={'width_ratios': [2.5, 3, 2.5]})
         else:
-            fig, ax = plt.subplots(1, 2, figsize=(10,5), gridspec_kw={'width_ratios': [2.5, 3.0]})
-        fig.suptitle(plot_subtitle.format(step=samples//population, samples=samples, evaluations=EVALUATIONS, elapsed_h=elapsed_h, elapsed_m=elapsed_m),
-            fontweight ="bold")
+            fig, ax = plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={'width_ratios': [2.5, 3.0]})
+        fig.suptitle(
+            plot_subtitle.format(
+                step=samples // population,
+                samples=samples,
+                evaluations=EVALUATIONS,
+                elapsed_h=elapsed_h,
+                elapsed_m=elapsed_m,
+            ),
+            fontweight="bold",
+        )
         cm = plt.cm.get_cmap('viridis_r')
 
         # LINAS plot
         df_conc = df_linas
-        data=df_conc[:samples][['macs', 'accuracy_top1']]
+        data = df_conc[:samples][['macs', 'accuracy_top1']]
         count = [x for x in range(len(data))]
         x = data['macs']
         y = data['accuracy_top1']
@@ -394,12 +400,17 @@ def plot_hv():
         ax[0].set_title('DyNAS-T')
         ax[0].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN\nArchitecture', s=6)
         ax[0].set_ylabel('Accuracy', fontsize=13)
-        ax[0].plot(df_linas_front['macs'], df_linas_front['accuracy_top1'],
-                color='red', linestyle='--', label='DyNAS-T Pareto front')
+        ax[0].plot(
+            df_linas_front['macs'],
+            df_linas_front['accuracy_top1'],
+            color='red',
+            linestyle='--',
+            label='DyNAS-T Pareto front',
+        )
         # ax[0].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
 
         # NSGA-II plot
-        data1=df_nsga[:samples][['macs', 'accuracy_top1']]
+        data1 = df_nsga[:samples][['macs', 'accuracy_top1']]
         print(len(data1))
         count = [x for x in range(len(data1))]
         x = data1['macs']
@@ -409,18 +420,20 @@ def plot_hv():
         ax[1].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN Architecture', s=6)
 
         # ax[1].get_yaxis().set_ticklabels([])
-        ax[1].plot(df_nsga_front['macs'], df_nsga_front['accuracy_top1'],
-                color='red', linestyle='--', label='DyNAS-T Pareto front')
+        ax[1].plot(
+            df_nsga_front['macs'],
+            df_nsga_front['accuracy_top1'],
+            color='red',
+            linestyle='--',
+            label='DyNAS-T Pareto front',
+        )
         # ax[1].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
 
-
-        cloud = list(df_random[['macs','accuracy_top1']].to_records(index=False))
+        cloud = list(df_random[['macs', 'accuracy_top1']].to_records(index=False))
         # alpha_shape = alphashape.alphashape(cloud, 0)
-
 
         for ax in fig.get_axes()[:2]:
             # ax.add_patch(PolygonPatch(alpha_shape, fill=None, alpha=0.8, linewidth=1.5, label='Random search boundary', linestyle='--'))
-
 
             ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
             # if ylim:
@@ -435,16 +448,35 @@ def plot_hv():
 
             ########## LINAS
             fig.get_axes()[2].plot(interval, df_linas_hv['mean'], label='LINAS', color=colors['red'], linewidth=2)
-            fig.get_axes()[2].fill_between(interval, df_linas_hv['mean']-df_linas_hv['std'], df_linas_hv['mean']+df_linas_hv['std'],
-                            color=colors['red'], alpha=0.2)
+            fig.get_axes()[2].fill_between(
+                interval,
+                df_linas_hv['mean'] - df_linas_hv['std'],
+                df_linas_hv['mean'] + df_linas_hv['std'],
+                color=colors['red'],
+                alpha=0.2,
+            )
             ########## NSGA / FULL
-            fig.get_axes()[2].plot(interval, df_full_hv['mean'], label='NSGA-II', linestyle='--', color=colors['blue'], linewidth=2)
-            fig.get_axes()[2].fill_between(interval, df_full_hv['mean']-df_full_hv['std'], df_full_hv['mean']+df_full_hv['std'],
-                            color=colors['blue'], alpha=0.2)
+            fig.get_axes()[2].plot(
+                interval, df_full_hv['mean'], label='NSGA-II', linestyle='--', color=colors['blue'], linewidth=2
+            )
+            fig.get_axes()[2].fill_between(
+                interval,
+                df_full_hv['mean'] - df_full_hv['std'],
+                df_full_hv['mean'] + df_full_hv['std'],
+                color=colors['blue'],
+                alpha=0.2,
+            )
             ########## RANDOM
-            fig.get_axes()[2].plot(interval, df_rand_hv['mean'], label='Random Search', linestyle='-.', color=colors['orange'], linewidth=2)
-            fig.get_axes()[2].fill_between(interval, df_rand_hv['mean']-df_rand_hv['std'], df_rand_hv['mean']+df_rand_hv['std'],
-                            color=colors['orange'], alpha=0.2)
+            fig.get_axes()[2].plot(
+                interval, df_rand_hv['mean'], label='Random Search', linestyle='-.', color=colors['orange'], linewidth=2
+            )
+            fig.get_axes()[2].fill_between(
+                interval,
+                df_rand_hv['mean'] - df_rand_hv['std'],
+                df_rand_hv['mean'] + df_rand_hv['std'],
+                color=colors['orange'],
+                alpha=0.2,
+            )
             ##########
 
             fig.get_axes()[2].set_xlim(population, samples)
@@ -456,7 +488,6 @@ def plot_hv():
             fig.get_axes()[2].legend(fancybox=True, fontsize=12, framealpha=1, borderpad=0.2, loc='best')
 
             fig.get_axes()[2].grid(True, alpha=0.2)
-
 
             formatter = ScalarFormatter()
             formatter.set_scientific(False)
@@ -470,10 +501,11 @@ def plot_hv():
 
         fig.tight_layout(pad=1)
         plt.subplots_adjust(wspace=0.07, hspace=0)
-        plt.show();
-        fn = save_dir + '/pareto_{}.png'.format(samples//population)
+        plt.show()
+        fn = save_dir + '/pareto_{}.png'.format(samples // population)
 
         fig.savefig(fn, bbox_inches='tight', pad_inches=0, dpi=150)
+
 
 # def correlation() -> None:
 #     df_1 = pd.read_csv('bnas_1_random.csv')[:50]
