@@ -55,7 +55,7 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 ## Intel Library Support
 The following software libraries are compatible with DyNAS-T:
 * [Intel Neural Compressor (INC)](https://github.com/intel/neural-compressor/blob/master/examples/notebook/dynas/MobileNetV3_Supernet_NAS.ipynb)
-* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md) (Work-in-progress)
+* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md)
 
 # Getting Started
 
