@@ -233,7 +233,9 @@ def plot_search_progression(
     cbar.ax.set_title("         Evaluation\n  Count", fontsize=8)
 
     fig.tight_layout(pad=2)
-    plt.savefig('{}.png'.format(results_path.split('.')[0]))
+    save_path = '{}.png'.format(results_path.split('.')[0])
+    plt.savefig(save_path)
+    log.info(f'Search progression plot saved to {save_path}')
 
 
 def load_csv(
