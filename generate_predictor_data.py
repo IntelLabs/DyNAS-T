@@ -4,13 +4,13 @@ from dynast.supernetwork.supernetwork_registry import SUPERNET_ENCODING, SUPERNE
 
 if __name__ == '__main__':
     supernet: str = 'ofa_resnet50'
-    results_path: str = '/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_random_a100.csv'
+    results_path: str = '/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_random_clx8280.csv'
     save_to_path: str = (
-        '/nfs/site/home/mszankin/store/code/handi/pretrained/predictors/datasets/resnet50_accuracy_a100_imagenet.csv'
+        '/nfs/site/home/mszankin/store/code/handi/pretrained/predictors/datasets/resnet50_latency_clx_imagenet.csv'
     )
     seed: int = 42
     config_name: str = 'subnet'
-    objective_name: str = 'accuracy_top1'
+    objective_name: str = 'latency'
     names = ['subnet', 'date'] + SUPERNET_METRICS[supernet]
 
     supernet_manager = SUPERNET_ENCODING[supernet](param_dict=SUPERNET_PARAMETERS[supernet], seed=seed)
