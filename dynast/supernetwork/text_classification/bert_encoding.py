@@ -108,8 +108,8 @@ class BertSST2Encoding(EncodingBase):
 
         collect_rows = list()
         for i in range(len(dataframe)):
-            collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i])) 
-        features = np.asarray(collect_rows) 
+            collect_rows.append(np.asarray(dataframe['config_onehot'].iloc[i]))
+        features = np.asarray(collect_rows)
         labels = dataframe.drop(columns=[config, 'config_pymoo', 'config_onehot']).values
 
         assert len(features) == len(labels)

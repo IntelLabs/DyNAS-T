@@ -56,6 +56,7 @@ class ViTEncoding(BertSST2Encoding):
 
         else:
             return features
+
     def import_csv(self, filepath, config, objective, column_names=None, drop_duplicates=True):
         '''
         Import a csv file generated from a supernetwork search for the purpose
@@ -69,7 +70,7 @@ class ViTEncoding(BertSST2Encoding):
              equivalent vector for training.
         '''
 
-        max_layers=12 #16 # TODO: Needs to be moved as an argument
+        max_layers = 12  # 16 # TODO: Needs to be moved as an argument
         if column_names == None:
             df = pd.read_csv(filepath)
         else:
@@ -86,7 +87,7 @@ class ViTEncoding(BertSST2Encoding):
         convert_to_dict = list()
         convert_to_pymoo = list()
         convert_to_onehot = list()
-        
+
         for i in range(len(df)):
             # Elastic Param Config format
             config_as_dict = ast.literal_eval(df[config].iloc[i])

@@ -27,7 +27,7 @@ import torchprofile
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
-from dynast.utils.nn import validate_classification, measure_latency, get_parameters
+from dynast.utils.nn import get_parameters, measure_latency, validate_classification
 
 from .vit_supernetwork import SuperViT
 
@@ -45,6 +45,7 @@ NUM_HEADS_B_16 = 12
 HIDDEN_DIM_B_16 = 768
 MLP_DIM_B_16 = 3072
 
+
 def load_supernet(checkpoint_path):
     model = SuperViT(
         image_size=IMAGE_SIZE,
@@ -55,13 +56,14 @@ def load_supernet(checkpoint_path):
         mlp_dim=MLP_DIM_B_16,
         num_classes=NUM_CLASSES,
     )
-    max_layers = NUM_LAYERS_B_16   
+    max_layers = NUM_LAYERS_B_16
 
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')['state_dict'],
         strict=True,
     )
     return model, max_layers
+
 
 def compute_val_acc(
     config,
@@ -75,7 +77,9 @@ def compute_val_acc(
     model.to(device)
     model.set_sample_config(config)
     return validate_classification(
-        model=model, data_loader=eval_dataloader, device=device,
+        model=model,
+        data_loader=eval_dataloader,
+        device=device,
     )
 
 
@@ -118,6 +122,7 @@ def compute_latency(
     latency_std = np.round(np.std(truncated_latency), 3)
 
     return latency_mean, latency_std
+
 
 def compute_macs(config, model, device: str = 'cpu'):
     """Calculate MACs for ViT-based models."""
@@ -163,7 +168,6 @@ class ViTRunner:
         device: str = 'cpu',
         test_fraction: float = 1.0,
     ):
-
         self.supernet = supernet
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -189,9 +193,10 @@ class ViTRunner:
     ) -> int:
         macs = self.macs_predictor.predict(subnet_cfg)
         return macs
-    
-    def estimate_parameters(self, 
-                            subnet_cfg: dict,
+
+    def estimate_parameters(
+        self,
+        subnet_cfg: dict,
     ) -> int:
         parameters = self.params_predictor.predict(subnet_cfg)
         return parameters
@@ -207,7 +212,6 @@ class ViTRunner:
         self,
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
-
         _, top1_accuracy, _ = compute_val_acc(
             config=subnet_cfg,
             eval_dataloader=self.eval_dataloader,
