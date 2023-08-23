@@ -156,6 +156,7 @@ def plot_search_progression(
     results_path: str,
     evals_limit: int = None,
     random_results_path: str = None,
+    target_metrics: List[str] = ['latency', 'accuracy_top1']
 ) -> None:
     df = pd.read_csv(results_path)
 
@@ -173,14 +174,14 @@ def plot_search_progression(
         df_random = pd.read_csv(random_results_path)
         df_random.columns = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1']
         ax.scatter(
-            df_random['macs'].values,
-            df_random['accuracy_top1'].values,
+            df_random[target_metrics[0]].values,
+            df_random[target_metrics[1]].values,
             marker='.',
             alpha=0.1,
             c='grey',
             label='Random DNN Model',
         )
-        cloud = list(df_random[['macs', 'accuracy_top1']].to_records(index=False))
+        cloud = list(df_random[[target_metrics[0], target_metrics[1]]].to_records(index=False))
         for i in range(len(cloud)):
             cloud[i] = list(cloud[i])
         print(cloud[:5])
@@ -200,8 +201,8 @@ def plot_search_progression(
         # )
 
     ax.scatter(
-        df['macs'].values,
-        df['accuracy_top1'].values,
+        df[target_metrics[0]].values,
+        df[target_metrics[1]].values,
         marker='^',
         alpha=0.7,
         c=count,
@@ -211,16 +212,16 @@ def plot_search_progression(
     )
 
     ax.set_title('DyNAS-T Search Results \n{}'.format(results_path.split('.')[0]))
-    ax.set_xlabel('MACs', fontsize=13)
-    ax.set_ylabel('Top1', fontsize=13)
+    ax.set_xlabel(target_metrics[0], fontsize=13)
+    ax.set_ylabel(target_metrics[1], fontsize=13)
     ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
     ax.grid(True, alpha=0.3)
     # ax.set_ylim(72,77.5)
 
-    df_conc_front = frontier_builder(df, optimization_metrics=['macs', 'accuracy_top1'])
+    df_conc_front = frontier_builder(df, optimization_metrics=[target_metrics[0], target_metrics[1]])
     ax.plot(
-        df_conc_front['macs'],
-        df_conc_front['accuracy_top1'],
+        df_conc_front[target_metrics[0]],
+        df_conc_front[target_metrics[1]],
         color='red',
         linestyle='--',
         label='DyNAS-T Pareto front',
