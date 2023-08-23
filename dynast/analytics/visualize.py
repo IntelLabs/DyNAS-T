@@ -15,6 +15,7 @@
 import itertools
 import math
 import os
+from typing import List
 
 import alphashape
 import matplotlib.pyplot as plt
@@ -156,7 +157,7 @@ def plot_search_progression(
     results_path: str,
     evals_limit: int = None,
     random_results_path: str = None,
-    target_metrics: List[str] = ['latency', 'accuracy_top1']
+    target_metrics: List[str] = ['latency', 'accuracy_top1'],
 ) -> None:
     df = pd.read_csv(results_path)
 
@@ -541,7 +542,11 @@ if __name__ == '__main__':
         plot_search_progression(results_path='bert_sst2_linas.csv')  # , random_results_path='bert_sst2_random.csv')
         plot_search_progression(results_path='bert_sst2_nsga2.csv')  # , random_results_path='bert_sst2_random.csv')
         plot_search_progression(results_path='bert_sst2_random.csv')
-    plot_hv()
+    # plot_hv()
+
+    plot_search_progression(
+        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/latency_stability/dynast_mp_ofaresnet50_linas_sprh9480_latency.csv'
+    )
 
 
 # correlation()
