@@ -14,14 +14,8 @@
 
 import pytest
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
-
-
-def test_dynas_not_enough_args_passed_exits():
-    # Not all params passed
-    with pytest.raises(SystemExit):
-        DyNAS(supernet='ofa_resnet50')
 
 
 def test_dynas_optimization_metrics_unsupported_number():

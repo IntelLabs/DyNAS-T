@@ -8,8 +8,9 @@ time ${RUN_COMMAND} \
         --dataset_path  ${DATASET_IMAGENET_PATH} \
         --search_tactic random \
         --population ${SHORT_RANDOM_POPULATION} \
-        --test_size ${SHORT_RANDOM_TEST_SIZE} \
         --batch_size ${BATCH_SIZE} \
+        --test_fraction ${SHORT_RANDOM_IMAGENET_TEST_FRACTION} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
-        --num_evals ${SHORT_RANDOM_POPULATION}
+        --num_evals ${SHORT_RANDOM_POPULATION} \
+        --device ${DEVICE}

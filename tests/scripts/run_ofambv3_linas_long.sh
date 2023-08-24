@@ -11,4 +11,5 @@ time ${RUN_COMMAND} \
         --batch_size ${BATCH_SIZE} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
-        --num_evals ${LONG_LINAS_NUM_EVALS}
+        --num_evals ${LONG_LINAS_NUM_EVALS} \
+        --device ${DEVICE}

@@ -12,4 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dynast.python import main as dynast  # noqa: F401
+from dynast.dynast_manager import DyNAS  # noqa: F401

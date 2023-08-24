@@ -1,10 +1,23 @@
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 
 
 def _main(args):
-
     agent = DyNAS(
         supernet=args.supernet,
         optimization_metrics=args.optimization_metrics,
@@ -21,7 +34,7 @@ def _main(args):
         verbose=args.verbose,
         supernet_ckpt_path=args.supernet_ckpt_path,
         device=args.device,
-        test_size=args.test_size,
+        test_fraction=args.test_fraction,
         dataloader_workers=args.dataloader_workers,
         distributed=args.distributed,
     )
@@ -75,10 +88,10 @@ def main():
         help='Batch size used in evaluation process. Does not influence latency measurement. If not set it will default to the same value as `batch_size` parameter.',
     )
     parser.add_argument(
-        '--test_size',
-        default=None,
-        type=int,
-        help='How many batches of data to use when evaluating model\'s accuracy.',
+        '--test_fraction',
+        default=1.0,
+        type=float,
+        help='Fraction of the validation data to be used for testing and evaluation.',
     )
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')

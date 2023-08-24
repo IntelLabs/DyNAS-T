@@ -35,7 +35,6 @@ warnings.filterwarnings("ignore")
 
 
 def load_supernet(checkpoint_path):
-
     bert_config = BertConfig()
     model = BertSupernetForSequenceClassification(bert_config, num_labels=2)
     model.load_state_dict(
@@ -61,7 +60,6 @@ def compute_accuracy_sst2(
     out_label_ids = None
 
     for i, (input_ids, input_mask, segment_ids, label_ids) in enumerate(eval_dataloader):
-
         input_ids = input_ids.to(device)
         input_mask = input_mask.to(device)
         segment_ids = segment_ids.to(device)
@@ -195,7 +193,6 @@ class BertSST2Runner:
         checkpoint_path=None,
         device: str = 'cpu',
     ):
-
         self.supernet = supernet
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -233,7 +230,6 @@ class BertSST2Runner:
         self,
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
-
         accuracy_sst2 = compute_accuracy_sst2(subnet_cfg, self.eval_dataloader, self.supernet_model, device=self.device)
         return accuracy_sst2
 
@@ -351,9 +347,9 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
+                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['macs'],
-                    individual_results['params'],
                     individual_results['accuracy_sst2'],
                 ]
                 writer.writerow(result)

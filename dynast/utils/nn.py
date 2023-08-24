@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import time
 from typing import List, Tuple, Union
 
@@ -69,27 +68,24 @@ def accuracy(output, target, topk=(1,)) -> List[float]:
 def validate_classification(
     model,
     data_loader,
-    test_size=None,
     device='cpu',
 ):
     test_criterion = nn.CrossEntropyLoss()
 
+    model.to(device)
     model = model.eval()
 
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
 
-    if test_size is not None:
-        total = test_size
-    else:
-        total = len(data_loader)
+    total = len(data_loader)
 
     with torch.no_grad():
-        for epoch, (images, labels) in enumerate(data_loader):
+        for batch, (images, labels) in enumerate(data_loader):
             log.debug(
                 "Validate #{}/{} {}".format(
-                    epoch + 1,
+                    batch + 1,
                     total,
                     {
                         "loss": losses.avg,
@@ -109,8 +105,7 @@ def validate_classification(
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
-            if epoch + 1 >= total:
-                break
+
     return losses.avg, top1.avg, top5.avg
 
 
@@ -118,8 +113,6 @@ def get_parameters(
     model: nn.Module,
     device: str = 'cpu',
 ) -> int:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -131,8 +124,6 @@ def get_macs(
     input_size: tuple = (1, 3, 224, 224),
     device: str = 'cpu',
 ) -> float:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
 
@@ -199,8 +190,6 @@ def measure_latency(
     inputs = torch.randn(*input_size, device=device)
     model = model.eval()
 
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
 
     if 'cuda' in str(device):

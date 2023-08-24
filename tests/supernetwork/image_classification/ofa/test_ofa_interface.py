@@ -12,8 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dynast.common import get_info
+import pytest
+
+from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 
 
-def main():
-    print(get_info('python'))
+class TestOFARunner:
+    def test_init_data_path_not_exist(self):
+        with pytest.raises(FileNotFoundError):
+            OFARunner(
+                supernet='ofa_resnet50',
+                dataset_path='/not-existing-path-to-a-dataset',
+            )
+
+    def test_init_data_path_none(self):
+        OFARunner(
+            supernet='ofa_resnet50',
+            dataset_path=None,
+        )
