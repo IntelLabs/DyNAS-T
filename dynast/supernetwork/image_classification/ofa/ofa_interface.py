@@ -50,7 +50,8 @@ class OFARunner:
         macs_predictor: Predictor = None,
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        test_batch_size: int = 128,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -62,6 +63,7 @@ class OFARunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
+        self.test_batch_size = test_batch_size
         self.device = device
         self.test_fraction = test_fraction
         self.dataset_path = dataset_path
@@ -71,7 +73,7 @@ class OFARunner:
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
-            test_batch_size=batch_size,
+            test_batch_size=test_batch_size,
             n_worker=dataloader_workers,
         )
         self._init_data()
@@ -80,7 +82,7 @@ class OFARunner:
         ImageNet.PATH = self.dataset_path
         if self.dataset_path:
             self.dataloader = ImageNet.validation_dataloader(
-                batch_size=self.batch_size,
+                batch_size=self.test_batch_size,
                 num_workers=self.dataloader_workers,
                 fraction=self.test_fraction,
             )
@@ -171,7 +173,7 @@ class OFARunner:
             mean latency; std latency
         """
         device = self.device if not device else device
-        input_size = (self.batch_size, 3, 224, 224)
+        input_size: tuple = (self.batch_size, 3, 224, 224)
 
         if not warmup_steps:
             warmup_steps = auto_steps(self.batch_size, is_warmup=True)

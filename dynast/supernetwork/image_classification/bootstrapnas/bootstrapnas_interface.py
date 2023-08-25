@@ -45,7 +45,8 @@ class BootstrapNASRunner:
         macs_predictor: Predictor = None,
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        test_batch_size: int = 128,
         device: str = 'cpu',
         metric_eval_fns: dict = None,
     ):
@@ -54,6 +55,7 @@ class BootstrapNASRunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
+        self.test_batch_size = test_batch_size
         self.device = device
         self.bootstrapnas_supernetwork = bootstrapnas_supernetwork
         self.dataset_path = dataset_path
@@ -88,10 +90,10 @@ class BootstrapNASRunner:
             log.debug('Using built-in accuracy_top1 metric evaluation function.')
             CIFAR10.PATH = self.dataset_path
 
-            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.batch_size)
+            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.test_batch_size)
 
             bn_adapt_algo_kwargs = {
-                'data_loader': CIFAR10.train_dataloader(batch_size=self.batch_size),
+                'data_loader': CIFAR10.train_dataloader(batch_size=self.test_batch_size),
                 'num_bn_adaptation_samples': 2000,
                 'device': 'cuda',
             }
@@ -139,7 +141,6 @@ class BootstrapNASRunner:
     def measure_latency(
         self,
         pymoo_vector: dict,
-        input_size: tuple = (1, 3, 32, 32),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = None,
@@ -155,6 +156,8 @@ class BootstrapNASRunner:
 
         model = self._get_subnet(pymoo_vector, device)
 
+        input_size: tuple = ((self.batch_size, 3, 32, 32),)
+
         if self.metric_eval_fns is not None and 'latency' in self.metric_eval_fns:
             log.debug('Using custom latency metric evaluation function.')
             latency_mean, latency_std = self.metric_eval_fns['latency'](model)
@@ -162,9 +165,9 @@ class BootstrapNASRunner:
 
         log.debug('Using built-in latency metric evaluation function.')
         if not warmup_steps:
-            warmup_steps = auto_steps(input_size[0], is_warmup=True)
+            warmup_steps = auto_steps(self.batch_size, is_warmup=True)
         if not measure_steps:
-            measure_steps = auto_steps(input_size[0])
+            measure_steps = auto_steps(self.batch_size)
 
         latency_mean, latency_std = measure_latency(
             model=model,
@@ -243,7 +246,6 @@ class EvaluationInterfaceBootstrapNAS(EvaluationInterface):
             if 'macs' in self.measurements or 'params' in self.measurements:
                 individual_results['macs'], individual_results['params'] = self.evaluator.validate_macs_params(x)
             if 'latency' in self.measurements:
-                # TODO(macsz) Make sure that the input size is correct
                 individual_results['latency'], _ = self.evaluator.measure_latency(x)
 
         # Write result for csv_path
