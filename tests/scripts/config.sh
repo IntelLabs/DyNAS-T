@@ -4,6 +4,8 @@ RUN_COMMAND="python dynast/cli.py"
 SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
+DATASET_CIFAR10_PATH="/tmp/cifar10/"
+DEVICE="cpu"
 
 
 ########################################################################################################

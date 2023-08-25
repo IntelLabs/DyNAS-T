@@ -14,6 +14,7 @@
 
 import logging
 import sys
+from typing import List
 
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
@@ -27,7 +28,29 @@ class DyNAS:
     with this class based on the user input.
     '''
 
-    def __new__(self, **kwargs):
+    def __new__(
+        self,
+        supernet: str,
+        results_path: str,
+        optimization_metrics: List[str],
+        measurements: List[str],
+        search_tactic: str = 'linas',
+        num_evals: int = 250,
+        dataset_path: str = None,
+        **kwargs,
+    ):
+        kwargs.update(
+            {
+                'supernet': supernet,
+                'results_path': results_path,
+                'optimization_metrics': optimization_metrics,
+                'measurements': measurements,
+                'search_tactic': search_tactic,
+                'num_evals': num_evals,
+                'dataset_path': dataset_path,
+            }
+        )
+
         log_level = logging.INFO
         if kwargs.get('verbose'):
             log_level = logging.DEBUG
@@ -45,24 +68,6 @@ class DyNAS:
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
         log.info('=' * 40)
 
-        # Required arguments for the DyNAS class
-        # TODO(macsz) If these are common for all created classes, then we can move it out of kwargs
-        REQUIRED_KWARGS = [
-            'supernet',
-            'optimization_metrics',
-            'measurements',
-            'search_tactic',
-            'num_evals',
-            'results_path',
-            'dataset_path',
-        ]
-
-        # Validity checks
-        for argument in REQUIRED_KWARGS:
-            if argument not in kwargs:
-                log.error(f"Missing `--{argument}` parameter.")
-                sys.exit("Missing argument, see log file for info.")
-
         kwargs = check_kwargs_deprecated(**kwargs)
 
         if len(kwargs['optimization_metrics']) > 3:
@@ -77,34 +82,34 @@ class DyNAS:
 
         if kwargs.get('distributed', False):
             # LINAS bi-level evolutionary algorithm search distributed to multiple workers
-            if kwargs['search_tactic'] == 'linas':
+            if search_tactic == 'linas':
                 log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
                 return LINASDistributed(**kwargs)
 
                 # Uniform random sampling of the architectural space distributed to multiple workers
-            elif kwargs['search_tactic'] == 'random':
+            elif search_tactic == 'random':
                 log.info('Initializing DyNAS random (distributed) search algorithm object.')
                 return RandomSearchDistributed(**kwargs)
 
         # LINAS bi-level evolutionary algorithm search
-        if kwargs['search_tactic'] == 'linas':
+        if search_tactic == 'linas':
             log.info('Initializing DyNAS LINAS algorithm object.')
             return LINAS(**kwargs)
 
         # Standard evolutionary algorithm search
-        elif kwargs['search_tactic'] == 'evolutionary':
+        elif search_tactic == 'evolutionary':
             log.info('Initializing DyNAS evoluationary algorithm object.')
             return Evolutionary(**kwargs)
 
         # Uniform random sampling of the architectural space
-        elif kwargs['search_tactic'] == 'random':
+        elif search_tactic == 'random':
             log.info('Initializing DyNAS random search algorithm object.')
             return RandomSearch(**kwargs)
 
         else:
             error_message = (
                 "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
-                    kwargs['search_tactic']
+                    search_tactic
                 )
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)

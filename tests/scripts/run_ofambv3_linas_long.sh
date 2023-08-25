@@ -10,4 +10,5 @@ time ${RUN_COMMAND} \
         --population ${LONG_LINAS_POPULATION} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
-        --num_evals ${LONG_LINAS_NUM_EVALS}
+        --num_evals ${LONG_LINAS_NUM_EVALS} \
+        --device ${DEVICE}

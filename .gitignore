@@ -122,4 +122,7 @@ venv.bak/
 *.meta
 cifar10/
 coverity_tmp/
+data/
+runs/
 *.png
+
