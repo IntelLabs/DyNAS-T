@@ -15,21 +15,26 @@ For development purposes it is advised to install DyNAS-T in editable mode. This
 
 ```bash
 cd "DyNAS-T's root directory"
-pip install -e .
-pip install -r requirements_test.txt
+pip install -e ".[test]"  # This will install both base and test dependencies.
 ```
 
 ## Code Style
 
-Changes to DyNAS-T should conform to Python's style Guide **WIP (For now please refer to the content of `linter.sh` script.)**
+To ensure consistency and quality in our codebase, we require that all submitted code be verified using specific code checking tools. Before submitting your code, please make sure you've checked it with mypy, isort, and black. These tools help maintain a uniform code format, type consistency, and import order.
 
-You can run automated linting and checks with:
+If you're unfamiliar with the configurations we use for these tools, refer to our `linter.sh` script. This script contains the detailed configurations for each tool. Furthermore, for your convenience, you can execute `linter.sh`locally to automatically fix any code-style inconsistencies in your contribution.
 
-```bash
-./linter.sh
-```
+Please note: the `linter.sh` script is also integrated into our Continuous Integration (CI) pipeline. When you submit a Pull Request (PR), this script will be run to validate your code's style. PRs that do not conform to our code style guidelines will be blocked until the necessary corrections are made.
 
-It's advised to run this script before every `git commit`.
+By adhering to these guidelines, you help us maintain a clean and consistent codebase. We appreciate your understanding and effort in this regard.
+
+> TL;DR: You can run automated linting and checks with:
+>
+> ```bash
+> ./linter.sh
+> ```
+> It's advised to run this script before every `git commit`.
+
 
 ## Testing
 
