@@ -2,6 +2,8 @@
 
 # DyNAS-T
 
+[![PyPI DyNAS-T](https://img.shields.io/pypi/v/dynast)](https://pypi.org/project/dynast/) [![Python Versions](https://img.shields.io/pypi/pyversions/dynast)](https://pypi.org/project/dynast/) [![image](https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0) [![Monthly Downloads](https://img.shields.io/pypi/dm/dynast)](https://pypi.org/project/dynast/)
+
 DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a super-network neural architecture
 search NAS optimization package designed for efficiently discovering optimal deep neural network (DNN)
 architectures for a variety of performance objectives such as accuracy, latency, multiply-and-accumulates,
@@ -41,16 +43,19 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 |OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |TransformerLT | transformer_lt_wmt_en_de | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
 |BERT-SST2 | bert_base_sst2 | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
+|BootstrapNAS | - | - | `accuracy_top1`, `macs`, `params`, `latency` |
 
 
 > **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
 
 > **_WMT En-De:_** To obtain and prepare dataset please follow instructions available [here](https://github.com/mit-han-lab/hardware-aware-transformers).
 
+> **_BootstrapNAS_**: BootstrapNAS is currently only avaiable through the Python interface. To read more how to use DyNAS-T on BootstrapNAS search space, please refer to [the example notebook](https://github.com/macsz/Hardware-Aware-Automated-Machine-Learning/blob/macsz/dynast/examples/bootstrapNAS/third_party_search/dynas-t_external_search_resnet50_supernet.ipynb).
+
 ## Intel Library Support
 The following software libraries are compatible with DyNAS-T:
 * [Intel Neural Compressor (INC)](https://github.com/intel/neural-compressor/blob/master/examples/notebook/dynas/MobileNetV3_Supernet_NAS.ipynb)
-* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md) (Work-in-progress)
+* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md)
 
 # Getting Started
 
