@@ -29,7 +29,7 @@ def _main(args):
         seed=args.seed,
         population=args.population,
         batch_size=args.batch_size,
-        test_batch_size=args.test_batch_size,
+        eval_batch_size=args.eval_batch_size,
         search_algo=args.search_algo,
         verbose=args.verbose,
         supernet_ckpt_path=args.supernet_ckpt_path,
@@ -82,7 +82,7 @@ def main():
     parser.add_argument('--num_evals', default=250, type=int, help='Total number of evaluations during search.')
     parser.add_argument('--batch_size', default=128, type=int, help='Batch size for latency measurement calculation.')
     parser.add_argument(
-        '--test_batch_size',
+        '--eval_batch_size',
         default=None,
         type=int,
         help='Batch size used in accuracy evaluation process. Not used for latency measurement. If not set it will default to the same value as `batch_size` parameter.',

@@ -46,7 +46,7 @@ class BootstrapNASRunner:
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
         batch_size: int = 128,
-        test_batch_size: int = 128,
+        eval_batch_size: int = 128,
         device: str = 'cpu',
         metric_eval_fns: dict = None,
     ):
@@ -55,7 +55,7 @@ class BootstrapNASRunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
-        self.test_batch_size = test_batch_size
+        self.eval_batch_size = eval_batch_size
         self.device = device
         self.bootstrapnas_supernetwork = bootstrapnas_supernetwork
         self.dataset_path = dataset_path
@@ -90,10 +90,10 @@ class BootstrapNASRunner:
             log.debug('Using built-in accuracy_top1 metric evaluation function.')
             CIFAR10.PATH = self.dataset_path
 
-            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.test_batch_size)
+            validation_dataloader = CIFAR10.validation_dataloader(batch_size=self.eval_batch_size)
 
             bn_adapt_algo_kwargs = {
-                'data_loader': CIFAR10.train_dataloader(batch_size=self.test_batch_size),
+                'data_loader': CIFAR10.train_dataloader(batch_size=self.eval_batch_size),
                 'num_bn_adaptation_samples': 2000,
                 'device': 'cuda',
             }
