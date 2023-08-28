@@ -1,2 +1,2 @@
-from .random import RandomSearchDistributed
 from .linas import LINASDistributed
+from .random import RandomSearchDistributed

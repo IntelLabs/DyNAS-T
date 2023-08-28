@@ -1,4 +1,3 @@
-
 from dynast.search.evolutionary import (
     EvolutionaryManager,
     EvolutionaryManyObjective,
