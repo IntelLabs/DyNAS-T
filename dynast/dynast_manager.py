@@ -14,7 +14,7 @@
 
 import logging
 import sys
-from typing import List
+from typing import Dict, List
 
 from dynast.search.tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
@@ -63,6 +63,8 @@ class DyNAS:
             seed = kwargs.get('seed', None)
             if seed:
                 kwargs['seed'] = seed + WORLD_RANK
+
+        DyNAS._set_eval_batch_size(kwargs)
 
         log.info('=' * 40)
         log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
@@ -114,3 +116,9 @@ class DyNAS:
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)
             raise NotImplementedError(error_message)
+
+    @staticmethod
+    def _set_eval_batch_size(kwargs: Dict) -> None:
+        """Set eval_batch_size to batch_size if not specified."""
+        if not kwargs.get('eval_batch_size'):
+            kwargs['eval_batch_size'] = kwargs.get('batch_size', 128)

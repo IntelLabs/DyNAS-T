@@ -36,7 +36,8 @@ class NASBaseConfig:
         results_path: str = 'results.csv',
         seed: int = 42,
         population: int = 50,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
@@ -69,6 +70,7 @@ class NASBaseConfig:
         self.seed = seed
         self.population = population
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.verbose = verbose
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
@@ -147,12 +149,14 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_fraction=self.test_fraction,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -161,6 +165,7 @@ class NASBaseConfig:
             )
         elif self.supernet == 'bert_base_sst2':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -174,6 +179,7 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 metric_eval_fns=self.metric_eval_fns,
             )

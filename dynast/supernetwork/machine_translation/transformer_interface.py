@@ -526,7 +526,6 @@ class TransformerLTRunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        input_size: tuple = (1, 3, 224, 224),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = 'cpu',
@@ -544,7 +543,11 @@ class TransformerLTRunner:
         )
 
         times = []
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.dataset_path)
+        lat_mean, lat_std = compute_latency(
+            config=subnet_cfg,
+            dataset_path=self.dataset_path,
+            batch_size=self.batch_size,
+        )
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std

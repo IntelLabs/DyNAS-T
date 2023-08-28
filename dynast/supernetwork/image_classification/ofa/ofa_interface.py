@@ -50,7 +50,8 @@ class OFARunner:
         macs_predictor: Predictor = None,
         latency_predictor: Predictor = None,
         params_predictor: Predictor = None,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -62,6 +63,7 @@ class OFARunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.device = device
         self.test_fraction = test_fraction
         self.dataset_path = dataset_path
@@ -71,7 +73,7 @@ class OFARunner:
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
-            test_batch_size=batch_size,
+            test_batch_size=eval_batch_size,
             n_worker=dataloader_workers,
         )
         self._init_data()
@@ -80,7 +82,7 @@ class OFARunner:
         ImageNet.PATH = self.dataset_path
         if self.dataset_path:
             self.dataloader = ImageNet.validation_dataloader(
-                batch_size=self.batch_size,
+                batch_size=self.eval_batch_size,
                 num_workers=self.dataloader_workers,
                 fraction=self.test_fraction,
             )
@@ -160,7 +162,6 @@ class OFARunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        input_size: tuple = (1, 3, 224, 224),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = None,
@@ -172,11 +173,12 @@ class OFARunner:
             mean latency; std latency
         """
         device = self.device if not device else device
+        input_size: tuple = (self.batch_size, 3, 224, 224)
 
         if not warmup_steps:
-            warmup_steps = auto_steps(input_size[0], is_warmup=True)
+            warmup_steps = auto_steps(self.batch_size, is_warmup=True)
         if not measure_steps:
-            measure_steps = auto_steps(input_size[0])
+            measure_steps = auto_steps(self.batch_size)
 
         model = self.get_subnet(subnet_cfg)
 
@@ -254,9 +256,7 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
                     subnet_sample
                 )
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(
-                    subnet_sample
-                )  # TODO(change batch size!!)
+                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_top1(subnet_sample)
 
