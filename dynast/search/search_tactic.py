@@ -205,6 +205,7 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_fraction=self.test_fraction,
