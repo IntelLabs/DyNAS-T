@@ -16,7 +16,7 @@ import logging
 import sys
 from typing import Dict, List
 
-from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
+from dynast.search.tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
 from dynast.utils.distributed import get_distributed_vars, init_distributed
 

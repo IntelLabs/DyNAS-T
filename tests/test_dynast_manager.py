@@ -15,7 +15,7 @@
 import pytest
 
 from dynast import DyNAS
-from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
+from dynast.search.tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 
 
 def test_dynas_optimization_metrics_unsupported_number():
