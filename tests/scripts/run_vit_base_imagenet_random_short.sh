@@ -8,6 +8,7 @@ time ${RUN_COMMAND} \
         --supernet_ckpt_path ${CHECKPOINT_VIT_BASE_IMAGENET_PATH} \
         --dataset_path  ${DATASET_IMAGENET_PATH} \
         --search_tactic random \
+        --batch_size ${BATCH_SIZE} \
         --population ${SHORT_RANDOM_POPULATION} \
         --test_fraction ${SHORT_RANDOM_IMAGENET_TEST_FRACTION} \
         --seed ${SEED} \

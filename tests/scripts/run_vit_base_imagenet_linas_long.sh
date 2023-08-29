@@ -8,6 +8,7 @@ time ${RUN_COMMAND} \
         --supernet_ckpt_path ${CHECKPOINT_VIT_BASE_IMAGENET_PATH} \
         --dataset_path  ${DATASET_IMAGENET_PATH} \
         --search_tactic linas \
+        --batch_size ${BATCH_SIZE} \
         --population ${LONG_LINAS_POPULATION} \
         --seed ${SEED} \
         --measurements macs accuracy_top1 \
