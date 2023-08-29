@@ -180,8 +180,19 @@ class ViTRunner:
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
-        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.eval_batch_size, fraction=test_fraction)
+        self.test_fraction = test_fraction
+
         self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
+
+        self._init_data()
+
+    def _init_data(self):
+        if self.dataset_path:
+            ImageNet.PATH = self.dataset_path
+            self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.eval_batch_size, fraction=self.test_fraction)
+        else:
+            self.dataloader = None
+            log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_accuracy_imagenet(
         self,
@@ -256,7 +267,7 @@ class ViTRunner:
              Measure steps = {measure_steps}'
         )
 
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, self.eval_batch_size, device=self.device)
+        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, self.batch_size, device=self.device)
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
