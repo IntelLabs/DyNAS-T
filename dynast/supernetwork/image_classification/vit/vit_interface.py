@@ -86,7 +86,7 @@ def compute_val_acc(
 def compute_latency(
     config,
     model,
-    eval_batch_size=4,
+    batch_size=128,
     device: str = 'cpu',
     warmup_steps: int = 10,
     measure_steps: int = 100,
@@ -97,7 +97,7 @@ def compute_latency(
     model.to(device)
     model.set_sample_config(config)
 
-    input_size = (eval_batch_size, 3, IMAGE_SIZE, IMAGE_SIZE)
+    input_size = (batch_size, 3, IMAGE_SIZE, IMAGE_SIZE)
     images = torch.zeros(input_size, dtype=torch.float, device=device)
 
     latencies = []
@@ -169,6 +169,8 @@ class ViTRunner:
         checkpoint_path=None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        warmup_steps: int = 10,
+        measure_steps: int = 100,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -181,6 +183,8 @@ class ViTRunner:
         self.checkpoint_path = checkpoint_path
         self.device = device
         self.test_fraction = test_fraction
+        self.warmup_steps = warmup_steps
+        self.measure_steps = measure_steps
 
         self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
@@ -189,7 +193,9 @@ class ViTRunner:
     def _init_data(self):
         if self.dataset_path:
             ImageNet.PATH = self.dataset_path
-            self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.eval_batch_size, fraction=self.test_fraction)
+            self.eval_dataloader = ImageNet.validation_dataloader(
+                batch_size=self.eval_batch_size, fraction=self.test_fraction
+            )
         else:
             self.dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
@@ -252,8 +258,6 @@ class ViTRunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        warmup_steps: int = 10,
-        measure_steps: int = 100,
     ):
         """Measure Torch model's latency.
         Args:
@@ -263,11 +267,18 @@ class ViTRunner:
         """
 
         logging.info(
-            f'Performing Latency measurements. Warmup = {warmup_steps},\
-             Measure steps = {measure_steps}'
+            f'Performing Latency measurements. Warmup = {self.warmup_steps},\
+             Measure steps = {self.measure_steps}'
         )
 
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, self.batch_size, device=self.device)
+        lat_mean, lat_std = compute_latency(
+            config=subnet_cfg,
+            model=self.supernet_model,
+            batch_size=self.batch_size,
+            device=self.device,
+            warmup_steps=self.warmup_steps,
+            measure_steps=self.measure_steps,
+        )
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
