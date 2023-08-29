@@ -47,7 +47,8 @@ class NASBaseConfig:
         results_path: str = 'results.csv',
         seed: int = 42,
         population: int = 50,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
@@ -80,6 +81,7 @@ class NASBaseConfig:
         self.seed = seed
         self.population = population
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.verbose = verbose
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
@@ -158,12 +160,14 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_fraction=self.test_fraction,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -172,6 +176,7 @@ class NASBaseConfig:
             )
         elif self.supernet == 'bert_base_sst2':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -194,6 +199,7 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 metric_eval_fns=self.metric_eval_fns,
             )
@@ -251,7 +257,8 @@ class LINAS(NASBaseConfig):
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -282,6 +289,7 @@ class LINAS(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
@@ -531,7 +539,8 @@ class Evolutionary(NASBaseConfig):
         dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
@@ -550,6 +559,7 @@ class Evolutionary(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
@@ -668,7 +678,8 @@ class RandomSearch(NASBaseConfig):
         dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
@@ -688,6 +699,7 @@ class RandomSearch(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
@@ -732,7 +744,8 @@ class LINASDistributed(LINAS):
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -753,6 +766,7 @@ class LINASDistributed(LINAS):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
@@ -970,7 +984,8 @@ class RandomSearchDistributed(RandomSearch):
         dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
@@ -992,6 +1007,7 @@ class RandomSearchDistributed(RandomSearch):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
