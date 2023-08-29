@@ -27,7 +27,7 @@ import torchprofile
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
-from dynast.utils.nn import get_parameters, measure_latency, validate_classification
+from dynast.utils.nn import validate_classification
 
 from .vit_supernetwork import SuperViT
 
@@ -93,6 +93,8 @@ def compute_latency(
 ):
     """Measure latency of the ViT-based model."""
 
+    # TODO(macsz) Use built-in methods
+
     model.eval()
     model.to(device)
     model.set_sample_config(config)
@@ -127,6 +129,8 @@ def compute_latency(
 
 def compute_macs(config, model, device: str = 'cpu'):
     """Calculate MACs for ViT-based models."""
+
+    # TODO(macsz) Use built-in methods
 
     model.eval()
     model.to(device)
