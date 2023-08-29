@@ -96,7 +96,7 @@ def main():
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
     parser.add_argument('--results_path', required=True, type=str, help='Path to store search results, csv format')
-    parser.add_argument('--dataset_path', default='/datasets/imagenet-ilsvrc2012', type=str, help='')
+    parser.add_argument('--dataset_path', default=None, type=str, help='')
     parser.add_argument('--supernet_ckpt_path', default=None, type=str, help='Path to supernet checkpoint.')
 
     parser.add_argument(
