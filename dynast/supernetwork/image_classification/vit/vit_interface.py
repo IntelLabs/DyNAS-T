@@ -97,7 +97,8 @@ def compute_latency(
     model.to(device)
     model.set_sample_config(config)
 
-    images = torch.zeros([eval_batch_size, 3, IMAGE_SIZE, IMAGE_SIZE], dtype=torch.float, device=device)
+    input_size = (eval_batch_size, 3, IMAGE_SIZE, IMAGE_SIZE)
+    images = torch.zeros(input_size, dtype=torch.float, device=device)
 
     latencies = []
 
