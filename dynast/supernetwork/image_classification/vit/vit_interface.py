@@ -164,6 +164,7 @@ class ViTRunner:
         latency_predictor=None,
         params_predictor=None,
         batch_size: int = 16,
+        eval_batch_size: int = 128,
         checkpoint_path=None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
@@ -174,10 +175,11 @@ class ViTRunner:
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
-        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.batch_size, fraction=test_fraction)
+        self.eval_dataloader = ImageNet.validation_dataloader(batch_size=self.eval_batch_size, fraction=test_fraction)
         self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
     def estimate_accuracy_imagenet(
@@ -238,7 +240,6 @@ class ViTRunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        eval_batch_size=4,
         warmup_steps: int = 10,
         measure_steps: int = 100,
     ):
@@ -254,7 +255,7 @@ class ViTRunner:
              Measure steps = {measure_steps}'
         )
 
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, eval_batch_size, device=self.device)
+        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, self.eval_batch_size, device=self.device)
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std

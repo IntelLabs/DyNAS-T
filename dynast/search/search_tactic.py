@@ -189,6 +189,7 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
                 test_fraction=self.test_fraction,
