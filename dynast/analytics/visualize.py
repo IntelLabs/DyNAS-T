@@ -545,7 +545,7 @@ if __name__ == '__main__':
     # plot_hv()
 
     plot_search_progression(
-        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/latency_stability/dynast_mp_ofaresnet50_linas_sprh9480_latency.csv'
+        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_linas_sprh9480.csv'
     )
 
 
