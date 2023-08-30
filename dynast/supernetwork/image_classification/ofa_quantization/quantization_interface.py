@@ -198,7 +198,7 @@ class QuantizedOFARunner:
         self.run_config.data_provider.assign_active_img_size(subnet_cfg['r'][0])
 
         loss, top1, top5 = validate_classification(
-            model=subnet,
+            model=subnet_qt,
             data_loader=self.dataloader,
             device=self.device,
         )
