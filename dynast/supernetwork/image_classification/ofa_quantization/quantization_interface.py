@@ -268,10 +268,11 @@ class QuantizedOFARunner:
         if not measure_steps:
             measure_steps = auto_steps(self.batch_size)
 
-        model = self.get_subnet(subnet_cfg)
+        subnet = self.get_subnet(subnet_cfg)
+        subnet_qt = self.quantize_and_calibrate(subnet, subnet_cfg)
 
         latency_mean, latency_std = measure_latency(
-            model=model,
+            model=subnet_qt,
             input_size=input_size,
             warmup_steps=warmup_steps,
             measure_steps=measure_steps,
