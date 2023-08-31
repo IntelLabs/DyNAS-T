@@ -354,7 +354,7 @@ class EvaluationInterfaceQuantizedOFAResNet50(EvaluationInterface):
             if 'params' in self.measurements:
                 individual_results['params'] = self.evaluator.validate_params(subnet_sample)
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
+                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample, measure_steps=100)  # For quantization latency stability it's better to measure over more steps
 
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_quantized_top1(subnet_sample)
