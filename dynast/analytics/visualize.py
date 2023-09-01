@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import itertools
 import math
 import os
+from dataclasses import dataclass
 from typing import Dict, List
 
 import alphashape
@@ -33,6 +33,7 @@ from shapely.ops import cascaded_union, polygonize
 from sklearn.preprocessing import MinMaxScaler
 
 from dynast.utils import log
+
 
 @dataclass
 class ReferencePoint(object):
@@ -567,9 +568,21 @@ if __name__ == '__main__':
     plot_search_progression(
         results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_quant_linas_sprh9480.csv',
         reference_points=[
-            ReferencePoint('INC INT8 ResNet50', {'latency': 69.805, 'accuracy_top1': 75.921}, marker='*', color='tab:orange'),
-            ReferencePoint('INC INT8 ResNet101', {'latency': 141.542, 'accuracy_top1': 77.283}, marker='*', color='tab:red'),
-            ReferencePoint('INC INT8 ResNet152', {'latency': 210.97, 'accuracy_top1': 78.233}, marker='*', color='tab:brown'),
+            ReferencePoint(
+                'INC INT8 ResNet50',
+                {'latency': 69.805, 'accuracy_top1': 75.921},
+                color='tab:orange',
+            ),
+            ReferencePoint(
+                'INC INT8 ResNet101',
+                {'latency': 141.542, 'accuracy_top1': 77.283},
+                color='tab:red',
+            ),
+            ReferencePoint(
+                'INC INT8 ResNet152',
+                {'latency': 210.97, 'accuracy_top1': 78.233},
+                color='tab:brown',
+            ),
         ],
     )
 
