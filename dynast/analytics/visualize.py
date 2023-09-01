@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 import itertools
 import math
 import os
-from typing import List
+from typing import Dict, List
 
 import alphashape
 import matplotlib.pyplot as plt
@@ -32,6 +33,14 @@ from shapely.ops import cascaded_union, polygonize
 from sklearn.preprocessing import MinMaxScaler
 
 from dynast.utils import log
+
+@dataclass
+class ReferencePoint(object):
+    label: str
+    metrics: Dict[str, float]
+    marker: str = '*'
+    color: str = 'red'
+
 
 PLOT_HYPERVOLUME = True
 NORMALIZE = False
@@ -158,6 +167,7 @@ def plot_search_progression(
     evals_limit: int = None,
     random_results_path: str = None,
     target_metrics: List[str] = ['latency', 'accuracy_top1'],
+    reference_points: List[ReferencePoint] = [],
 ) -> None:
     df = pd.read_csv(results_path)
 
@@ -212,11 +222,6 @@ def plot_search_progression(
         s=10,
     )
 
-    ax.set_title('DyNAS-T Search Results \n{}'.format(results_path.split('.')[0]))
-    ax.set_xlabel(target_metrics[0], fontsize=13)
-    ax.set_ylabel(target_metrics[1], fontsize=13)
-    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
-    ax.grid(True, alpha=0.3)
     # ax.set_ylim(72,77.5)
 
     df_conc_front = frontier_builder(df, optimization_metrics=[target_metrics[0], target_metrics[1]])
@@ -228,11 +233,26 @@ def plot_search_progression(
         label='DyNAS-T Pareto front',
     )
 
+    for reference_point in reference_points:
+        ax.scatter(
+            reference_point.metrics[target_metrics[0]],
+            reference_point.metrics[target_metrics[1]],
+            color=reference_point.color,
+            marker=reference_point.marker,
+            label=reference_point.label,
+        )
+
     # Eval Count bar
     norm = plt.Normalize(0, len(df))
     sm = ScalarMappable(norm=norm, cmap=cm)
     cbar = fig.colorbar(sm, ax=ax, shrink=0.85)
     cbar.ax.set_title("         Evaluation\n  Count", fontsize=8)
+
+    ax.set_title('DyNAS-T Search Results \n{}'.format(results_path.split('.')[0]))
+    ax.set_xlabel(target_metrics[0], fontsize=13)
+    ax.set_ylabel(target_metrics[1], fontsize=13)
+    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
+    ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=2)
     save_path = '{}.png'.format(results_path.split('.')[0])
@@ -545,7 +565,12 @@ if __name__ == '__main__':
     # plot_hv()
 
     plot_search_progression(
-        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_linas_sprh9480.csv'
+        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_quant_linas_sprh9480.csv',
+        reference_points=[
+            ReferencePoint('INC INT8 ResNet50', {'latency': 69.805, 'accuracy_top1': 75.921}, marker='*', color='tab:orange'),
+            ReferencePoint('INC INT8 ResNet101', {'latency': 141.542, 'accuracy_top1': 77.283}, marker='*', color='tab:red'),
+            ReferencePoint('INC INT8 ResNet152', {'latency': 210.97, 'accuracy_top1': 78.233}, marker='*', color='tab:brown'),
+        ],
     )
 
 
