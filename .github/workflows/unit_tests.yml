@@ -64,6 +64,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements_test.txt
           pip install -e .[all]
+          git clone https://github.com/openvinotoolkit/nncf.git /tmp/nncf
+          cd /tmp/nncf && git checkout e0bc50359992a3d73d4ed3e6396c8b4f1d4ae631 && pip install -e .
       - name: Test with pytest
         run: |
           python -m pytest -v --cov dynast/ --cov-report html --cov-report term
