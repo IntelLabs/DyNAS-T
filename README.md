@@ -176,7 +176,7 @@ An example of the search results for a Multi-Objective search using both LINAS+N
 
 ### Quantization-aware Search
 
-This approach allows you to run search on your FP32 super-network and find optimal model configurations w.r.t. both architecture and Post-Training Quantization policy. DyNAS-T's implementation uses [Intel® Neural Compressor](https://github.com/intel/neural-compressor) as an underlaying backend for quantyzing models. This search approach is specific to the CPU, and so `--device=cpu` has to be used.
+This approach allows you to run search on your FP32 super-network and find optimal model configurations w.r.t. both architecture and Post-Training Quantization policy. DyNAS-T's implementation uses [Intel® Neural Compressor](https://github.com/intel/neural-compressor) as an underlying backend for quantizing models. This search approach is specific to the CPU, and so `--device=cpu` has to be used.
 
 *Example 4.* Quantization-aware search on OFA ResNet50 super-network.
 
