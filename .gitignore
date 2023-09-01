@@ -126,3 +126,5 @@ data/
 runs/
 *.png
 
+# Neural Compressor
+nc_workspace/

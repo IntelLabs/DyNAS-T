@@ -68,6 +68,7 @@ setup(
         'all': get_dependencies('all'),
         'test': get_dependencies('test'),
         'bootstrapnas': get_dependencies('bootstrapnas'),
+        'neural_compressor': get_dependencies('neural_compressor'),
     },
     entry_points={
         'console_scripts': [

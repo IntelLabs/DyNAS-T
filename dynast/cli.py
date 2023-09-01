@@ -58,6 +58,7 @@ def main():
             'ofa_proxyless_d234_e346_k357_w1.3',
             'transformer_lt_wmt_en_de',
             'bert_base_sst2',
+            'inc_quantization_ofa_resnet50',
         ],
     )
     parser.add_argument('--seed', default=42, type=int, help='Random Seed')
@@ -113,8 +114,16 @@ def main():
     )
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information.')
 
+    mp_parser = parser.add_argument_group('Mixed Precision search options')
+    mp_parser.add_argument(
+        '--mp_calibration_samples',
+        default=100,
+        type=int,
+        help='How many samples to use to calibrate the mixed precision model.',
+    )
+
     dist_parser = parser.add_argument_group('Distributed search options')
-    parser.add_argument(
+    dist_parser.add_argument(
         '--distributed',
         action='store_true',
         help='If set, a distributed implementation of the search algorithm will be used.',
