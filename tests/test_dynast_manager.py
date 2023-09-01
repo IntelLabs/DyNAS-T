@@ -124,3 +124,32 @@ def test_dynas_unsupported_supernet():
             results_path='test',
             dataset_path='test',
         )
+
+
+def test_dynas_eval_batch_size():
+    input_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+    }
+    expected_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 32,
+    }
+    DyNAS._set_eval_batch_size(input_kwargs)
+
+    assert input_kwargs == expected_kwargs
+
+    input_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 64,
+    }
+    expected_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 64,
+    }
+    DyNAS._set_eval_batch_size(input_kwargs)
+
+    assert input_kwargs == expected_kwargs

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import time
 from typing import List, Tuple, Union
 
@@ -114,8 +113,6 @@ def get_parameters(
     model: nn.Module,
     device: str = 'cpu',
 ) -> int:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -127,8 +124,6 @@ def get_macs(
     input_size: tuple = (1, 3, 224, 224),
     device: str = 'cpu',
 ) -> float:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
 
@@ -166,14 +161,6 @@ def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `mo
     model.eval()
 
 
-def rm_bn_from_net(
-    net: nn.Module,
-) -> None:
-    for m in net.modules():
-        if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
-            m.forward = lambda x: x
-
-
 @torch.no_grad()
 def measure_latency(
     model: nn.Module,
@@ -195,8 +182,6 @@ def measure_latency(
     inputs = torch.randn(*input_size, device=device)
     model = model.eval()
 
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
 
     if 'cuda' in str(device):

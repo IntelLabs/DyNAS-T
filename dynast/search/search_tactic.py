@@ -23,12 +23,18 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
+from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.utils import log, split_list
+from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
+
+QuantizedOFARunner = LazyImport(
+    'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
+)
 
 
 class NASBaseConfig:
@@ -36,7 +42,7 @@ class NASBaseConfig:
 
     def __init__(
         self,
-        dataset_path: str,
+        dataset_path: str = None,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
         measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
@@ -44,13 +50,16 @@ class NASBaseConfig:
         results_path: str = 'results.csv',
         seed: int = 42,
         population: int = 50,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -64,6 +73,7 @@ class NASBaseConfig:
         - population - (int) Population size for each iteration.
         - seed - (int) Random seed.
         - batch_size - (int) Batch size for latency measurement, has a significant impact on latency.
+        - mp_calibration_samples - (int) How many samples to use to calibrate the mixed precision model.
         """
         # TODO(macsz) Update docstring above.
 
@@ -76,12 +86,17 @@ class NASBaseConfig:
         self.seed = seed
         self.population = population
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.verbose = verbose
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
+        self.mp_calibration_samples = mp_calibration_samples
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
+        self.metric_eval_fns = metric_eval_fns
+
+        self.bootstrapnas_supernetwork = kwargs.get('bootstrapnas_supernetwork', None)
 
         self.verify_measurement_types()
         self.format_csv_header()
@@ -134,9 +149,11 @@ class NASBaseConfig:
 
     def init_supernet(self):
         # Initializes the super-network manager
-        self.supernet_manager = SUPERNET_ENCODING[self.supernet](
-            param_dict=SUPERNET_PARAMETERS[self.supernet], seed=self.seed
-        )
+        if self.bootstrapnas_supernetwork:
+            param_dict = self.bootstrapnas_supernetwork.get_search_space()
+        else:
+            param_dict = SUPERNET_PARAMETERS[self.supernet]
+        self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
 
     def _init_search(self):
         if self.supernet in [
@@ -149,12 +166,14 @@ class NASBaseConfig:
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
                 device=self.device,
                 dataloader_workers=self.dataloader_workers,
                 test_fraction=self.test_fraction,
             )
         elif self.supernet == 'transformer_lt_wmt_en_de':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = TransformerLTRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
@@ -163,12 +182,34 @@ class NASBaseConfig:
             )
         elif self.supernet == 'bert_base_sst2':
             # TODO(macsz) Add `test_fraction`
+            # TODO(macsz) Add `eval_batch_size`
             self.runner_validate = BertSST2Runner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
+            )
+        elif 'bootstrapnas' in self.supernet:
+            self.runner_validate = BootstrapNASRunner(
+                bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                device=self.device,
+                metric_eval_fns=self.metric_eval_fns,
+            )
+        elif self.supernet == 'inc_quantization_ofa_resnet50':
+            self.runner_validate = QuantizedOFARunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                device=self.device,
+                dataloader_workers=self.dataloader_workers,
+                test_fraction=self.test_fraction,
+                mp_calibration_samples=self.mp_calibration_samples,
             )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
@@ -186,6 +227,25 @@ class NASBaseConfig:
         # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
+    def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
+        """Returns the best sub-networks.
+
+        Number of returned networks is controlled by the `limit` parameter. If it's not set, then
+        `self.population` is used instead.
+        """
+        limit = self.population if limit is None else limit
+        df = pd.read_csv(self.results_path).tail(limit)
+
+        if self.csv_header is not None:
+            df.columns = self.csv_header
+
+        if sort_by is not None:
+            df = df.sort_values(by=sort_by, ascending=ascending)
+
+        if 'bootstrapnas' in self.supernet:
+            df['Sub-network'] = df['Sub-network'].apply(BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas)
+        return df
+
 
 class LINAS(NASBaseConfig):
     """The LINAS algorithm is a bi-objective optimization approach that explores the sub-networks
@@ -195,21 +255,24 @@ class LINAS(NASBaseConfig):
 
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         """Params:
@@ -235,12 +298,16 @@ class LINAS(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
+            **kwargs,
         )
 
     def train_predictors(self, results_path: str = None):
@@ -334,6 +401,33 @@ class LINAS(NASBaseConfig):
                     device=self.device,
                 )
 
+            elif self.supernet == 'inc_quantization_ofa_resnet50':
+                runner_predict = QuantizedOFARunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    test_fraction=self.test_fraction,
+                )
+
+            elif 'bootstrapnas' in self.supernet:
+                runner_predict = BootstrapNASRunner(
+                    bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                )
+            else:
+                raise NotImplementedError
             # Setup validation interface
             prediction_interface = EVALUATION_INTERFACE[self.supernet](
                 evaluator=runner_predict,
@@ -438,26 +532,32 @@ class LINAS(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class Evolutionary(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path=None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -472,12 +572,15 @@ class Evolutionary(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
@@ -570,28 +673,35 @@ class Evolutionary(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class RandomSearch(NASBaseConfig):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         super().__init__(
@@ -604,12 +714,16 @@ class RandomSearch(NASBaseConfig):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
+            **kwargs,
         )
 
     def search(self):
@@ -625,27 +739,33 @@ class RandomSearch(NASBaseConfig):
 
         output = list()
         for individual in latest_population:
-            output.append(self.supernet_manager.translate2param(individual))
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
         return output
 
 
 class LINASDistributed(LINAS):
     def __init__(
         self,
-        dataset_path: str,
         supernet: str,
         optimization_metrics: list,
         measurements: list,
         num_evals: int,
         results_path: str,
+        dataset_path: str = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -663,11 +783,13 @@ class LINASDistributed(LINAS):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 
@@ -872,19 +994,21 @@ class LINASDistributed(LINAS):
 class RandomSearchDistributed(RandomSearch):
     def __init__(
         self,
-        dataset_path,
         supernet,
         optimization_metrics,
         measurements,
         num_evals,
         results_path,
+        dataset_path: str = None,
         seed=42,
         population=50,
-        batch_size=1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -902,10 +1026,12 @@ class RandomSearchDistributed(RandomSearch):
             seed=seed,
             population=population,
             batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 

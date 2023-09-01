@@ -13,17 +13,19 @@
 # limitations under the License.
 # import datetime
 
+import os
+
 from setuptools import find_packages, setup
 
 
 def get_version():
     # TODO(macsz) Replace with __version__
-    return '1.3.0'
+    return '1.4.0'
 
 
-def get_dependencies():
+def _read_requirements(fn):
     deps = []
-    with open('requirements.txt') as f:
+    with open(fn) as f:
         lines = f.readlines()
         for line in lines:
             line = line.strip()
@@ -31,13 +33,22 @@ def get_dependencies():
     return deps
 
 
-def get_test_dependencies():
+def get_dependencies(feature=None):
     deps = []
-    with open('requirements_test.txt') as f:
-        lines = f.readlines()
-        for line in lines:
-            line = line.strip()
-            deps.append(line)
+
+    if feature is None:
+        fns = ['requirements.txt']
+    elif feature == 'all':
+        fns = [f for f in os.listdir('.') if f.startswith('requirements') and f.endswith('.txt')]
+    else:
+        fns = ['requirements.txt', f'requirements_{feature}.txt']
+
+    deps = []
+
+    for fn in fns:
+        deps.extend(_read_requirements(fn))
+
+    deps = list(sorted(set(deps)))
     return deps
 
 
@@ -54,8 +65,11 @@ setup(
     packages=find_packages(),
     install_requires=get_dependencies(),
     extras_require={
-        'test': get_test_dependencies(),
+        'all': get_dependencies('all'),
+        'test': get_dependencies('test'),
         'plot': ['matplotlib', 'shapely', 'alphashape', 'descartes'],
+        'bootstrapnas': get_dependencies('bootstrapnas'),
+        'neural_compressor': get_dependencies('neural_compressor'),
     },
     entry_points={
         'console_scripts': [

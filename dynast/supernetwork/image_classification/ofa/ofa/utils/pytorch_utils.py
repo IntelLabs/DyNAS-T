@@ -24,7 +24,7 @@ import time
 import torch
 import torch.nn as nn
 
-from dynast.utils.nn import get_macs, rm_bn_from_net
+from dynast.utils.nn import get_macs
 
 __all__ = [
     "mix_images",
@@ -103,9 +103,6 @@ def measure_net_latency(net, l_type="gpu8", fast=True, input_shape=(3, 224, 224)
     # TODO(macsz) Probably can drop.
     if isinstance(net, nn.DataParallel):
         net = net.module
-
-    # remove bn from graph
-    rm_bn_from_net(net)
 
     # return `ms`
     if "gpu" in l_type:

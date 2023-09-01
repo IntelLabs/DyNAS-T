@@ -122,4 +122,9 @@ venv.bak/
 *.meta
 cifar10/
 coverity_tmp/
+data/
+runs/
 *.png
+
+# Neural Compressor
+nc_workspace/
