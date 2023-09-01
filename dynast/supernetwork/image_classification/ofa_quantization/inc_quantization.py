@@ -243,10 +243,7 @@ def inc_quantize(model_fp, qconfig_dict, data_loader=None, mp_calibration_sample
         quantizer = Quantization(temp_yaml_name)
         quantizer.model = copy.deepcopy(model_fp)
         quantizer.calib_dataloader = data_loader
-        # quantizer.eval_func = lambda model: validate_classification(model, data_loader=data_loader, test_size=mp_calibration_samples//data_loader.batch_size)[1]
         model_qt = quantizer.fit()
-
-        # calibrate(model_qt, train_dataloader=data_loader, num_samples=mp_calibration_samples, device='cpu')
 
         os.remove(temp_yaml_name)
     except Exception as e:
