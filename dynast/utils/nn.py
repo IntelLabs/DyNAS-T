@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import time
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -131,34 +131,6 @@ def get_macs(
     macs = torchprofile.profile_macs(model, inputs)
 
     return macs
-
-
-@measure_time
-def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `model_train` and a new method for calibration should be added
-    model: nn.Module,
-    num_samples: int,
-    train_dataloader: torch.utils.data.DataLoader,
-    device: Union[str, torch.device] = 'cpu',
-) -> None:
-    model.train()
-    model.to(device)
-
-    batch_size = train_dataloader.batch_size
-
-    if num_samples / batch_size > len(train_dataloader):
-        log.warn("BN set stats: num of samples exceed the samples in loader. Using full loader")
-    for i, (images, _) in enumerate(train_dataloader):
-        log.debug("Calibrating BN statistics #{}/{}".format(i, num_samples // batch_size + 1))
-        images = images.to(device)
-        model(images)
-        if i > num_samples / batch_size:
-            log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
-            break
-
-    if 'cuda' in str(device):
-        log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated() // 1024 // 1024))
-
-    model.eval()
 
 
 @torch.no_grad()
