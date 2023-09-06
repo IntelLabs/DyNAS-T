@@ -14,7 +14,7 @@
 
 
 from dynast.utils.nn import AverageMeter, get_macs, get_parameters, measure_latency, validate_classification
-from tests import TinyModel, get_random_dataloader
+from tests.helpers import TinyModel, get_random_dataloader
 
 
 def test_average_meter():
