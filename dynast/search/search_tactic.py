@@ -30,8 +30,12 @@ from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.utils import log, split_list
+from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
+
+QuantizedOFARunner = LazyImport(
+    'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
+)
 
 
 class NASBaseConfig:
@@ -54,6 +58,7 @@ class NASBaseConfig:
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -69,6 +74,7 @@ class NASBaseConfig:
         - population - (int) Population size for each iteration.
         - seed - (int) Random seed.
         - batch_size - (int) Batch size for latency measurement, has a significant impact on latency.
+        - mp_calibration_samples - (int) How many samples to use to calibrate the mixed precision model.
         """
         # TODO(macsz) Update docstring above.
 
@@ -86,6 +92,7 @@ class NASBaseConfig:
         self.search_algo = search_algo
         self.supernet_ckpt_path = supernet_ckpt_path
         self.device = device
+        self.mp_calibration_samples = mp_calibration_samples
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
         self.metric_eval_fns = metric_eval_fns
@@ -204,6 +211,17 @@ class NASBaseConfig:
                 device=self.device,
                 metric_eval_fns=self.metric_eval_fns,
             )
+        elif self.supernet == 'inc_quantization_ofa_resnet50':
+            self.runner_validate = QuantizedOFARunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                device=self.device,
+                dataloader_workers=self.dataloader_workers,
+                test_fraction=self.test_fraction,
+                mp_calibration_samples=self.mp_calibration_samples,
+            )
         else:
             log.error(f'Missing interface and runner for supernet: {self.supernet}!')
             raise NotImplementedError
@@ -263,6 +281,7 @@ class LINAS(NASBaseConfig):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -296,6 +315,7 @@ class LINAS(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
             **kwargs,
@@ -403,6 +423,20 @@ class LINAS(NASBaseConfig):
                     batch_size=self.batch_size,
                     device=self.device,
                 )
+
+            elif self.supernet == 'inc_quantization_ofa_resnet50':
+                runner_predict = QuantizedOFARunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    test_fraction=self.test_fraction,
+                )
+
             elif 'bootstrapnas' in self.supernet:
                 runner_predict = BootstrapNASRunner(
                     bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
@@ -546,6 +580,7 @@ class Evolutionary(NASBaseConfig):
         search_algo='nsga2',
         supernet_ckpt_path=None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         **kwargs,
@@ -566,6 +601,7 @@ class Evolutionary(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             **kwargs,
         )
@@ -686,6 +722,7 @@ class RandomSearch(NASBaseConfig):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
         **kwargs,
@@ -706,6 +743,7 @@ class RandomSearch(NASBaseConfig):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
             **kwargs,
@@ -750,6 +788,7 @@ class LINASDistributed(LINAS):
         supernet_ckpt_path: str = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -773,6 +812,7 @@ class LINASDistributed(LINAS):
             supernet_ckpt_path=supernet_ckpt_path,
             device=device,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 
@@ -991,6 +1031,7 @@ class RandomSearchDistributed(RandomSearch):
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
         test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         **kwargs,
     ):
@@ -1013,6 +1054,7 @@ class RandomSearchDistributed(RandomSearch):
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
             test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
         )
 

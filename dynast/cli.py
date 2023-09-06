@@ -59,6 +59,7 @@ def main():
             'transformer_lt_wmt_en_de',
             'bert_base_sst2',
             'vit_base_imagenet',
+            'inc_quantization_ofa_resnet50',
         ],
     )
     parser.add_argument('--seed', default=42, type=int, help='Random Seed')
@@ -97,7 +98,7 @@ def main():
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
     parser.add_argument('--results_path', required=True, type=str, help='Path to store search results, csv format')
-    parser.add_argument('--dataset_path', default='/datasets/imagenet-ilsvrc2012', type=str, help='')
+    parser.add_argument('--dataset_path', default=None, type=str, help='')
     parser.add_argument('--supernet_ckpt_path', default=None, type=str, help='Path to supernet checkpoint.')
 
     parser.add_argument(
@@ -114,8 +115,16 @@ def main():
     )
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more information.')
 
+    mp_parser = parser.add_argument_group('Mixed Precision search options')
+    mp_parser.add_argument(
+        '--mp_calibration_samples',
+        default=100,
+        type=int,
+        help='How many samples to use to calibrate the mixed precision model.',
+    )
+
     dist_parser = parser.add_argument_group('Distributed search options')
-    parser.add_argument(
+    dist_parser.add_argument(
         '--distributed',
         action='store_true',
         help='If set, a distributed implementation of the search algorithm will be used.',
