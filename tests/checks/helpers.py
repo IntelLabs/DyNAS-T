@@ -24,6 +24,19 @@ IGNORE_DIRS = [
     '.idea',
     '.venv',
     'build',
+    'nc_workspace',
+    'docs',
+    '__pycache__',
+    '.pytest_cache',
+    'dynast.egg-info',
+    '.torch',
+    '.github',
+    'notebooks',
+    'models',
+    'out',
+    'results',
+    'tmp',
+    'scripts',
 ]
 
 
@@ -40,3 +53,30 @@ def get_python_files(root_dir, exclude_files=None):
             files.extend(glob(os.path.join(d, pattern)))
 
     return list(sorted(set(files) - set(exclude_files)))
+
+
+def get_packages_paths(root_dir, exclude_files=None):
+    if not exclude_files:
+        exclude_files = []
+
+    subdirs = []
+    dirs = list(os.walk(root_dir))[1:]  # [1:] to exclude DyNAS-T's root dir
+    for x in dirs:
+        subdir = x[0]
+        is_ok = True
+        for ignored_dir in IGNORE_DIRS:
+            if ignored_dir in subdir or f'./{ignored_dir}' in subdir:
+                is_ok = False
+        for ignored_dir in exclude_files:
+            if ignored_dir in subdir or f'./{ignored_dir}' in subdir:
+                is_ok = False
+
+        # Check if subdir actually has any python files inside (or if there are subdirs)
+        pys = [tmp_path for tmp_path in os.listdir(subdir) if tmp_path.endswith('.py') or os.path.isdir(tmp_path)]
+        if not pys:
+            continue
+
+        if is_ok:
+            subdirs.append(subdir)
+
+    return subdirs
