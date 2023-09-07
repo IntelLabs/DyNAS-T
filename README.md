@@ -27,10 +27,10 @@ The following number of optimization algorithms are supported by DyNAS-T in both
 
 | 1 Objective<br/>(Single-Objective) | 2 Objectives<br/>(Multi-Objective) | 3 Objectives<br/>(Many-Objective) |
 |------------------|-----------------|----------------|
-| GA* `'ga'`   | NSGA-II* `'nsga2'` | UNSGA-II* `'unsga3'`     |
+| GA* `'ga'`   | NSGA-II\* `'nsga2'` | UNSGA-II\* `'unsga3'`     |
 | CMA-ES `'cmaes'` | AGE-MOEA `'age'` | CTAEA `'ctaea'`         |
 |        |          | MOEAD `'moead'`          |
-*Recommended for stability of search results
+\*Recommended for stability of search results
 
 ## Super-networks
 
