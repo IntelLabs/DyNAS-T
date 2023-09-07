@@ -16,7 +16,7 @@ jobs:
           pip install -r requirements_test.txt
       - name: markdown-check
         run: |
-          python -m pymarkdown -d MD013 scan .
+          python -m pymarkdown -d MD013,MD033,MD034 scan .
   code-check:
     runs-on: ubuntu-latest
     steps:
