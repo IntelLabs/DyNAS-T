@@ -20,7 +20,7 @@ from setuptools import find_packages, setup
 
 def get_version():
     # TODO(macsz) Replace with __version__
-    return '1.4.0'
+    return '1.5.1'
 
 
 def _read_requirements(fn):
@@ -47,6 +47,19 @@ def get_dependencies(feature=None):
 
     for fn in fns:
         deps.extend(_read_requirements(fn))
+
+    # TODO(macsz) At the moment, PyPi will produce an error if you attempt to install NNCF from GitHub. This is because
+    # the necessary features have not yet been included in any released versions of NNCF, so it must be removed from
+    # this list and installed manually by the user.
+    # For now, to install NNCF, use the following steps:
+    # ```
+    # git clone https://github.com/openvinotoolkit/nncf.git
+    # cd nncf
+    # git checkout e0bc50359992a3d73d4ed3e6396c8b4f1d4ae631
+    # pip install -e .
+    # ```
+    # Once version 2.6 of NNCF is released, the following line can be deleted:
+    deps = [d for d in deps if 'nncf' not in d]
 
     deps = list(sorted(set(deps)))
     return deps
