@@ -3,7 +3,7 @@ flake8-html
 flake8
 isort
 mypy
-pymarkdownlnt
+pymarkdownlnt; python_version >= '3.8'
 pytest-cov
 pytest
 tox
