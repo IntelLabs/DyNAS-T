@@ -3,6 +3,7 @@ flake8-html
 flake8
 isort
 mypy
+pymarkdownlnt
 pytest-cov
 pytest
 tox
