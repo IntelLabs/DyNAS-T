@@ -26,6 +26,7 @@ from dynast.search.evolutionary import (
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
+from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
@@ -189,6 +190,16 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
+            )
+        elif self.supernet == 'vit_base_imagenet':
+            self.runner_validate = ViTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+                test_fraction=self.test_fraction,
             )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
@@ -398,6 +409,18 @@ class LINAS(NASBaseConfig):
                     acc_predictor=self.predictor_dict['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+            elif self.supernet == 'vit_base_imagenet':
+                runner_predict = ViTRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
                     device=self.device,
                 )
 
