@@ -28,13 +28,7 @@ Please note: the `linter.sh` script is also integrated into our Continuous Integ
 
 By adhering to these guidelines, you help us maintain a clean and consistent codebase. We appreciate your understanding and effort in this regard.
 
-> TL;DR: You can run automated linting and checks with:
->
-> ```bash
-> ./linter.sh
-> ```
-> It's advised to run this script before every `git commit`.
-
+> TL;DR: You can run automated linting and checks with: `./linter.sh`. It's advised to run this script before every `git commit`.
 
 ## Testing
 
