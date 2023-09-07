@@ -564,27 +564,31 @@ if __name__ == '__main__':
         plot_search_progression(results_path='bert_sst2_nsga2.csv')  # , random_results_path='bert_sst2_random.csv')
         plot_search_progression(results_path='bert_sst2_random.csv')
     # plot_hv()
-
-    plot_search_progression(
-        results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_quant_linas_sprh9480.csv',
-        reference_points=[
-            ReferencePoint(
-                'INC INT8 ResNet50',
-                {'latency': 69.805, 'accuracy_top1': 75.921},
-                color='tab:orange',
-            ),
-            ReferencePoint(
-                'INC INT8 ResNet101',
-                {'latency': 141.542, 'accuracy_top1': 77.283},
-                color='tab:red',
-            ),
-            ReferencePoint(
-                'INC INT8 ResNet152',
-                {'latency': 210.97, 'accuracy_top1': 78.233},
-                color='tab:brown',
-            ),
-        ],
-    )
+    if False:
+        plot_search_progression(
+            results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_ofaresnet50_quant_linas_sprh9480.csv',
+            reference_points=[
+                ReferencePoint(
+                    'INC INT8 ResNet50',
+                    {'latency': 69.805, 'accuracy_top1': 75.921},
+                    color='tab:orange',
+                ),
+                ReferencePoint(
+                    'INC INT8 ResNet101',
+                    {'latency': 141.542, 'accuracy_top1': 77.283},
+                    color='tab:red',
+                ),
+                ReferencePoint(
+                    'INC INT8 ResNet152',
+                    {'latency': 210.97, 'accuracy_top1': 78.233},
+                    color='tab:brown',
+                ),
+            ],
+        )
+    if True:
+        plot_search_progression(
+            results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_vit_linas_a100.csv'
+        )
 
 
 # correlation()
