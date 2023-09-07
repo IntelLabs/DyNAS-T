@@ -8,6 +8,8 @@ DATASET_CIFAR10_PATH="/tmp/cifar10/"
 DEVICE="cpu"
 BATCH_SIZE=128
 
+CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
+
 
 ########################################################################################################
 # SHORT runs config. Shoud use random search tactic to allow for a very limited number of evaluations. #
