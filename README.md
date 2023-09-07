@@ -40,7 +40,7 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 |OFA MobileNetV3-w1.0 | `ofa_mbv3_d234_e346_k357_w1.0` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |OFA MobileNetV3-w1.2 | `ofa_mbv3_d234_e346_k357_w1.2` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |OFA ResNet50 | `ofa_resnet50` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
-|Quantization-aware OFA ResNet50 | inc_quantization_ofa_resnet50 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `model_size`, `params`, `latency` |
+|Quantization-aware OFA ResNet50 | `inc_quantization_ofa_resnet50` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `model_size`, `params`, `latency` |
 |OFA ProxylessNAS | `ofa_proxyless_d234_e346_k357_w1.3` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 |TransformerLT | `transformer_lt_wmt_en_de` | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
 |BERT-SST2 | `bert_base_sst2` | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
