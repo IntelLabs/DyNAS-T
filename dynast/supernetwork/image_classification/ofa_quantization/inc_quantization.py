@@ -181,17 +181,6 @@ def inc_qconfig_dict(
 
     qconfig_dict = default_policy()
 
-    # print(
-    #     q_weights_bit,
-    #     q_activations_bit,
-    #     q_weights_mode,
-    #     q_activations_mode,
-    #     q_weights_granularity,
-    #     q_activations_granularity,
-    #     regex_module_names,
-    # )
-    # exit()
-
     if regex_module_names is not None:
         assert (
             len(regex_module_names)
