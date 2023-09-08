@@ -48,8 +48,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='linas',
             num_evals=1,
             results_path='test',
@@ -61,8 +61,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='evolutionary',
             num_evals=1,
             results_path='test',
@@ -74,8 +74,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='random',
             num_evals=1,
             results_path='test',
@@ -87,8 +87,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='linas',
             distributed=True,
             num_evals=1,
@@ -101,8 +101,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='random',
             distributed=True,
             num_evals=1,
