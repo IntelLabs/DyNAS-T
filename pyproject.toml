@@ -8,6 +8,7 @@ include = '\.pyi?$'
 
 [tool.mypy]
 python_version = '3.7'
+exclude = ['venv', '.venv', 'build', 'dist']
 files = [
     'dynast',
     'tests',

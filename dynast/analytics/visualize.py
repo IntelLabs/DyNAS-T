@@ -14,9 +14,9 @@
 
 import itertools
 import math
-import pandas as pd
 
 import numpy as np
+import pandas as pd
 from scipy.spatial import Delaunay
 from shapely.geometry import MultiLineString, MultiPoint, mapping
 from shapely.ops import cascaded_union, polygonize
@@ -24,23 +24,27 @@ from shapely.ops import cascaded_union, polygonize
 from dynast.utils import log
 
 
-def frontier_builder(df, alpha=0, verbose=False):
+def frontier_builder(df, optimization_metrics, alpha=0, verbose=False):
     """
     Modified alphashape algorithm to draw Pareto Front for OFA search.
     Takes a DataFrame of column form [x, y] = [latency, accuracy]
 
     Params:
-    df     - 2 column dataframe in order of 'Latency' and 'Accuracy'
+    df     - dataframe containing `optimization_metrics` columns at minimum
     alpha  - Dictates amount of tolerable 'concave-ness' allowed.
              A fully convex front will be given if 0 (also better for runtime)
     """
     if verbose:
         log.info('Running front builder')
-    df = df[['Latency', 'Accuracy']]
+    df = df[optimization_metrics]
     points = list(df.to_records(index=False))
-    points = MultiPoint(list(points))
+    for i in range(len(points)):
+        points[i] = list(points[i])
+    points = MultiPoint(points)
 
-    if len(points) < 4 or alpha <= 0:
+    # TODO(macsz) Fix the line below in comment:
+    # if len(points) < 4 or alpha <= 0:
+    if alpha <= 0:
         if verbose:
             log.info('Alpha=0 -> convex hull')
         result = points.convex_hull
@@ -118,6 +122,6 @@ def frontier_builder(df, alpha=0, verbose=False):
     df.drop(df.index[drop_list], inplace=True)
     df.reset_index(drop=True, inplace=True)
 
-    df.columns = ['Latency', 'Accuracy']
+    df.columns = optimization_metrics
 
     return df

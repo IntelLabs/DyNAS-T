@@ -51,7 +51,6 @@ class ImagenetDataProvider(DataProvider):
         num_replicas=None,
         rank=None,
     ):
-
         warnings.filterwarnings("ignore")
         self._save_path = save_path
 
@@ -193,7 +192,7 @@ class ImagenetDataProvider(DataProvider):
     def normalize(self):
         return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-    def build_train_transform(self, image_size=None, print_log=True):
+    def build_train_transform(self, image_size=None, print_log=False):
         if image_size is None:
             image_size = self.image_size
         if print_log:

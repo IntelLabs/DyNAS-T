@@ -47,34 +47,42 @@ class OFARunner:
         supernet: str,
         dataset_path: str,
         predictors: Dict[str, Predictor] = None,
-        batch_size: int = 1,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
         dataloader_workers: int = 4,
         device: str = 'cpu',
-        test_size: int = None,
+        test_fraction: float = 1.0,
+        verbose: bool = False,
     ):
         self.supernet = supernet
         self.predictors = predictors
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.device = device
-        self.test_size = test_size
+        self.test_fraction = test_fraction
         self.dataset_path = dataset_path
         self.dataloader_workers = dataloader_workers
+        self.verbose = verbose
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
         self.run_config = ImagenetRunConfig(
-            test_batch_size=batch_size,
+            test_batch_size=eval_batch_size,
             n_worker=dataloader_workers,
-            valid_size=test_size,
         )
         self._init_data()
 
     def _init_data(self):
         ImageNet.PATH = self.dataset_path
-        self.dataloader = ImageNet.validation_dataloader(
-            batch_size=self.batch_size,
-            num_workers=self.dataloader_workers,
-        )
+        if self.dataset_path:
+            self.dataloader = ImageNet.validation_dataloader(
+                batch_size=self.eval_batch_size,
+                num_workers=self.dataloader_workers,
+                fraction=self.test_fraction,
+            )
+        else:
+            self.dataloader = None
+            log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_metric(self, metric: str, subnet_cfg) -> float:
         predicted_val = self.predictors.get(metric).predict(subnet_cfg)
@@ -85,7 +93,13 @@ class OFARunner:
 
         subnet = self.get_subnet(subnet_cfg)
         folder_name = '/tmp/ofa-tmp-{}'.format(uuid.uuid1().hex)  # TODO(macsz) root directory should be configurable
-        run_manager = RunManager('{}/eval_subnet'.format(folder_name), subnet, self.run_config, init=False)
+        run_manager = RunManager(
+            '{}/eval_subnet'.format(folder_name),
+            subnet,
+            self.run_config,
+            init=False,
+            verbose=self.verbose,
+        )
         run_manager.reset_running_statistics(net=subnet)
 
         # Test sampled subnet
@@ -94,7 +108,6 @@ class OFARunner:
         loss, top1, top5 = validate_classification(
             model=subnet,
             data_loader=self.dataloader,
-            test_size=self.test_size,
             device=self.device,
         )
 
@@ -131,7 +144,6 @@ class OFARunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
-        input_size: tuple = (1, 3, 224, 224),
         warmup_steps: int = 10,
         measure_steps: int = 50,
         device: str = None,
@@ -143,11 +155,12 @@ class OFARunner:
             mean latency; std latency
         """
         device = self.device if not device else device
+        input_size: tuple = (self.batch_size, 3, 224, 224)
 
         if not warmup_steps:
-            warmup_steps = auto_steps(input_size[0], is_warmup=True)
+            warmup_steps = auto_steps(self.batch_size, is_warmup=True)
         if not measure_steps:
-            measure_steps = auto_steps(input_size[0])
+            measure_steps = auto_steps(self.batch_size)
 
         model = self.get_subnet(subnet_cfg)
 
@@ -162,7 +175,7 @@ class OFARunner:
 
     def get_subnet(self, subnet_cfg):
         if self.supernet == 'ofa_resnet50':
-            self.ofa_network.set_active_subnet(ks=subnet_cfg['d'], e=subnet_cfg['e'], d=subnet_cfg['w'])
+            self.ofa_network.set_active_subnet(d=subnet_cfg['d'], e=subnet_cfg['e'], w=subnet_cfg['w'])
         else:
             self.ofa_network.set_active_subnet(ks=subnet_cfg['ks'], e=subnet_cfg['e'], d=subnet_cfg['d'])
 
@@ -214,9 +227,7 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
                     subnet_sample
                 )
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(
-                    subnet_sample
-                )  # TODO(change batch size!!)
+                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_top1(subnet_sample)
 

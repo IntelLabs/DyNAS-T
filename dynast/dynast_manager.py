@@ -14,10 +14,12 @@
 
 import logging
 import sys
+from typing import Dict, List
 
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
 from dynast.utils.distributed import get_distributed_vars, init_distributed
+from dynast.version import __version__
 
 
 class DyNAS:
@@ -27,7 +29,29 @@ class DyNAS:
     with this class based on the user input.
     '''
 
-    def __new__(self, **kwargs):
+    def __new__(
+        self,
+        supernet: str,
+        results_path: str,
+        optimization_metrics: List[str],
+        measurements: List[str],
+        search_tactic: str = 'linas',
+        num_evals: int = 250,
+        dataset_path: str = None,
+        **kwargs,
+    ):
+        kwargs.update(
+            {
+                'supernet': supernet,
+                'results_path': results_path,
+                'optimization_metrics': optimization_metrics,
+                'measurements': measurements,
+                'search_tactic': search_tactic,
+                'num_evals': num_evals,
+                'dataset_path': dataset_path,
+            }
+        )
+
         log_level = logging.INFO
         if kwargs.get('verbose'):
             log_level = logging.DEBUG
@@ -41,27 +65,11 @@ class DyNAS:
             if seed:
                 kwargs['seed'] = seed + WORLD_RANK
 
-        log.info('=' * 40)
-        log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
-        log.info('=' * 40)
+        DyNAS._set_eval_batch_size(kwargs)
 
-        # Required arguments for the DyNAS class
-        # TODO(macsz) If these are common for all created classes, then we can move it out of kwargs
-        REQUIRED_KWARGS = [
-            'supernet',
-            'optimization_metrics',
-            'measurements',
-            'search_tactic',
-            'num_evals',
-            'results_path',
-            'dataset_path',
-        ]
-
-        # Validity checks
-        for argument in REQUIRED_KWARGS:
-            if argument not in kwargs:
-                log.error(f"Missing `--{argument}` parameter.")
-                sys.exit("Missing argument, see log file for info.")
+        log.info('=' * 40)
+        log.info(f'Starting Dynamic NAS Toolkit (DyNAS-T {__version__})')
+        log.info('=' * 40)
 
         kwargs = check_kwargs_deprecated(**kwargs)
 
@@ -77,35 +85,41 @@ class DyNAS:
 
         if kwargs.get('distributed', False):
             # LINAS bi-level evolutionary algorithm search distributed to multiple workers
-            if kwargs['search_tactic'] == 'linas':
+            if search_tactic == 'linas':
                 log.info('Initializing DyNAS LINAS (distributed) algorithm object.')
                 return LINASDistributed(**kwargs)
 
                 # Uniform random sampling of the architectural space distributed to multiple workers
-            elif kwargs['search_tactic'] == 'random':
+            elif search_tactic == 'random':
                 log.info('Initializing DyNAS random (distributed) search algorithm object.')
                 return RandomSearchDistributed(**kwargs)
 
         # LINAS bi-level evolutionary algorithm search
-        if kwargs['search_tactic'] == 'linas':
+        if search_tactic == 'linas':
             log.info('Initializing DyNAS LINAS algorithm object.')
             return LINAS(**kwargs)
 
         # Standard evolutionary algorithm search
-        elif kwargs['search_tactic'] == 'evolutionary':
+        elif search_tactic == 'evolutionary':
             log.info('Initializing DyNAS evoluationary algorithm object.')
             return Evolutionary(**kwargs)
 
         # Uniform random sampling of the architectural space
-        elif kwargs['search_tactic'] == 'random':
+        elif search_tactic == 'random':
             log.info('Initializing DyNAS random search algorithm object.')
             return RandomSearch(**kwargs)
 
         else:
             error_message = (
                 "Invalid `--search_tactic` parameter `{}` (options: 'linas', 'evolutionary', 'random').".format(
-                    kwargs['search_tactic']
+                    search_tactic
                 )
             )  # TODO(macsz) Un-hardcode options.
             log.error(error_message)
             raise NotImplementedError(error_message)
+
+    @staticmethod
+    def _set_eval_batch_size(kwargs: Dict) -> None:
+        """Set eval_batch_size to batch_size if not specified."""
+        if not kwargs.get('eval_batch_size'):
+            kwargs['eval_batch_size'] = kwargs.get('batch_size', 128)

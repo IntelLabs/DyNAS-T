@@ -14,14 +14,8 @@
 
 import pytest
 
-from dynast.dynast_manager import DyNAS
+from dynast import DyNAS
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
-
-
-def test_dynas_not_enough_args_passed_exits():
-    # Not all params passed
-    with pytest.raises(SystemExit):
-        DyNAS(supernet='ofa_resnet50')
 
 
 def test_dynas_optimization_metrics_unsupported_number():
@@ -54,8 +48,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='linas',
             num_evals=1,
             results_path='test',
@@ -67,8 +61,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='evolutionary',
             num_evals=1,
             results_path='test',
@@ -80,8 +74,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='random',
             num_evals=1,
             results_path='test',
@@ -93,8 +87,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='linas',
             distributed=True,
             num_evals=1,
@@ -107,8 +101,8 @@ def test_dynas_supported_search_tactics():
     assert isinstance(
         DyNAS(
             supernet='ofa_resnet50',
-            optimization_metrics=['m1', 'm2', 'm3'],
-            measurements=['m1', 'm2', 'm3'],
+            optimization_metrics=['latency', 'macs'],
+            measurements=['latency', 'macs'],
             search_tactic='random',
             distributed=True,
             num_evals=1,
@@ -130,3 +124,32 @@ def test_dynas_unsupported_supernet():
             results_path='test',
             dataset_path='test',
         )
+
+
+def test_dynas_eval_batch_size():
+    input_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+    }
+    expected_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 32,
+    }
+    DyNAS._set_eval_batch_size(input_kwargs)
+
+    assert input_kwargs == expected_kwargs
+
+    input_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 64,
+    }
+    expected_kwargs = {
+        'supernet': 'ofa_resnet50',
+        'batch_size': 32,
+        'eval_batch_size': 64,
+    }
+    DyNAS._set_eval_batch_size(input_kwargs)
+
+    assert input_kwargs == expected_kwargs

@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import time
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -69,27 +68,24 @@ def accuracy(output, target, topk=(1,)) -> List[float]:
 def validate_classification(
     model,
     data_loader,
-    test_size=None,
     device='cpu',
 ):
     test_criterion = nn.CrossEntropyLoss()
 
+    model.to(device)
     model = model.eval()
 
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
 
-    if test_size is not None:
-        total = test_size
-    else:
-        total = len(data_loader)
+    total = len(data_loader)
 
     with torch.no_grad():
-        for epoch, (images, labels) in enumerate(data_loader):
+        for batch, (images, labels) in enumerate(data_loader):
             log.debug(
                 "Validate #{}/{} {}".format(
-                    epoch + 1,
+                    batch + 1,
                     total,
                     {
                         "loss": losses.avg,
@@ -109,8 +105,7 @@ def validate_classification(
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
-            if epoch + 1 >= total:
-                break
+
     return losses.avg, top1.avg, top5.avg
 
 
@@ -118,8 +113,6 @@ def get_parameters(
     model: nn.Module,
     device: str = 'cpu',
 ) -> int:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -131,8 +124,6 @@ def get_macs(
     input_size: tuple = (1, 3, 224, 224),
     device: str = 'cpu',
 ) -> float:
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
     model = model.eval()
 
@@ -140,42 +131,6 @@ def get_macs(
     macs = torchprofile.profile_macs(model, inputs)
 
     return macs
-
-
-@measure_time
-def reset_bn(  # TODO(Maciej) This should be renamed to `model_fine_tune` or `model_train` and a new method for calibration should be added
-    model: nn.Module,
-    num_samples: int,
-    train_dataloader: torch.utils.data.DataLoader,
-    device: Union[str, torch.device] = 'cpu',
-) -> None:
-    model.train()
-    model.to(device)
-
-    batch_size = train_dataloader.batch_size
-
-    if num_samples / batch_size > len(train_dataloader):
-        log.warn("BN set stats: num of samples exceed the samples in loader. Using full loader")
-    for i, (images, _) in enumerate(train_dataloader):
-        log.debug("Calibrating BN statistics #{}/{}".format(i, num_samples // batch_size + 1))
-        images = images.to(device)
-        model(images)
-        if i > num_samples / batch_size:
-            log.info(f"Finishing setting bn stats using {num_samples} and batch size of {batch_size}")
-            break
-
-    if 'cuda' in str(device):
-        log.debug('GPU mem peak usage: {} MB'.format(torch.cuda.max_memory_allocated() // 1024 // 1024))
-
-    model.eval()
-
-
-def rm_bn_from_net(
-    net: nn.Module,
-) -> None:
-    for m in net.modules():
-        if isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.BatchNorm1d):
-            m.forward = lambda x: x
 
 
 @torch.no_grad()
@@ -199,8 +154,6 @@ def measure_latency(
     inputs = torch.randn(*input_size, device=device)
     model = model.eval()
 
-    model = copy.deepcopy(model)
-    rm_bn_from_net(model)
     model = model.to(device)
 
     if 'cuda' in str(device):

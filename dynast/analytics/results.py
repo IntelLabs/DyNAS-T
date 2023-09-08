@@ -31,13 +31,11 @@ class ResultsManager:
     '''
 
     def __init__(self, csv_path, manager, search_output):
-
         self.csv_path = csv_path
         self.manager = manager
         self.search_output = search_output
 
     def front_to_csv(self, filepath=None, overwrite=True):
-
         if filepath is None:
             filepath = self.csv_path[:-4] + '_front.csv'
 
@@ -60,7 +58,6 @@ class ResultsManager:
         return None
 
     def history_to_csv(self, filepath=None, overwrite=True):
-
         if filepath is None:
             filepath = self.csv_path
 

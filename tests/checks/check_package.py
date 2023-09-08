@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 
-def get_info(message=''):
-    return 'dynas-\U0001F375 : {}'.format(message)
+import pytest
+
+from tests.checks.helpers import get_packages_paths
+
+ROOT_DIR = os.getcwd()
+
+
+@pytest.mark.parametrize('dir_path', get_packages_paths(ROOT_DIR))
+def test_check_init_files(dir_path):
+    fn = os.path.join(dir_path, '__init__.py')
+    assert os.path.exists(fn), f"Package {dir_path} does not contain `__init__.py` file!"

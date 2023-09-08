@@ -1,6 +1,8 @@
+# DyNAS-T
+
 ![DyNAS-T Logo](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_logo.png?raw=true)
 
-# DyNAS-T
+[![PyPI DyNAS-T](https://img.shields.io/pypi/v/dynast)](https://pypi.org/project/dynast/) [![Python Versions](https://img.shields.io/pypi/pyversions/dynast)](https://pypi.org/project/dynast/) [![image](https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0) [![Monthly Downloads](https://img.shields.io/pypi/dm/dynast)](https://pypi.org/project/dynast/)
 
 DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a super-network neural architecture
 search NAS optimization package designed for efficiently discovering optimal deep neural network (DNN)
@@ -23,36 +25,41 @@ A unique capability of DyNAS-T is the Lightweight Iterative NAS (LINAS) that pai
 
 The following number of optimization algorithms are supported by DyNAS-T in both standard and LINAS formats.
 
-| 1 Objective<br>(Single-Objective) | 2 Objectives<br>(Multi-Objective) | 3 Objectives<br>(Many-Objective) |
+| 1 Objective<br/>(Single-Objective) | 2 Objectives<br/>(Multi-Objective) | 3 Objectives<br/>(Many-Objective) |
 |------------------|-----------------|----------------|
-| GA* `'ga'`   | NSGA-II* `'nsga2'` | UNSGA-II* `'unsga3'`     |
+| GA* `'ga'`   | NSGA-II\* `'nsga2'` | UNSGA-II\* `'unsga3'`     |
 | CMA-ES `'cmaes'` | AGE-MOEA `'age'` | CTAEA `'ctaea'`         |
 |        |          | MOEAD `'moead'`          |
-*Recommended for stability of search results
+\*Recommended for stability of search results
 
 ## Super-networks
+
 DyNAS-T included support for the following super-network frameworks suchs as [Once-for-All (OFA)](https://github.com/mit-han-lab/once-for-all).
 
 | Super-Network | Model Name | Dataset | Objectives/Measurements Supported |
 |------------------|-----------------|-----------------|-----------------|
-|OFA MobileNetV3-w1.0 | ofa_mbv3_d234_e346_k357_w1.0 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
-|OFA MobileNetV3-w1.2 | ofa_mbv3_d234_e346_k357_w1.2 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
-|OFA ResNet50 | ofa_resnet50 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
-|OFA ProxylessNAS | ofa_proxyless_d234_e346_k357_w1.3 | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
-|TransformerLT | transformer_lt_wmt_en_de | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
-|BERT-SST2 | bert_base_sst2 | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
-
+|OFA MobileNetV3-w1.0 | `ofa_mbv3_d234_e346_k357_w1.0` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|OFA MobileNetV3-w1.2 | `ofa_mbv3_d234_e346_k357_w1.2` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|OFA ResNet50 | `ofa_resnet50` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|Quantization-aware OFA ResNet50 | `inc_quantization_ofa_resnet50` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `model_size`, `params`, `latency` |
+|OFA ProxylessNAS | `ofa_proxyless_d234_e346_k357_w1.3` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|TransformerLT | `transformer_lt_wmt_en_de` | WMT En-De | `bleu` (BLEU Score), `macs`, `params`, `latency` |
+|BERT-SST2 | `bert_base_sst2` | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `macs`, `params`, `accuracy_sst2` |
+|BootstrapNAS | - | - | `accuracy_top1`, `macs`, `params`, `latency` |
+|Vision Transformer | `vit_base_imagenet` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
 
 > **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
-
 > **_WMT En-De:_** To obtain and prepare dataset please follow instructions available [here](https://github.com/mit-han-lab/hardware-aware-transformers).
+> **_BootstrapNAS_**: BootstrapNAS is currently only avaiable through the Python interface. To read more how to use DyNAS-T on BootstrapNAS search space, please refer to [the example notebook](https://github.com/macsz/Hardware-Aware-Automated-Machine-Learning/blob/macsz/dynast/examples/bootstrapNAS/third_party_search/dynas-t_external_search_resnet50_supernet.ipynb).
 
 ## Intel Library Support
-The following software libraries are compatible with DyNAS-T:
-* [Intel Neural Compressor (INC)](https://github.com/intel/neural-compressor/blob/master/examples/notebook/dynas/MobileNetV3_Supernet_NAS.ipynb)
-* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md) (Work-in-progress)
 
-# Getting Started
+The following software libraries are compatible with DyNAS-T:
+
+* [Intel Neural Compressor (INC)](https://github.com/intel/neural-compressor/blob/master/examples/notebook/dynas/MobileNetV3_Supernet_NAS.ipynb)
+* [Intel OpenVINO NNCF BootstrapNAS](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/experimental/torch/nas/bootstrapNAS/BootstrapNAS.md)
+
+## Getting Started
 
 To setup DyNAS-T from source code run `pip install -e .` or make a local copy of the `dynast` subfolder in your
 local subnetwork repository with the `requirements.txt` dependencies installed.
@@ -65,8 +72,8 @@ pip install dynast
 
 Installing DyNAS-T with `pip` will make a `dynast` command available in your CLI.
 
+### Running DyNAS-T
 
-## Running DyNAS-T
 The `dynast/cli.py` (you can use `dynast` command to invoke this script) template provide a starting point for running the NAS process. An evaluation is the process of determining the fitness of an architectural candidate. A *validation* evaluation is the costly process of running the full validation set. A *predictor* evaluation uses a pre-trained performance predictor.
 
 * `supernet` - Name of the pre-trained super-network. See list of supported super-networks. For a custom super-network, you will have to modify the code including the `dynast_manager.py` and `supernetwork_registry.py` files.
@@ -80,7 +87,7 @@ The `dynast/cli.py` (you can use `dynast` command to invoke this script) templat
 * `results_path` - The location of the csv file that store information of the DNN candidates during the search process. The csv file is used for plotting NAS results.
 * `dataset_path` - Location of the dataset used for training the super-network of interest.
 
-### Single-Objective
+#### Single-Objective
 
 *Example 1a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy using a simple evolutionary genetic algorithm (GA) approach.
 
@@ -108,7 +115,7 @@ dynast \
     --search_algo ga
 ```
 
-### Multi-Objective
+#### Multi-Objective
 
 *Example 2a.* NAS process for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* multiply-and-accumulates (MACs) using a LINAS+NSGA-II approach.
 
@@ -136,7 +143,7 @@ dynast \
     --search_algo age
 ```
 
-### Many-Objective
+#### Many-Objective
 
 *Example 3a.* NAS process for the OFA ResNet50 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters) *and* multiply-and-accumulates (MACs) using a evolutionary unsga3 approach.
 
@@ -167,13 +174,32 @@ dynast \
 An example of the search results for a Multi-Objective search using both LINAS+NSGA-II and standard NSGA-II algorithms will yield results in the following format.
 ![DyNAS-T Results](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/search_results.png?raw=true)
 
-### Distributed Search
+#### Quantization-aware Search
+
+This approach allows you to run search on your FP32 super-network and find optimal model configurations w.r.t. both architecture and Post-Training Quantization policy. DyNAS-T's implementation uses [Intel® Neural Compressor](https://github.com/intel/neural-compressor) as an underlying backend for quantizing models. This search approach is specific to the CPU, and so `--device=cpu` has to be used.
+
+*Example 4.* Quantization-aware search on OFA ResNet50 super-network.
+
+```bash
+dynast \
+        --results_path dynast_ofaresnet50_quant.csv \
+        --dataset_path /ML_datasets/imagenet/ilsvrc12_raw \
+        --supernet inc_quantization_ofa_resnet50 \
+        --device cpu \
+        --batch_size 128 \
+        --search_tactic linas \
+        --measurements latency accuracy_top1 \
+        --optimization_metrics latency accuracy_top1 \
+        --seed 42
+```
+
+#### Distributed Search
 
 Search can be performed with multiple workers using the `MPI` / `torch.distributed` library. To use this functionality, your script should be called with `mpirun`/`mpiexec` command and an additional `--distributed` param has to be set (`DyNAS([...], distributed=True`).
 
 > Note: When run with `torchrun`, unless explicitly specified, `torch.distributed` uses `OMP_NUM_THREADS=1` ([link](https://github.com/pytorch/pytorch/commit/1c0309a9a924e34803bf7e8975f7ce88fb845131)) which may result in slow evaluation time. Good practice is to explicitly set `OMP_NUM_THREADS`  to `(total_core_count)/(num_workers)` (optional for MPI).
 
-*Example 4.* Distributed NAS process with two OpenMPI workers for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters)
+*Example 5.* Distributed NAS process with two OpenMPI workers for the OFA MobileNetV3-w1.0 super-network that optimizes for ImageNet Top-1 accuracy *and* model size (parameters)
 
 ```bash
 OMP_NUM_THREADS=28 mpirun \
@@ -204,5 +230,4 @@ OMP_NUM_THREADS=28 mpirun \
 ## Legal Disclaimer and Notices
 
 > This “research quality code”  is for Non-Commercial purposes provided by Intel “As Is” without any express or implied warranty of any kind. Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it. Intel does not warrant or assume responsibility for the accuracy or completeness of any information, text, graphics, links or other items within the code. A thorough security review has not been performed on this code. Additionally, this repository may contain components that are out of date or contain known security vulnerabilities.
-
 > ImageNet, WMT, SST2: Please see the dataset's applicable license for terms and conditions. Intel does not own the rights to this data set and does not confer any rights to it.
