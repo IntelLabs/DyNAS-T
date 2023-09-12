@@ -204,3 +204,11 @@ def get_csv_header(supernet: str) -> List[str]:
         raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
 
     return csv_header
+
+
+def get_supported_supernets():
+    return list(EVALUATION_INTERFACE.keys())
+
+
+def get_all_supported_metrics():
+    return list(set([metric for metrics in SUPERNET_METRICS.values() for metric in metrics]))

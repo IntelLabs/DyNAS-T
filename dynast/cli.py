@@ -15,6 +15,7 @@
 import argparse
 
 from dynast import DyNAS
+from dynast.supernetwork.supernetwork_registry import get_all_supported_metrics, get_supported_supernets
 
 
 def _main(args):
@@ -51,33 +52,23 @@ def main():
         default='ofa_mbv3_d234_e346_k357_w1.0',
         type=str,
         help='Super-network',
-        choices=[
-            'ofa_resnet50',
-            'ofa_mbv3_d234_e346_k357_w1.0',
-            'ofa_mbv3_d234_e346_k357_w1.2',
-            'ofa_proxyless_d234_e346_k357_w1.3',
-            'transformer_lt_wmt_en_de',
-            'bert_base_sst2',
-            'vit_base_imagenet',
-            'inc_quantization_ofa_resnet50',
-        ],
+        choices=get_supported_supernets(),
     )
     parser.add_argument('--seed', default=42, type=int, help='Random Seed')
-    # TODO(macsz) might be better to list allowed elements here (or in help message)
     parser.add_argument(
         '--optimization_metrics',
-        default=['accuracy_top1', 'macs'],  # TODO*macsz) Consider just 'accuracy',
-        # as it translates better for both image classification
-        # and Transformer LT
+        default=['accuracy_top1', 'macs'],
         nargs='*',
         type=str,
-        help='Metrics that will be optimized for during search.',
+        choices=get_all_supported_metrics(),
+        help='Metrics that will be used to guide the search towards Pareto-optimal front of network configurations.',
     )
     parser.add_argument(
         '--measurements',
-        default=['accuracy_top1', 'macs', 'params', 'latency'],  # TODO(macsz) Ditto
+        default=['accuracy_top1', 'macs', 'params', 'latency'],
         nargs='*',
         type=str,
+        choices=get_all_supported_metrics(),
         help='Measurements during search.',
     )
     parser.add_argument('-d', '--device', default='cpu', type=str, help='Target device to run measurements on.')
