@@ -169,13 +169,14 @@ def plot_search_progression(
     random_results_path: str = None,
     target_metrics: List[str] = ['latency', 'accuracy_top1'],
     reference_points: List[ReferencePoint] = [],
+    columns: List[str] = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1'],
 ) -> None:
     df = pd.read_csv(results_path)
 
     if evals_limit:
         df = df[:evals_limit]
 
-    df.columns = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1']
+    df.columns = columns
 
     fig, ax = plt.subplots(figsize=(7, 5))
 
@@ -184,7 +185,7 @@ def plot_search_progression(
 
     if random_results_path:
         df_random = pd.read_csv(random_results_path)
-        df_random.columns = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1']
+        df_random.columns = columns
         ax.scatter(
             df_random[target_metrics[0]].values,
             df_random[target_metrics[1]].values,
@@ -585,9 +586,15 @@ if __name__ == '__main__':
                 ),
             ],
         )
-    if True:
+    if False:
         plot_search_progression(
             results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_vit_linas_a100.csv'
+        )
+    if True:
+        plot_search_progression(
+            results_path='dynast_decoma_distributed.csv',
+            target_metrics=['cycles', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1', 'cycles'],
         )
 
 
