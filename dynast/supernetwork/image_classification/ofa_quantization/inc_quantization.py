@@ -15,12 +15,15 @@
 import copy
 import os
 import time
+from typing import List, Union
 
+import neural_compressor
+import torch
 import yaml
 from neural_compressor.experimental import Quantization
 
 
-def default_policy():
+def default_policy() -> dict:
     policy = {
         'model': {
             'name': 'dynast_quantized_subnet',
@@ -41,7 +44,12 @@ def default_policy():
     return policy
 
 
-def qparam_parse(observer_type: str, bit: str, mode: str, granularity: str):
+def qparam_parse(
+    observer_type: str,
+    bit: str,
+    mode: str,
+    granularity: str,
+) -> (str, str, str, str):
     '''
     Parse quantization parameters
     Parameters:
@@ -74,11 +82,6 @@ def qparam_parse(observer_type: str, bit: str, mode: str, granularity: str):
         'perchannel': 'per_channel',
     }
 
-    assert observer_type in observer.keys()
-    assert bit in dtype.keys()
-    assert mode in qscheme.keys()
-    assert granularity in qgranularity.keys()
-
     return (observer[observer_type], dtype[bit], qscheme[mode], qgranularity[granularity])
 
 
@@ -91,7 +94,7 @@ def qconfig_parse(
     abit: str,
     amode: str,
     agranularity: str,
-):
+) -> dict:
     '''
     Parse quantization config
     Parameters:
@@ -131,50 +134,50 @@ def qconfig_parse(
     return qconfig
 
 
+def _convert_dtype(w_bit, a_bit):
+    if w_bit == 32:
+        wbit = 'float32'
+    elif w_bit == 8:
+        wbit = 'qint8'
+    else:
+        raise Exception(
+            f'Unsupported Weight Data Type: {w_bit}!' + 'Only support float32 / qint8 by specify 32 / 8 temporarily!'
+        )
+
+    if a_bit == 32:
+        abit = 'float32'
+    elif a_bit == 8:
+        abit = 'quint8'
+    else:
+        raise Exception(
+            f'Unsupported Activation Data Type: {a_bit}!'
+            + 'Only support float32 / quint8 by specify 32 / 8 temporarily!'
+        )
+
+    return (wbit, abit)
+
+
 def inc_qconfig_dict(
-    q_weights_bit,
-    q_activations_bit,
-    q_weights_mode,
-    q_activations_mode,
-    q_weights_granularity,
-    q_activations_granularity,
-    regex_module_names=None,
+    q_weights_bit: Union[List[int], int],
+    q_activations_bit: Union[List[int], int],
+    q_weights_mode: Union[List[str], str],
+    q_activations_mode: Union[List[str], str],
+    q_weights_granularity: Union[List[str], str],
+    q_activations_granularity: Union[List[str], str],
+    regex_module_names: list = None,
 ):
     '''
     Parameters:
-        q_weights_bit (list): weight data type
-        q_activations_bit (list): activation data type
-        q_weights_mode (list): weight mode
-        q_activations_mode (list): activation mode
-        q_weights_granularity (list): weight granularity
-        q_activations_granularity (list): activation granularity
-        regex_module_names (list): name list of sub-modules to be quantized. if None, then quantize all sub-modules.
+        q_weights_bit (list of int or int): weight data type
+        q_activations_bit (list of int or int): activation data type
+        q_weights_mode (list of str or str): weight mode
+        q_activations_mode (list of str or str): activation mode
+        q_weights_granularity (list of str or str): weight granularity
+        q_activations_granularity (list of str or str): activation granularity
+        regex_module_names (list): name list of sub-modules to be quantized. if None, then quantize all sub-modules using the same policy.
     Return:
         A customized QConfig dictionary that specify the quantization configure for each specified module.
     '''
-
-    def convert_dtype(w_bit, a_bit):
-        if w_bit == 32:
-            wbit = 'float32'
-        elif w_bit == 8:
-            wbit = 'qint8'
-        else:
-            raise Exception(
-                f'Unsupported Weight Data Type: {w_bit}!'
-                + 'Only support float32 / qint8 by specify 32 / 8 temporarily!'
-            )
-
-        if a_bit == 32:
-            abit = 'float32'
-        elif a_bit == 8:
-            abit = 'quint8'
-        else:
-            raise Exception(
-                f'Unsupported Activation Data Type: {a_bit}!'
-                + 'Only support float32 / quint8 by specify 32 / 8 temporarily!'
-            )
-
-        return (wbit, abit)
 
     qconfig_dict = default_policy()
 
@@ -200,7 +203,7 @@ def inc_qconfig_dict(
             q_activations_granularity,
             regex_module_names,
         ):
-            w_bit, a_bit = convert_dtype(w_bit, a_bit)
+            w_bit, a_bit = _convert_dtype(w_bit, a_bit)
             qconfig = qconfig_parse('minmax', w_bit, w_mode, w_granularity, 'kl', a_bit, a_mode, a_granularity)
             qconfig_dict['quantization']['op_wise'][module_name] = qconfig
 
@@ -211,7 +214,7 @@ def inc_qconfig_dict(
         w_mode, a_mode = q_weights_mode, q_activations_mode
         w_granularity, a_granularity = q_weights_granularity, q_activations_granularity
 
-        w_bit, a_bit = convert_dtype(w_bit, a_bit)
+        w_bit, a_bit = _convert_dtype(w_bit, a_bit)
 
         qconfig = qconfig_parse('minmax', w_bit, w_mode, w_granularity, 'kl', a_bit, a_mode, a_granularity)
 
@@ -219,7 +222,12 @@ def inc_qconfig_dict(
         return qconfig_dict
 
 
-def inc_quantize(model_fp, qconfig_dict, data_loader=None, mp_calibration_samples=None):
+def inc_quantize(
+    model_fp: torch.nn.Module,
+    qconfig_dict: dict,
+    data_loader: torch.utils.data.DataLoader = None,
+    mp_calibration_samples: int = None,
+) -> neural_compressor.model.torch_model.PyTorchFXModel:
     '''
     Parameters:
         model_fp: float point model

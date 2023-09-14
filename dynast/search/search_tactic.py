@@ -26,11 +26,13 @@ from dynast.search.evolutionary import (
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
+from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
+from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetException
 
 QuantizedOFARunner = LazyImport(
     'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
@@ -108,39 +110,29 @@ class NASBaseConfig:
     def verify_measurement_types(self):
         # Remove duplicates
         self.optimization_metrics = list(set(self.optimization_metrics))
-        self.num_objectives = len(self.optimization_metrics)  # TODO(macsz) Can be a getter
+        self.num_objectives = len(self.optimization_metrics)
         self.measurements = list(set(self.measurements))
 
         # Check that measurements counts are correct
         if self.num_objectives > 3 or self.num_objectives < 1:
             log.error('Incorrect number of optimization objectives specified. Must be 1, 2, or 3.')
 
-        # Verify that supernetwork and metrics are valid
-        if self.supernet in SUPERNET_TYPE['image_classification']:
-            valid_metrics = ['accuracy_top1', 'macs', 'latency', 'params']
+        if self.supernet in SUPERNET_METRICS:
+            valid_metrics = SUPERNET_METRICS[self.supernet]
             for metric in self.optimization_metrics:
                 if metric not in valid_metrics:
-                    log.error(f'Invalid metric(s) specified: {metric}. Choose from {valid_metrics}')
-                elif metric in valid_metrics and metric not in self.measurements:
-                    self.measurements.append(metric)
+                    raise InvalidMetricsException(self.supernet, metric)
+                self.measurements.append(metric)
 
             for metric in self.measurements:
                 if metric not in valid_metrics:
-                    self.measurements.remove(metric)
-
-        elif self.supernet in SUPERNET_TYPE['machine_translation']:
-            # TODO(macsz,sharathns93) Fix
-            pass
-
-        elif self.supernet in SUPERNET_TYPE['text_classification']:
-            # TODO(macsz,sharathns93) Fix
-            pass
-
-        elif self.supernet in SUPERNET_TYPE['recommendation']:
-            pass
+                    raise InvalidMetricsException(self.supernet, metric)
 
         else:
-            log.error(f'Invalid supernet specified. Choose from the following: {SUPERNET_TYPE}')
+            raise InvalidSupernetException(self.supernet)
+
+        self.measurements = list(set(self.measurements))
+        self.optimization_metrics = list(set(self.optimization_metrics))
 
     def format_csv_header(self):
         self.csv_header = get_csv_header(self.supernet)
@@ -189,6 +181,16 @@ class NASBaseConfig:
                 batch_size=self.batch_size,
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
+            )
+        elif self.supernet == 'vit_base_imagenet':
+            self.runner_validate = ViTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+                test_fraction=self.test_fraction,
             )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
@@ -398,6 +400,18 @@ class LINAS(NASBaseConfig):
                     acc_predictor=self.predictor_dict['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+            elif self.supernet == 'vit_base_imagenet':
+                runner_predict = ViTRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
                     device=self.device,
                 )
 

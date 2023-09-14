@@ -19,6 +19,7 @@ from typing import Dict, List
 from dynast.search.search_tactic import LINAS, Evolutionary, LINASDistributed, RandomSearch, RandomSearchDistributed
 from dynast.utils import check_kwargs_deprecated, log, set_logger
 from dynast.utils.distributed import get_distributed_vars, init_distributed
+from dynast.version import __version__
 
 
 class DyNAS:
@@ -67,7 +68,7 @@ class DyNAS:
         DyNAS._set_eval_batch_size(kwargs)
 
         log.info('=' * 40)
-        log.info('Starting Dynamic NAS Toolkit (DyNAS-T)')
+        log.info(f'Starting Dynamic NAS Toolkit (DyNAS-T {__version__})')
         log.info('=' * 40)
 
         kwargs = check_kwargs_deprecated(**kwargs)

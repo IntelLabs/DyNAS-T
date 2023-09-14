@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import Any, Dict, List
+from typing import List
 
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
@@ -23,6 +23,8 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
     EvaluationInterfaceOFAResNet50,
 )
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_encoding import OFAQuantizedResNet50Encoding
+from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
+from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
@@ -40,6 +42,7 @@ SUPERNET_ENCODING = {
     'ofa_proxyless_d234_e346_k357_w1.3': OFAMobileNetV3Encoding,
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
+    'vit_base_imagenet': ViTEncoding,
     'inc_quantization_ofa_resnet50': OFAQuantizedResNet50Encoding,
     'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
@@ -88,6 +91,11 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
+    'vit_base_imagenet': {
+        'num_layers': {'count': 1, 'vars': [10, 11, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
+    },
 }
 
 EVALUATION_INTERFACE = {
@@ -97,6 +105,7 @@ EVALUATION_INTERFACE = {
     'ofa_proxyless_d234_e346_k357_w1.3': EvaluationInterfaceOFAMobileNetV3,
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
+    'vit_base_imagenet': EvaluationInterfaceViT,
     'inc_quantization_ofa_resnet50': EvaluationInterfaceQuantizedOFAResNet50,
     'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
 }
@@ -108,6 +117,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
+    'vit_base_imagenet': 20000,
     'inc_quantization_ofa_resnet50': 10000,
     'bootstrapnas_image_classification': 5000,
 }
@@ -118,6 +128,7 @@ SUPERNET_TYPE = {
         'ofa_mbv3_d234_e346_k357_w1.0',
         'ofa_mbv3_d234_e346_k357_w1.2',
         'ofa_proxyless_d234_e346_k357_w1.3',
+        'vit_base_imagenet',
         'bootstrapnas_image_classification',
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
@@ -134,6 +145,7 @@ SUPERNET_METRICS = {
     'bootstrapnas_image_classification': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['params', 'latency', 'macs', 'bleu'],
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
+    'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
 }
 
@@ -192,3 +204,11 @@ def get_csv_header(supernet: str) -> List[str]:
         raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
 
     return csv_header
+
+
+def get_supported_supernets():
+    return list(EVALUATION_INTERFACE.keys())
+
+
+def get_all_supported_metrics():
+    return list(set([metric for metrics in SUPERNET_METRICS.values() for metric in metrics]))

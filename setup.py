@@ -14,13 +14,19 @@
 # import datetime
 
 import os
+import re
 
 from setuptools import find_packages, setup
 
 
 def get_version():
-    # TODO(macsz) Replace with __version__
-    return '1.5.1'
+    try:
+        filepath = "./dynast/version.py"
+        with open(filepath) as version_file:
+            (__version__,) = re.findall('__version__ = "(.*)"', version_file.read())
+    except Exception as error:
+        assert False, "Error: Could not open '%s' due %s\n" % (filepath, error)
+    return __version__
 
 
 def _read_requirements(fn):
