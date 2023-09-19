@@ -17,6 +17,7 @@ import os
 
 import pandas as pd
 import torch.distributed as dist
+from pymoo.core.problem import Problem
 
 from dynast.predictors.predictor_manager import PredictorManager
 from dynast.search.evolutionary import (
@@ -557,6 +558,9 @@ class LINAS(NASBaseConfig):
 
 
 class Evolutionary(NASBaseConfig):
+    search_manager: EvolutionaryManager = None
+    problem: Problem = None
+
     def __init__(
         self,
         supernet,
@@ -599,89 +603,91 @@ class Evolutionary(NASBaseConfig):
             **kwargs,
         )
 
-    def search(self):
-        self._init_search()
-
+    def _init_evolutionary_manager(self):
         # Following sets up the algorithm based on number of objectives
         # Could be refractored at the expense of readability
         if self.num_objectives == 1:
-            problem = EvolutionarySingleObjective(
+            self.problem = EvolutionarySingleObjective(
                 evaluation_interface=self.validation_interface,
                 param_count=self.supernet_manager.param_count,
                 param_upperbound=self.supernet_manager.param_upperbound,
             )
             if self.search_algo == 'cmaes':
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='cmaes',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_cmaes(num_evals=self.num_evals)
+                self.search_manager.configure_cmaes(num_evals=self.num_evals)
             else:
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='ga',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
+                self.search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 2:
-            problem = EvolutionaryMultiObjective(
+            self.problem = EvolutionaryMultiObjective(
                 evaluation_interface=self.validation_interface,
                 param_count=self.supernet_manager.param_count,
                 param_upperbound=self.supernet_manager.param_upperbound,
             )
             if self.search_algo == 'age':
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='age',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_age(population=self.population, num_evals=self.num_evals)
+                self.search_manager.configure_age(population=self.population, num_evals=self.num_evals)
             else:
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='nsga2',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
+                self.search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
         elif self.num_objectives == 3:
-            problem = EvolutionaryManyObjective(
+            self.problem = EvolutionaryManyObjective(
                 evaluation_interface=self.validation_interface,
                 param_count=self.supernet_manager.param_count,
                 param_upperbound=self.supernet_manager.param_upperbound,
             )
             if self.search_algo == 'ctaea':
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='ctaea',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_ctaea(num_evals=self.num_evals)
+                self.search_manager.configure_ctaea(num_evals=self.num_evals)
             elif self.search_algo == 'moead':
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='moead',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_moead(num_evals=self.num_evals)
+                self.search_manager.configure_moead(num_evals=self.num_evals)
             else:
-                search_manager = EvolutionaryManager(
+                self.search_manager = EvolutionaryManager(
                     algorithm='unsga3',
                     seed=self.seed,
                     n_obj=self.num_objectives,
                     verbose=self.verbose,
                 )
-                search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
+                self.search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
 
-        results = search_manager.run_search(problem)
+    def search(self):
+        self._init_search()
+        self._init_evolutionary_manager()
+
+        results = self.search_manager.run_search(self.problem)
 
         latest_population = results.pop.get('X')
 
