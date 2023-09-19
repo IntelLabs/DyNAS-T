@@ -563,23 +563,24 @@ class Evolutionary(NASBaseConfig):
 
     def __init__(
         self,
-        supernet,
-        optimization_metrics,
-        measurements,
-        num_evals,
-        results_path,
+        supernet: str,
+        optimization_metrics: list,
+        measurements: list,
+        num_evals: int,
+        results_path: str,
         dataset_path: str = None,
-        seed=42,
-        population=50,
+        verbose: bool = False,
+        search_algo: str = 'nsga2',
+        population: int = 50,
+        seed: int = 42,
         batch_size: int = 128,
         eval_batch_size: int = 128,
-        verbose=False,
-        search_algo='nsga2',
-        supernet_ckpt_path=None,
+        supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        device: str = 'cpu',
+        metric_eval_fns: dict = None,
         **kwargs,
     ):
         super().__init__(
@@ -600,6 +601,7 @@ class Evolutionary(NASBaseConfig):
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
             **kwargs,
         )
 
