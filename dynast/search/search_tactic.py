@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import os
+
 import pandas as pd
 import torch.distributed as dist
 
@@ -787,6 +789,9 @@ class LINASDistributed(LINAS):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
+        if device == 'cuda':
+            device = f'cuda:{LOCAL_RANK}'
+
         super().__init__(
             dataset_path=dataset_path,
             supernet=supernet,
@@ -805,6 +810,7 @@ class LINASDistributed(LINAS):
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
@@ -835,6 +841,10 @@ class LINASDistributed(LINAS):
         for loop in range(num_loops):
             log.info('Starting LINAS loop {} of {}.'.format(loop + 1, num_loops))
 
+            # On every external loop start we have to clear worker's results. Results from all workers are later merged into a single
+            # file and this will help to keep gathered results in order in which configurations were evaluated.
+            self.validation_interface.format_csv(self.csv_header)
+
             # High-Fidelity Validation measurements
             for _, individual in enumerate(latest_population):
                 log.info(
@@ -854,7 +864,13 @@ class LINASDistributed(LINAS):
 
             if is_main_process():
                 worker_results_paths = [o['results_path'] for o in outputs]
-                combined_csv = pd.concat([pd.read_csv(f) for f in worker_results_paths])
+                # First read main CSV file (if exists), and the append all latest population results from workers.
+                csv_paths = (
+                    [self.main_results_path] + worker_results_paths
+                    if os.path.exists(self.main_results_path)
+                    else worker_results_paths
+                )
+                combined_csv = pd.concat([pd.read_csv(f) for f in csv_paths])
                 combined_csv.to_csv(self.main_results_path, index=False)
                 log.info(f'Saving combined results to {self.main_results_path}')
 
@@ -1021,6 +1037,7 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
@@ -1029,6 +1046,9 @@ class RandomSearchDistributed(RandomSearch):
         self.main_results_path = results_path
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
+
+        if device == 'cuda':
+            device = f'cuda:{LOCAL_RANK}'
 
         super().__init__(
             dataset_path=dataset_path,
@@ -1044,9 +1064,11 @@ class RandomSearchDistributed(RandomSearch):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
+            device=device,
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
