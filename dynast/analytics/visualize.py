@@ -592,9 +592,9 @@ if __name__ == '__main__':
         )
     if True:
         plot_search_progression(
-            results_path='dynast_decoma_distributed.csv',
-            target_metrics=['cycles', 'accuracy_top1'],
-            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1', 'cycles'],
+            results_path='/tmp/results_ofambv3_evolutionary_long.csv',
+            target_metrics=['macs', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1',],# 'cycles'],
         )
 
 
