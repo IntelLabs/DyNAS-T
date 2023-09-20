@@ -7,6 +7,7 @@ DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 DATASET_CIFAR10_PATH="/tmp/cifar10/"
 DEVICE="cpu"
 BATCH_SIZE=128
+TEST_FRACTION=1.0
 
 CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
 
