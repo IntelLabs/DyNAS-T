@@ -904,6 +904,58 @@ class LINASDistributed(LINAS):
                         checkpoint_path=self.supernet_ckpt_path,
                     )
 
+                elif self.supernet == 'bert_base_sst2':
+                    runner_predict = BertSST2Runner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_sst2'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        device=self.device,
+                    )
+                elif self.supernet == 'vit_base_imagenet':
+                    runner_predict = ViTRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        batch_size=self.batch_size,
+                        device=self.device,
+                    )
+
+                elif self.supernet == 'inc_quantization_ofa_resnet50':
+                    runner_predict = QuantizedOFARunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        model_size_predictor=self.predictor_dict['model_size'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        device=self.device,
+                        dataloader_workers=self.dataloader_workers,
+                        test_fraction=self.test_fraction,
+                    )
+
+                elif 'bootstrapnas' in self.supernet:
+                    runner_predict = BootstrapNASRunner(
+                        bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        batch_size=self.batch_size,
+                        device=self.device,
+                    )
+                else:
+                    raise NotImplementedError
+
                 # Setup validation interface
                 prediction_interface = EVALUATION_INTERFACE[self.supernet](
                     evaluator=runner_predict,
