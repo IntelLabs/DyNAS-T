@@ -25,6 +25,7 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.bert_quantization.bert_quant_interface import BertSST2QuantizedRunner
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
@@ -35,7 +36,7 @@ from dynast.supernetwork.text_classification.bert_interface import BertSST2Runne
 from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetException
-from dynast.supernetwork.bert_quantization.bert_quant_interface import BertSST2QuantizedRunner
+
 QuantizedOFARunner = LazyImport(
     'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
 )
@@ -184,7 +185,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
             )
-        
+
         elif self.supernet == 'bert_base_sst2_quantized':
             # TODO(macsz) Add `test_fraction`
             self.runner_validate = BertSST2QuantizedRunner(

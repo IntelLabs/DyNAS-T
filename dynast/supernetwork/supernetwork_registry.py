@@ -15,6 +15,8 @@
 
 from typing import List
 
+from dynast.supernetwork.bert_quantization.bert_quant_encoding import BertSST2QuantizedEncoding
+from dynast.supernetwork.bert_quantization.bert_quant_interface import EvaluationInterfaceBertSST2Quantized
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
@@ -29,9 +31,6 @@ from dynast.supernetwork.machine_translation.transformer_encoding import Transfo
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
-from dynast.supernetwork.bert_quantization.bert_quant_encoding import BertSST2QuantizedEncoding
-from dynast.supernetwork.bert_quantization.bert_quant_interface import EvaluationInterfaceBertSST2Quantized
-
 from dynast.utils import LazyImport
 
 EvaluationInterfaceQuantizedOFAResNet50 = LazyImport(
@@ -47,7 +46,7 @@ SUPERNET_ENCODING = {
     'bert_base_sst2': BertSST2Encoding,
     'vit_base_imagenet': ViTEncoding,
     'inc_quantization_ofa_resnet50': OFAQuantizedResNet50Encoding,
-    'bert_base_sst2_quantized':  BertSST2QuantizedEncoding,
+    'bert_base_sst2_quantized': BertSST2QuantizedEncoding,
     'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
 
@@ -100,13 +99,12 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
-
     'bert_base_sst2_quantized': {
         'num_layers': {'count': 1, 'vars': [6, 7, 8, 9, 10, 11, 12]},
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
         'q_bits': {'count': 74, 'vars': [8, 32]},
-    }
+    },
 }
 
 EVALUATION_INTERFACE = {
@@ -214,7 +212,7 @@ def get_csv_header(supernet: str) -> List[str]:
             'Model Size',
             'Top-1 Acc (%)',
         ]
-    
+
     elif supernet in SUPERNET_TYPE['bert_quantization']:
         csv_header = [
             'Sub-network',

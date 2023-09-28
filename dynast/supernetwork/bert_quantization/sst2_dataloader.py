@@ -17,11 +17,10 @@
 import warnings
 
 import torch
-from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
-from transformers.data.processors.glue import glue_processors
-from transformers.models.bert.tokenization_bert import BertTokenizer
 from datasets import load_dataset, load_metric
+from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
 from transformers import Trainer
+from transformers.data.processors.glue import glue_processors
 from transformers.models.bert.tokenization_bert import BertTokenizer
 
 warnings.filterwarnings("ignore")
@@ -108,18 +107,17 @@ def prepare_data_loader(dataset_path, max_seq_length=128, eval_batch_size=16):
 
 
 def prepare_calib_loader(dataset_path, model, max_seq_length=128, eval_batch_size=16):
-
-
-    device ='cpu'
-    raw_datasets = load_dataset("glue","sst2")
+    device = 'cpu'
+    raw_datasets = load_dataset("glue", "sst2")
     label_list = raw_datasets["train"].features["label"].names
     num_labels = len(label_list)
-    label_to_id = None# {v: i for i, v in enumerate(label_list)}
+    label_to_id = None  # {v: i for i, v in enumerate(label_list)}
     padding = "max_length"
     max_seq_length = 128
     sentence1_key = "sentence"
     sentence2_key = None
-    tokenizer =  BertTokenizer.from_pretrained('bert-base-uncased')
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
     def preprocess_function(examples):
         # Tokenize the texts
         args = (
@@ -131,12 +129,10 @@ def prepare_calib_loader(dataset_path, model, max_seq_length=128, eval_batch_siz
         if label_to_id is not None and "label" in examples:
             result["label"] = [(label_to_id[l] if l != -1 else -1) for l in examples["label"]]
         return result
-    
-    raw_datasets = raw_datasets.map(
-            preprocess_function, batched=True, load_from_cache_file=True
-        )
+
+    raw_datasets = raw_datasets.map(preprocess_function, batched=True, load_from_cache_file=True)
     eval_dataset = raw_datasets["validation"]
-    trainer = Trainer( model=model,   train_dataset=None,eval_dataset=eval_dataset, tokenizer=tokenizer)
+    trainer = Trainer(model=model, train_dataset=None, eval_dataset=eval_dataset, tokenizer=tokenizer)
     calib_dataloader = trainer.get_eval_dataloader()
 
     return calib_dataloader

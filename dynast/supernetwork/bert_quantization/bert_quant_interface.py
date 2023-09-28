@@ -16,6 +16,8 @@
 import copy
 import csv
 import logging
+import os
+import shutil
 import time
 import warnings
 from datetime import datetime
@@ -23,25 +25,25 @@ from datetime import datetime
 import numpy as np
 import torch
 import torchprofile
+from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
+from neural_compressor.quantization import fit
 from transformers import BertConfig
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
 
-from .bert_supernetwork import  BertSupernetForSequenceClassification
-from .bert_subnetwork import  BertSubnetForSequenceClassification
+from .bert_subnetwork import BertSubnetForSequenceClassification
+from .bert_supernetwork import BertSupernetForSequenceClassification
+from .sst2_dataloader import prepare_calib_loader, prepare_data_loader
 
-from .sst2_dataloader import prepare_data_loader,prepare_calib_loader
-from neural_compressor.quantization import fit
-from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
-import shutil
-import os
 warnings.filterwarnings("ignore")
+
 
 def get_weights_copy(model):
     weights_path = 'weights_temp.pt'
     torch.save(model.state_dict(), weights_path)
     return torch.load(weights_path)
+
 
 def load_supernet(checkpoint_path):
     bert_config = BertConfig()
@@ -53,22 +55,24 @@ def load_supernet(checkpoint_path):
     return model, bert_config
 
 
-def load_subnet(checkpoint_path,num_layers):
+def load_subnet(checkpoint_path, num_layers):
     bert_config = BertConfig()
-    model = BertSubnetForSequenceClassification(bert_config,2,num_layers)
+    model = BertSubnetForSequenceClassification(bert_config, 2, num_layers)
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')["model"],
         strict=False,
     )
     return model, bert_config
 
+
 def get_regex_names(model):
     regex_module_names = []
     for name, module in model.named_modules():
-            #print(name)
-        if name.endswith('.layer') and name!="bert.encoder.layer": #type(module) in (nn.modules.conv.Conv2d,) and
+        # print(name)
+        if name.endswith('.layer') and name != "bert.encoder.layer":  # type(module) in (nn.modules.conv.Conv2d,) and
             regex_module_names.append(name)
     return regex_module_names
+
 
 def compute_accuracy_sst2(
     eval_dataloader,
@@ -78,8 +82,8 @@ def compute_accuracy_sst2(
     """Measure SST-2 Accuracy score of the BERT based model."""
 
     model.eval()
-    #model.to(device)
-    #model.set_sample_config(config)
+    # model.to(device)
+    # model.set_sample_config(config)
 
     preds = None
     out_label_ids = None
@@ -119,7 +123,6 @@ def compute_latency(
 ):
     """Measure latency of the BERT-based model."""
 
-
     input_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
     segment_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
     input_mask = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
@@ -149,9 +152,6 @@ def compute_latency(
     return latency_mean, latency_std
 
 
-
-
-
 class BertSST2QuantizedRunner:
     """The BertSST2Runner class manages the sub-network selection from the BERT super-network and
     the validation measurements of the sub-networks. Bert-Base network finetuned on SST-2 dataset is
@@ -179,15 +179,18 @@ class BertSST2QuantizedRunner:
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
-     
 
         self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
-        supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12, 
-                        'subnet_intermediate_sizes': [3072]*12}
+        supernet_config = {
+            'subnet_hidden_sizes': 768,
+            'num_layers': 12,
+            'num_attention_heads': [12] * 12,
+            'subnet_intermediate_sizes': [3072] * 12,
+        }
 
         model_new = self.supernet_model
         self.eval_dataloader = prepare_data_loader(self.dataset_path)
-        self.calib_dataloader = prepare_calib_loader(self.dataset_path,model_new,eval_batch_size=16)
+        self.calib_dataloader = prepare_calib_loader(self.dataset_path, model_new, eval_batch_size=16)
 
         self.supernet_model.set_sample_config(supernet_config)
 
@@ -212,23 +215,24 @@ class BertSST2QuantizedRunner:
         latency = self.latency_predictor.predict(subnet_cfg)
         return latency
 
-    
-
     def validate_accuracy_sst2(
         self,
         subnet_sample,
         qbit_list,
     ) -> float:  # pragma: no cover
-
         regex_module_names = get_regex_names(self.supernet_model)
-        supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12, 
-                        'subnet_intermediate_sizes': [3072]*12}
-        model_fp32,_=load_supernet(self.checkpoint_path)
+        supernet_config = {
+            'subnet_hidden_sizes': 768,
+            'num_layers': 12,
+            'num_attention_heads': [12] * 12,
+            'subnet_intermediate_sizes': [3072] * 12,
+        }
+        model_fp32, _ = load_supernet(self.checkpoint_path)
         model_fp32.set_sample_config(supernet_config)
-        model_fp32.set_sample_config(subnet_sample) 
-        quantized_model = self.quantize_subnet(model_fp32, qbit_list,regex_module_names)
+        model_fp32.set_sample_config(subnet_sample)
+        quantized_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
         accuracy_sst2 = compute_accuracy_sst2(self.eval_dataloader, quantized_model, device=self.device)
-        del quantized_model,model_fp32
+        del quantized_model, model_fp32
         return accuracy_sst2
 
     def validate_macs(
@@ -265,43 +269,43 @@ class BertSST2QuantizedRunner:
             f'Performing Latency measurements. Warmup = {warmup_steps},\
              Measure steps = {measure_steps}'
         )
-        
+
         regex_module_names = get_regex_names(self.supernet_model)
-        config_new ={'subnet_hidden_sizes': 768,
+        config_new = {
+            'subnet_hidden_sizes': 768,
             'num_layers': subnet_sample['num_layers'],
-            'num_attention_heads': subnet_sample['num_attention_heads'][:subnet_sample['num_layers']],
-            'subnet_intermediate_sizes': subnet_sample["subnet_intermediate_sizes"][:subnet_sample['num_layers']],
+            'num_attention_heads': subnet_sample['num_attention_heads'][: subnet_sample['num_layers']],
+            'subnet_intermediate_sizes': subnet_sample["subnet_intermediate_sizes"][: subnet_sample['num_layers']],
         }
-        model_fp32,_=load_subnet(self.checkpoint_path,subnet_sample['num_layers'])
+        model_fp32, _ = load_subnet(self.checkpoint_path, subnet_sample['num_layers'])
         model_fp32.set_sample_config(config_new)
-       
-        q_model = self.quantize_subnet(model_fp32, qbit_list,regex_module_names)
+
+        q_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
         lat_mean, lat_std = compute_latency(q_model, eval_batch_size, device=self.device)
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
 
-
-    def validate_modelsize(self,subnet_sample,qbit_list):
-
+    def validate_modelsize(self, subnet_sample, qbit_list):
         temp_name = "temp_23"
-        #supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12, 
+        # supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12,
         #               'subnet_intermediate_sizes': [3072]*12}
         regex_module_names = get_regex_names(self.supernet_model)
-        config_new ={'subnet_hidden_sizes': 768,
+        config_new = {
+            'subnet_hidden_sizes': 768,
             'num_layers': subnet_sample['num_layers'],
-            'num_attention_heads': subnet_sample['num_attention_heads'][:subnet_sample['num_layers']],
-            'subnet_intermediate_sizes': subnet_sample["subnet_intermediate_sizes"][:subnet_sample['num_layers']],
+            'num_attention_heads': subnet_sample['num_attention_heads'][: subnet_sample['num_layers']],
+            'subnet_intermediate_sizes': subnet_sample["subnet_intermediate_sizes"][: subnet_sample['num_layers']],
         }
-        model_fp32,_=load_subnet(self.checkpoint_path,subnet_sample['num_layers'])
-        #model_fp32.set_sample_config(supernet_config)
+        model_fp32, _ = load_subnet(self.checkpoint_path, subnet_sample['num_layers'])
+        # model_fp32.set_sample_config(supernet_config)
         model_fp32.set_sample_config(config_new)
-       
-        q_model = self.quantize_subnet(model_fp32, qbit_list,regex_module_names)
+
+        q_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
         q_model.save(temp_name)
-        model_size = os.path.getsize(f'{temp_name}/best_model.pt')/1e6
+        model_size = os.path.getsize(f'{temp_name}/best_model.pt') / 1e6
         print('Size (MB):', model_size)
-        
+
         shutil.rmtree(temp_name)
         del q_model, model_fp32
         return model_size
@@ -311,32 +315,34 @@ class BertSST2QuantizedRunner:
         model,
         qbit_list,
         regex_module_names,
-       # calib_dataloader,
+        # calib_dataloader,
     ):
-
-        default_config={'weight': {'dtype':['fp32']},'activation': {'dtype':['fp32']}}
-        q_config_dict={}
-        count=0
-        #model_fp32 = copy.deepcopy(model)
+        default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
+        q_config_dict = {}
+        count = 0
+        # model_fp32 = copy.deepcopy(model)
         for mod_name in regex_module_names:
             q_config_dict[mod_name] = copy.deepcopy(default_config)
-            #import ipdb;db.set_trace()
-            if qbit_list[count]==32:
-
+            # import ipdb;db.set_trace()
+            if qbit_list[count] == 32:
                 dtype = ['fp32']
             else:
                 dtype = ['int8']
 
-            q_config_dict[mod_name]['weight']['dtype']= dtype
-            q_config_dict[mod_name]['activation']['dtype']= dtype
-            count = count +1 
+            q_config_dict[mod_name]['weight']['dtype'] = dtype
+            q_config_dict[mod_name]['activation']['dtype'] = dtype
+            count = count + 1
         tuning_criterion = TuningCriterion(max_trials=1)
 
-        conf = PostTrainingQuantConfig(approach="static",tuning_criterion=tuning_criterion, calibration_sampling_size=16,
-                                   op_name_dict=q_config_dict)
+        conf = PostTrainingQuantConfig(
+            approach="static",
+            tuning_criterion=tuning_criterion,
+            calibration_sampling_size=16,
+            op_name_dict=q_config_dict,
+        )
 
-        q_model = fit(model, conf=conf,calib_dataloader=self.calib_dataloader)#, eval_func=eval_func),
-        del q_config_dict, conf,model
+        q_model = fit(model, conf=conf, calib_dataloader=self.calib_dataloader)  # , eval_func=eval_func),
+        del q_config_dict, conf, model
         return q_model
 
 
@@ -380,12 +386,12 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
                     self.manager.onehot_custom(param_dict).reshape(1, -1)
                 )[0]
             if 'model_size' in self.optimization_metrics:
-                #import ipdb;ipdb.set_trace()
+                # import ipdb;ipdb.set_trace()
                 individual_results['model_size'] = self.evaluator.estimate_model_size(
                     self.manager.onehot_custom(param_dict).reshape(1, -1)
                 )[0]
             if 'accuracy_sst2' in self.optimization_metrics:
-                #import ipdb;ipdb.set_trace()
+                # import ipdb;ipdb.set_trace()
                 individual_results['accuracy_sst2'] = self.evaluator.estimate_accuracy_sst2(
                     self.manager.onehot_custom(param_dict).reshape(1, -1)
                 )[0]
@@ -393,16 +399,17 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
         # Validation Mode
         else:
             if 'params' in self.measurements:
-                individual_results['params'] = 0#self.evaluator.validate_macs(subnet_sample)
-            
+                individual_results['params'] = 0  # self.evaluator.validate_macs(subnet_sample)
+
             if 'accuracy_sst2' in self.measurements:
-                individual_results['accuracy_sst2'] = self.evaluator.validate_accuracy_sst2(subnet_sample,qbit_list)
-            
+                individual_results['accuracy_sst2'] = self.evaluator.validate_accuracy_sst2(subnet_sample, qbit_list)
+
             if 'model_size' in self.measurements:
-                individual_results['model_size'] = self.evaluator.validate_modelsize(subnet_sample,qbit_list)
+                individual_results['model_size'] = self.evaluator.validate_modelsize(subnet_sample, qbit_list)
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample,qbit_list,eval_batch_size=16)
-            
+                individual_results['latency'], _ = self.evaluator.measure_latency(
+                    subnet_sample, qbit_list, eval_batch_size=16
+                )
 
         subnet_sample = param_dict
         sample = param_dict

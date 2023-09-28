@@ -27,7 +27,6 @@ class BertSST2QuantizedEncoding(EncodingBase):
     def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
         super().__init__(param_dict, verbose, seed)
 
-    
     def onehot_custom(self, subnet_cfg, provide_onehot=True, max_layers=12):
         features = []
         num_layers = subnet_cfg['num_layers'][0]
@@ -36,7 +35,12 @@ class BertSST2QuantizedEncoding(EncodingBase):
         intermediate_size_list = subnet_cfg['intermediate_size'][:num_layers] + [0] * (max_layers - num_layers)
         features = [num_layers] + attn_head_list + intermediate_size_list
 
-        qbit_list = [subnet_cfg['q_bits'][0]] + subnet_cfg['q_bits'][1:6*num_layers+1]+[0]*(max_layers-num_layers)*6 + [subnet_cfg['q_bits'][-1]]
+        qbit_list = (
+            [subnet_cfg['q_bits'][0]]
+            + subnet_cfg['q_bits'][1 : 6 * num_layers + 1]
+            + [0] * (max_layers - num_layers) * 6
+            + [subnet_cfg['q_bits'][-1]]
+        )
         features = features + qbit_list
         if provide_onehot == True:
             examples = np.array([features])

@@ -134,7 +134,7 @@ class LinearSuper(nn.Linear):
     def set_sample_config(self, sample_in_dim, sample_out_dim):
         self.sample_in_dim = sample_in_dim
         self.sample_out_dim = sample_out_dim
-        self.layer = nn.Linear(self.sample_in_dim,self.sample_out_dim)
+        self.layer = nn.Linear(self.sample_in_dim, self.sample_out_dim)
         self._sample_parameters()
 
     def _sample_parameters(self):
@@ -147,8 +147,8 @@ class LinearSuper(nn.Linear):
         return self.samples
 
     def forward(self, x):
-        #self.sample_parameters()
-        return self.layer(x) #F.linear(x, self.samples['weight'], self.samples['bias'])##
+        # self.sample_parameters()
+        return self.layer(x)  # F.linear(x, self.samples['weight'], self.samples['bias'])##
 
     def calc_sampled_param_num(self):
         assert 'weight' in self.samples.keys()
@@ -187,8 +187,8 @@ def LayerNorm(normalized_shape, eps=1e-5, elementwise_affine=True, export=False)
 
 
 class LayerNormSuper(torch.nn.LayerNorm):
-    def __init__(self, super_embed_dim,eps=0):
-        super().__init__(super_embed_dim,eps)
+    def __init__(self, super_embed_dim, eps=0):
+        super().__init__(super_embed_dim, eps)
 
         # the largest embed dim
         self.super_embed_dim = super_embed_dim
