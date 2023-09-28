@@ -119,9 +119,6 @@ def compute_latency(
 ):
     """Measure latency of the BERT-based model."""
 
-    model.eval()
-    model.to(device)
-    model.set_sample_config(config)
 
     input_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
     segment_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
@@ -404,7 +401,7 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
             if 'model_size' in self.measurements:
                 individual_results['model_size'] = self.evaluator.validate_modelsize(subnet_sample,qbit_list)
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample,qbit_list,eval_batch_size=128)
+                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample,qbit_list,eval_batch_size=16)
             
 
         subnet_sample = param_dict

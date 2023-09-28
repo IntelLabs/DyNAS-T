@@ -185,7 +185,7 @@ class NASBaseConfig:
                 device=self.device,
             )
         
-         elif self.supernet == 'bert_base_sst2_quantized':
+        elif self.supernet == 'bert_base_sst2_quantized':
             # TODO(macsz) Add `test_fraction`
             self.runner_validate = BertSST2QuantizedRunner(
                 supernet=self.supernet,
@@ -194,7 +194,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
             )
-            
+
         elif self.supernet == 'vit_base_imagenet':
             self.runner_validate = ViTRunner(
                 supernet=self.supernet,
