@@ -38,6 +38,8 @@ from dynast.supernetwork.image_classification.ofa.ofa.utils import (
     mix_labels,
     write_log,
 )
+from dynast.utils import log
+from dynast.utils.distributed import get_distributed_vars
 from dynast.utils.nn import AverageMeter, accuracy
 
 __all__ = ["RunManager"]
@@ -66,7 +68,9 @@ class RunManager:
 
         # move network to GPU if available
         if torch.cuda.is_available() and (not no_gpu):
-            self.device = torch.device("cuda:0")
+            LOCAL_RANK, _, _, _ = get_distributed_vars()
+            self.device = torch.device(f"cuda:{LOCAL_RANK}") if LOCAL_RANK is not None else torch.device("cuda:0")
+            log.debug(f'RuManager: device = {self.device}')
             self.net = self.net.to(self.device)
             cudnn.benchmark = True
         else:
