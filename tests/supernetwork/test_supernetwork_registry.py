@@ -12,4 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "1.6.0"
+
+from dynast.supernetwork.supernetwork_registry import (
+    EVALUATION_INTERFACE,
+    SUPERNET_METRICS,
+    get_all_supported_metrics,
+    get_supported_supernets,
+)
+
+
+def test_get_supported_supernets():
+    assert get_supported_supernets() == list(EVALUATION_INTERFACE.keys())
+
+
+def test_get_all_supported_metrics():
+    metrics = []
+    for s, ms in SUPERNET_METRICS.items():
+        metrics.extend(ms)
+    unique_metrics = list(set(metrics))
+    assert unique_metrics == get_all_supported_metrics()

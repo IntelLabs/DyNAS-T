@@ -24,6 +24,8 @@ from typing import List
 import pandas as pd
 import requests
 
+from dynast.utils.distributed import get_distributed_vars
+
 
 def set_logger(
     level: int = logging.INFO,
@@ -37,8 +39,14 @@ def set_logger(
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
 
+    LOCAL_RANK, _, _, _ = get_distributed_vars()
+    if LOCAL_RANK is not None:
+        log_str = f"[%(asctime)s worker-{LOCAL_RANK}] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s"
+    else:
+        log_str = "[%(asctime)s] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s"
+
     formatter = logging.Formatter(
-        "[%(asctime)s %(processName)s #%(process)d] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s",
+        log_str,
         "%m-%d %H:%M:%S",
     )
     console_handler.setFormatter(formatter)
