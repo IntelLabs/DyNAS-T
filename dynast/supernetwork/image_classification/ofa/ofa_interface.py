@@ -31,12 +31,13 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
     ImagenetRunConfig,
     RunManager,
 )
+from dynast.supernetwork.runner import Runner
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
 
 
-class OFARunner:
+class OFARunner(Runner):
     """The OFARunner class manages the sub-network selection from the OFA super-network and
     the validation measurements of the sub-networks. ResNet50, MobileNetV3 w1.0, and MobileNetV3 w1.2
     are currently supported. Imagenet is required for these super-networks `imagenet-ilsvrc2012`.
@@ -46,23 +47,26 @@ class OFARunner:
         self,
         supernet: str,
         dataset_path: str,
-        predictors: Dict[str, Predictor] = None,
+        predictors: Dict[str, Predictor] = {},
         batch_size: int = 128,
         eval_batch_size: int = 128,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         verbose: bool = False,
-    ):
-        self.supernet = supernet
-        self.predictors = predictors
-        self.batch_size = batch_size
-        self.eval_batch_size = eval_batch_size
-        self.device = device
-        self.test_fraction = test_fraction
-        self.dataset_path = dataset_path
-        self.dataloader_workers = dataloader_workers
-        self.verbose = verbose
+    ) -> None:
+        super().__init__(
+            supernet=supernet,
+            dataset_path=dataset_path,
+            predictors=predictors,
+            batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
+            dataloader_workers=dataloader_workers,
+            device=device,
+            test_fraction=test_fraction,
+            verbose=verbose,
+        )
+
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
@@ -83,10 +87,6 @@ class OFARunner:
         else:
             self.dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
-
-    def estimate_metric(self, metric: str, subnet_cfg) -> float:
-        predicted_val = self.predictors.get(metric).predict(subnet_cfg)
-        return predicted_val
 
     def validate_top1(self, subnet_cfg, device=None) -> float:
         device = self.device if not device else device
