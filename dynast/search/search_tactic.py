@@ -393,7 +393,10 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'bert_base_sst2':
                 runner_predict = BertSST2Runner(
                     supernet=self.supernet,
-                    predictors=self.predictors,
+                    latency_predictor=self.predictors['latency'],
+                    macs_predictor=self.predictors['macs'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
@@ -899,10 +902,10 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'bert_base_sst2':
                     runner_predict = BertSST2Runner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_sst2'],
+                        latency_predictor=self.predictors['latency'],
+                        macs_predictor=self.predictors['macs'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['accuracy_sst2'],
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                         device=self.device,
