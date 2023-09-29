@@ -382,7 +382,10 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
                     supernet=self.supernet,
-                    predictors=self.predictors,
+                    latency_predictor=self.predictors['latency'],
+                    macs_predictor=self.predictors['macs'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['bleu'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                 )
@@ -885,7 +888,10 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
                         supernet=self.supernet,
-                        predictors=self.predictors,
+                        latency_predictor=self.predictors['latency'],
+                        macs_predictor=self.predictors['macs'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['bleu'],
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                     )
