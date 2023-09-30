@@ -69,6 +69,7 @@ def validate_classification(
     model,
     data_loader,
     device='cpu',
+    log_frequency: int = 5,
 ):
     test_criterion = nn.CrossEntropyLoss()
 
@@ -79,22 +80,10 @@ def validate_classification(
     top1 = AverageMeter()
     top5 = AverageMeter()
 
-    total = len(data_loader)
+    total = len(data_loader) - 1
 
     with torch.no_grad():
         for batch, (images, labels) in enumerate(data_loader):
-            log.debug(
-                "Validate #{}/{} {}".format(
-                    batch + 1,
-                    total,
-                    {
-                        "loss": losses.avg,
-                        "top1": top1.avg,
-                        "top5": top5.avg,
-                        "img_size": images.size(2),
-                    },
-                )
-            )
             images, labels = images.to(device), labels.to(device)
 
             output = model(images)
@@ -105,6 +94,21 @@ def validate_classification(
             losses.update(loss.item(), images.size(0))
             top1.update(acc1, images.size(0))
             top5.update(acc5, images.size(0))
+
+            if batch in list(map(int, list(np.linspace(0, total, log_frequency)))):
+                log.debug(
+                    "Validate #{}/{} {}".format(
+                        batch,
+                        total,
+                        {
+                            "loss": losses.avg,
+                            "top1": top1.avg,
+                            "top5": top5.avg,
+                            "img_size": images.size(2),
+                            "device": device,
+                        },
+                    )
+                )
 
     return losses.avg, top1.avg, top5.avg
 
@@ -177,7 +181,7 @@ def measure_latency(
         times.append(ed - st)
 
     # Convert to [ms] and round to 0.001
-    latency_mean = np.round(np.mean(times) * 1e3, 3)
-    latency_std = np.round(np.std(times) * 1e3, 3)
+    latency_mean = float(np.round(np.mean(times) * 1e3, 3))
+    latency_std = float(np.round(np.std(times) * 1e3, 3))
 
     return latency_mean, latency_std

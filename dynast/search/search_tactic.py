@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+import os
+
 import pandas as pd
 import torch.distributed as dist
 
@@ -787,6 +789,10 @@ class LINASDistributed(LINAS):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
+        if 'cuda' in device:
+            device = f'cuda:{LOCAL_RANK}'
+            log.info(f'Setting device to {device}')
+
         super().__init__(
             dataset_path=dataset_path,
             supernet=supernet,
@@ -805,6 +811,7 @@ class LINASDistributed(LINAS):
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
@@ -835,6 +842,10 @@ class LINASDistributed(LINAS):
         for loop in range(num_loops):
             log.info('Starting LINAS loop {} of {}.'.format(loop + 1, num_loops))
 
+            # On every external loop start we have to clear worker's results. Results from all workers are later merged into a single
+            # file and this will help to keep gathered results in order in which configurations were evaluated.
+            self.validation_interface.format_csv(self.csv_header)
+
             # High-Fidelity Validation measurements
             for _, individual in enumerate(latest_population):
                 log.info(
@@ -854,7 +865,13 @@ class LINASDistributed(LINAS):
 
             if is_main_process():
                 worker_results_paths = [o['results_path'] for o in outputs]
-                combined_csv = pd.concat([pd.read_csv(f) for f in worker_results_paths])
+                # First read main CSV file (if exists), and the append all latest population results from workers.
+                csv_paths = (
+                    [self.main_results_path] + worker_results_paths
+                    if os.path.exists(self.main_results_path)
+                    else worker_results_paths
+                )
+                combined_csv = pd.concat([pd.read_csv(f) for f in csv_paths])
                 combined_csv.to_csv(self.main_results_path, index=False)
                 log.info(f'Saving combined results to {self.main_results_path}')
 
@@ -887,6 +904,58 @@ class LINASDistributed(LINAS):
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                     )
+
+                elif self.supernet == 'bert_base_sst2':
+                    runner_predict = BertSST2Runner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_sst2'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        device=self.device,
+                    )
+                elif self.supernet == 'vit_base_imagenet':
+                    runner_predict = ViTRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        batch_size=self.batch_size,
+                        device=self.device,
+                    )
+
+                elif self.supernet == 'inc_quantization_ofa_resnet50':
+                    runner_predict = QuantizedOFARunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        model_size_predictor=self.predictor_dict['model_size'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        device=self.device,
+                        dataloader_workers=self.dataloader_workers,
+                        test_fraction=self.test_fraction,
+                    )
+
+                elif 'bootstrapnas' in self.supernet:
+                    runner_predict = BootstrapNASRunner(
+                        bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        batch_size=self.batch_size,
+                        device=self.device,
+                    )
+                else:
+                    raise NotImplementedError
 
                 # Setup validation interface
                 prediction_interface = EVALUATION_INTERFACE[self.supernet](
@@ -1021,6 +1090,7 @@ class RandomSearchDistributed(RandomSearch):
         verbose=False,
         search_algo='nsga2',
         supernet_ckpt_path: str = None,
+        device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
@@ -1029,6 +1099,10 @@ class RandomSearchDistributed(RandomSearch):
         self.main_results_path = results_path
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
+
+        if 'cuda' in device:
+            device = f'cuda:{LOCAL_RANK}'
+            log.info(f'Setting device to {device}')
 
         super().__init__(
             dataset_path=dataset_path,
@@ -1044,9 +1118,11 @@ class RandomSearchDistributed(RandomSearch):
             verbose=verbose,
             search_algo=search_algo,
             supernet_ckpt_path=supernet_ckpt_path,
+            device=device,
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            **kwargs,
         )
 
     def search(self):
