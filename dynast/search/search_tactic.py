@@ -404,10 +404,7 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'vit_base_imagenet':
                 runner_predict = ViTRunner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictors['latency'],
-                    macs_predictor=self.predictors['macs'],
-                    params_predictor=self.predictors['params'],
-                    acc_predictor=self.predictors['accuracy_top1'],
+                    predictors=self.predictors,
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     batch_size=self.batch_size,
@@ -913,10 +910,7 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'vit_base_imagenet':
                     runner_predict = ViTRunner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictors['latency'],
-                        macs_predictor=self.predictors['macs'],
-                        params_predictor=self.predictors['params'],
-                        acc_predictor=self.predictors['accuracy_top1'],
+                        predictors=self.predictors,
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                         batch_size=self.batch_size,
