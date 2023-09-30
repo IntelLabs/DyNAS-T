@@ -16,7 +16,7 @@ import copy
 import csv
 import uuid
 from datetime import datetime
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import torch
 
@@ -46,7 +46,7 @@ class OFARunner(Runner):
     def __init__(
         self,
         supernet: str,
-        dataset_path: str,
+        dataset_path: Union[None, str] = None,
         predictors: Dict[str, Predictor] = {},
         batch_size: int = 128,
         eval_batch_size: int = 128,
@@ -301,7 +301,6 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
         # Predictor Mode
         if self.predictor_mode == True:
             for metric in self.optimization_metrics:
-                # TODO(macsz) Maybe move [0] to the `estimate_metric`.
                 individual_results[metric] = self.evaluator.estimate_metric(
                     metric, self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
