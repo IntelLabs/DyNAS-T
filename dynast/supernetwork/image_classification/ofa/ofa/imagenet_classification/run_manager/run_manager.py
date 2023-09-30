@@ -33,12 +33,13 @@ from dynast.supernetwork.image_classification.ofa.ofa.utils import (
     MyRandomResizedCrop,
     cross_entropy_loss_with_soft_target,
     cross_entropy_with_label_smoothing,
-    get_net_info,
     init_models,
     mix_images,
     mix_labels,
     write_log,
 )
+from dynast.utils import log
+from dynast.utils.distributed import get_distributed_vars
 from dynast.utils.nn import AverageMeter, accuracy
 
 __all__ = ["RunManager"]
@@ -67,7 +68,9 @@ class RunManager:
 
         # move network to GPU if available
         if torch.cuda.is_available() and (not no_gpu):
-            self.device = torch.device("cuda:0")
+            LOCAL_RANK, _, _, _ = get_distributed_vars()
+            self.device = torch.device(f"cuda:{LOCAL_RANK}") if LOCAL_RANK is not None else torch.device("cuda:0")
+            log.debug(f'RuManager: device = {self.device}')
             self.net = self.net.to(self.device)
             cudnn.benchmark = True
         else:
@@ -75,19 +78,6 @@ class RunManager:
         # initialize model (default)
         if init:
             init_models(run_config.model_init)
-
-        # net info
-        net_info = get_net_info(self.net, self.run_config.data_provider.data_shape, measure_latency)
-        with open("%s/net_info.txt" % self.path, "w") as fout:
-            fout.write(json.dumps(net_info, indent=4) + "\n")
-            # noinspection PyBroadException
-            try:
-                fout.write(self.network.module_str + "\n")
-            except Exception:
-                pass
-            fout.write("%s\n" % self.run_config.data_provider.train.dataset.transform)
-            fout.write("%s\n" % self.run_config.data_provider.test.dataset.transform)
-            fout.write("%s\n" % self.network)
 
         # criterion
         if isinstance(self.run_config.mixup_alpha, float):

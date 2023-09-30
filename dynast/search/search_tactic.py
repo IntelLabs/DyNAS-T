@@ -812,8 +812,9 @@ class LINASDistributed(LINAS):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
-        if device == 'cuda':
+        if 'cuda' in device:
             device = f'cuda:{LOCAL_RANK}'
+            log.info(f'Setting device to {device}')
 
         super().__init__(
             dataset_path=dataset_path,
@@ -1122,8 +1123,9 @@ class RandomSearchDistributed(RandomSearch):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
-        if device == 'cuda':
+        if 'cuda' in device:
             device = f'cuda:{LOCAL_RANK}'
+            log.info(f'Setting device to {device}')
 
         super().__init__(
             dataset_path=dataset_path,
