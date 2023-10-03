@@ -789,6 +789,9 @@ class LINASDistributed(LINAS):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
+        if is_main_process() and os.path.exists(self.main_results_path):
+            os.remove(self.main_results_path)
+
         if 'cuda' in device:
             device = f'cuda:{LOCAL_RANK}'
             log.info(f'Setting device to {device}')
@@ -1098,6 +1101,10 @@ class RandomSearchDistributed(RandomSearch):
     ):
         self.main_results_path = results_path
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+
+        if is_main_process() and os.path.exists(self.main_results_path):
+            os.remove(self.main_results_path)
+
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
         if 'cuda' in device:
