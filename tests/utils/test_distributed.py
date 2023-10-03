@@ -59,8 +59,7 @@ def test_is_main_process() -> None:
     ):
         assert not is_main_process()
 
-    with pytest.raises(Exception):
-        is_main_process()
+    assert is_main_process()
 
 
 def test_is_worker_process() -> None:
