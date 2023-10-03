@@ -590,11 +590,17 @@ if __name__ == '__main__':
         plot_search_progression(
             results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_vit_linas_a100.csv'
         )
+    if False:
+        plot_search_progression(
+            results_path='/localdisk/maciej/code/dynast-decoma/tmp.csv',
+            target_metrics=['cycles', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1', 'cycles'],
+        )
     if True:
         plot_search_progression(
-            results_path='/tmp/results_ofambv3_evolutionary_long.csv',
-            target_metrics=['macs', 'accuracy_top1'],
-            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1',],# 'cycles'],
+            results_path='tmp_clx.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
         )
 
 
