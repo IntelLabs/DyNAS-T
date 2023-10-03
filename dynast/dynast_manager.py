@@ -60,7 +60,8 @@ class DyNAS:
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         if DIST_METHOD:
             backend = kwargs.get('backend', 'gloo')
-            init_distributed(backend, WORLD_RANK, WORLD_SIZE)
+            dist_timeout = kwargs.get('dist_timeout', 3600)
+            init_distributed(backend, WORLD_RANK, WORLD_SIZE, dist_timeout)
             seed = kwargs.get('seed', None)
             if seed:
                 kwargs['seed'] = seed + WORLD_RANK
