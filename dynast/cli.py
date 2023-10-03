@@ -46,7 +46,7 @@ def _main(args):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--supernet',
         default='ofa_mbv3_d234_e346_k357_w1.0',
