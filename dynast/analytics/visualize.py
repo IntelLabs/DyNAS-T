@@ -60,7 +60,7 @@ colors = {
 }
 
 
-def frontier_builder(df, optimization_metrics, alpha=0, verbose=False):
+def frontier_builder(df, optimization_metrics, alpha=0):
     """
     Modified alphashape algorithm to draw Pareto Front for OFA search.
     Takes a DataFrame of column form [x, y] = [latency, accuracy]
@@ -70,19 +70,15 @@ def frontier_builder(df, optimization_metrics, alpha=0, verbose=False):
     alpha  - Dictates amount of tolerable 'concave-ness' allowed.
              A fully convex front will be given if 0 (also better for runtime)
     """
-    if verbose:
-        log.info('Running front builder')
+    log.debug('Running front builder')
     df = df[optimization_metrics]
     points = list(df.to_records(index=False))
     for i in range(len(points)):
         points[i] = list(points[i])
     points = MultiPoint(points)
 
-    # TODO(macsz) Fix the line below in comment:
-    # if len(points) < 4 or alpha <= 0:
-    if alpha <= 0:
-        if verbose:
-            log.info('Alpha=0 -> convex hull')
+    if len(points.geoms) < 4 or alpha <= 0:
+        log.debug('Alpha=0 -> convex hull')
         result = points.convex_hull
     else:
         coords = np.array([point.coords[0] for point in points])
