@@ -594,36 +594,44 @@ if __name__ == '__main__':
         )
     if True:
         evals_limit = 1000
+        # Model's latency: 78.156 +/- 1.453 accuracy_sst2 0.9208715596330275
         plot_search_progression(
             results_path='results_linas_subnet_qp_icx.csv',
             target_metrics=['latency', 'accuracy_sst2'],
             columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
             evals_limit=evals_limit,
+            reference_points=[
+                ReferencePoint(
+                    'INC INT8 BERT-SST2',
+                    {'latency': 78.156, 'accuracy_sst2': 0.9208715596330275},
+                    color='tab:red',
+                ),
+            ]
         )
-        plot_search_progression(
-            results_path='results_linas_subnet_qp_spr.csv',
-            target_metrics=['latency', 'accuracy_sst2'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
-            evals_limit=evals_limit,
-        )
-        plot_search_progression(
-            results_path='results_linas_subnet_qp_spr_ompreduced.csv',
-            target_metrics=['latency', 'accuracy_sst2'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
-            evals_limit=evals_limit,
-        )
-        plot_search_progression(
-            results_path='results_linas_subnet_qp_spr_ompreduced_boost.csv',
-            target_metrics=['latency', 'accuracy_sst2'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
-            evals_limit=evals_limit,
-        )
-        plot_search_progression(
-            results_path='results_linas_subnet_qp_spr_ompreduced_noboost.csv',
-            target_metrics=['latency', 'accuracy_sst2'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
-            evals_limit=evals_limit,
-        )
+        # plot_search_progression(
+        #     results_path='results_linas_subnet_qp_spr.csv',
+        #     target_metrics=['latency', 'accuracy_sst2'],
+        #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
+        #     evals_limit=evals_limit,
+        # )
+        # plot_search_progression(
+        #     results_path='results_linas_subnet_qp_spr_ompreduced.csv',
+        #     target_metrics=['latency', 'accuracy_sst2'],
+        #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
+        #     evals_limit=evals_limit,
+        # )
+        # plot_search_progression(
+        #     results_path='results_linas_subnet_qp_spr_ompreduced_boost.csv',
+        #     target_metrics=['latency', 'accuracy_sst2'],
+        #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
+        #     evals_limit=evals_limit,
+        # )
+        # plot_search_progression(
+        #     results_path='results_linas_subnet_qp_spr_ompreduced_noboost.csv',
+        #     target_metrics=['latency', 'accuracy_sst2'],
+        #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
+        #     evals_limit=evals_limit,
+        # )
 
 
 # correlation()
