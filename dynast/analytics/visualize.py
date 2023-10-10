@@ -606,6 +606,11 @@ if __name__ == '__main__':
                     {'latency': 78.156, 'accuracy_sst2': 0.9208715596330275},
                     color='tab:red',
                 ),
+                ReferencePoint(
+                    'FP32 BERT-SST2',
+                    {'latency': 170.272, 'accuracy_sst2': 0.9243119266055045},
+                    color='tab:purple',
+                ),
             ]
         )
         # plot_search_progression(
