@@ -144,7 +144,11 @@ def compute_latency(
             latencies.append((end - start) * 1e3)
 
     # Drop the first and last 5% latency numbers
-    truncated_latency = np.array(latencies)[int(measure_steps * 0.05) : int(measure_steps * 0.95)]
+    latencies.sort()
+    truncated_latency = np.array(latencies)[int(len(latencies) * 0.05) : int(len(latencies) * 0.95)]
+    log.debug(
+        f'Truncating latency measurements to 5% - 95% range (removing {len(latencies)-len(truncated_latency)} measurements))'
+    )
 
     latency_mean = np.round(np.mean(truncated_latency), 3)
     latency_std = np.round(np.std(truncated_latency), 3)
