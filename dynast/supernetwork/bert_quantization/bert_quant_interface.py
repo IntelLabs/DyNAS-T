@@ -118,8 +118,8 @@ def compute_latency(
     model,
     eval_batch_size=4,
     device: str = 'cpu',
-    warmup_steps: int = 10,
-    measure_steps: int = 100,
+    warmup_steps: int = 50,
+    measure_steps: int = 500,
 ):
     """Measure latency of the BERT-based model."""
 
