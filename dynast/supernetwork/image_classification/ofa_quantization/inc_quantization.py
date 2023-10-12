@@ -22,6 +22,8 @@ import torch
 import yaml
 from neural_compressor.experimental import Quantization
 
+from dynast.utils import reset_logger
+
 
 def default_policy() -> dict:
     policy = {
@@ -237,6 +239,10 @@ def inc_quantize(
     Return:
         model_qt: quantized model
     '''
+
+    # Set INC logger level to ERROR to limit INC's verbosity (prints network architecture to INFO by default).
+    reset_logger()
+
     model_fp.eval()
 
     if mp_calibration_samples is not None:
