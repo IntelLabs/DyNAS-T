@@ -19,7 +19,7 @@ import logging
 import os
 import subprocess
 import time as _time
-from typing import List, Union
+from typing import List
 
 import pandas as pd
 import requests
