@@ -58,7 +58,7 @@ def set_logger(
         logging.getLogger(logger_3rd_party).setLevel(auxiliary_log_level)
 
 
-log: Union[logging.Logger, None] = None
+log = None
 
 set_logger()
 
