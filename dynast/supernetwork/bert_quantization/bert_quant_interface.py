@@ -255,9 +255,8 @@ class BertSST2QuantizedRunner:
             mean latency; std latency
         """
 
-        logging.info(
-            f'Performing Latency measurements. Warmup = {warmup_steps},\
-             Measure steps = {measure_steps}'
+        logging.debug(
+            f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}'
         )
 
         regex_module_names = get_regex_names(self.supernet_model)
@@ -278,8 +277,6 @@ class BertSST2QuantizedRunner:
 
     def validate_modelsize(self, subnet_sample, qbit_list):
         temp_name = "temp_23"
-        # supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12,
-        #               'subnet_intermediate_sizes': [3072]*12}
         regex_module_names = get_regex_names(self.supernet_model)
         config_new = {
             'subnet_hidden_sizes': 768,
