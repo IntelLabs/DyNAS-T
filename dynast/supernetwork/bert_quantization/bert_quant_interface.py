@@ -30,13 +30,13 @@ from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 from transformers import BertConfig
 from dynast.predictors.dynamic_predictor import Predictor
-
 from dynast.search.evaluation_interface import EvaluationInterface
+from dynast.supernetwork.text_classification.sst2_dataloader import prepare_data_loader
 from dynast.utils import log
 
 from .bert_subnetwork import BertSubnetForSequenceClassification
 from .bert_supernetwork import BertSupernetForSequenceClassification
-from .sst2_dataloader import prepare_calib_loader, prepare_data_loader
+from .sst2_dataloader import prepare_calib_loader
 
 warnings.filterwarnings("ignore")
 

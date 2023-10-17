@@ -82,30 +82,6 @@ def create_tensor_dataset(features):
     )
 
 
-def prepare_data_loader(dataset_path, max_seq_length=128, eval_batch_size=16):
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    processor = glue_processors["sst-2"]()
-    num_labels = len(processor.get_labels())
-
-    eval_examples = processor.get_dev_examples(dataset_path)
-
-    eval_features = convert_examples_to_features(
-        eval_examples,
-        processor.get_labels(),
-        max_seq_length,
-        tokenizer,
-    )
-
-    eval_data = create_tensor_dataset(eval_features)
-    eval_sampler = SequentialSampler(eval_data)
-    eval_dataloader = DataLoader(
-        eval_data,
-        sampler=eval_sampler,
-        batch_size=eval_batch_size,
-    )
-    return eval_dataloader
-
-
 def prepare_calib_loader(dataset_path, model, max_seq_length=128, eval_batch_size=16):
     device = 'cpu'
     raw_datasets = load_dataset("glue", "sst2")
