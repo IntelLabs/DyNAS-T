@@ -19,6 +19,7 @@ import logging
 import os
 import shutil
 import time
+from typing import Optional
 import warnings
 from datetime import datetime
 
@@ -28,6 +29,7 @@ import torchprofile
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 from transformers import BertConfig
+from dynast.predictors.dynamic_predictor import Predictor
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
@@ -164,12 +166,11 @@ class BertSST2QuantizedRunner:
 
     def __init__(
         self,
-        supernet,
-        dataset_path,
-        acc_predictor=None,
-        model_size_predictor=None,
-        latency_predictor=None,
-        params_predictor=None,
+        supernet: str,
+        dataset_path: str,
+        acc_predictor: Optional[Predictor] = None,
+        model_size_predictor: Optional[Predictor] = None,
+        latency_predictor: Optional[Predictor] = None,
         batch_size: int = 16,
         checkpoint_path=None,
         device: str = 'cpu',
@@ -178,7 +179,6 @@ class BertSST2QuantizedRunner:
         self.acc_predictor = acc_predictor
         self.model_size_predictor = model_size_predictor
         self.latency_predictor = latency_predictor
-        self.params_predictor = params_predictor
         self.batch_size = batch_size
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
@@ -202,21 +202,21 @@ class BertSST2QuantizedRunner:
         self,
         subnet_cfg: dict,
     ) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
+        top1 = self.acc_predictor.predict(subnet_cfg) if self.acc_predictor else 0
         return top1
 
     def estimate_model_size(
         self,
         subnet_cfg: dict,
     ) -> int:
-        model_size = self.model_size_predictor.predict(subnet_cfg)
+        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else 0
         return model_size
 
     def estimate_latency(
         self,
         subnet_cfg: dict,
     ) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
+        latency = self.latency_predictor.predict(subnet_cfg) if self.latency_predictor else 0
         return latency
 
     def validate_accuracy_sst2(
@@ -238,20 +238,6 @@ class BertSST2QuantizedRunner:
         accuracy_sst2 = compute_accuracy_sst2(self.eval_dataloader, quantized_model, device=self.device)
         del quantized_model, model_fp32
         return accuracy_sst2
-
-    def validate_macs(
-        self,
-        subnet_cfg: dict,
-    ) -> float:
-        """Measure Torch model's FLOPs/MACs as per FVCore calculation
-        Args:
-            subnet_cfg: sub-network Torch model
-        Returns:
-            `macs`
-        """
-        macs, params = compute_macs(subnet_cfg, self.supernet_model, self.base_config)
-        logging.info('Model\'s macs: {}'.format(macs))
-        return macs, params
 
     @torch.no_grad()
     def measure_latency(
@@ -376,15 +362,11 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
         subnet_sample = copy.deepcopy(sample)
 
         individual_results = dict()
-        for metric in ['params', 'latency', 'model_size', 'accuracy_sst2']:
+        for metric in ['latency', 'model_size', 'accuracy_sst2']:
             individual_results[metric] = 0
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_custom(param_dict).reshape(1, -1)
-                )[0]
             if 'latency' in self.optimization_metrics:
                 individual_results['latency'] = self.evaluator.estimate_latency(
                     self.manager.onehot_custom(param_dict).reshape(1, -1)
@@ -402,9 +384,6 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
 
         # Validation Mode
         else:
-            if 'params' in self.measurements:
-                individual_results['params'] = 0  # self.evaluator.validate_macs(subnet_sample)
-
             if 'accuracy_sst2' in self.measurements:
                 individual_results['accuracy_sst2'] = self.evaluator.validate_accuracy_sst2(subnet_sample, qbit_list)
 
@@ -425,7 +404,6 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
                 result = [
                     subnet_sample,
                     date,
-                    individual_results['params'],
                     individual_results['latency'],
                     individual_results['model_size'],
                     individual_results['accuracy_sst2'],

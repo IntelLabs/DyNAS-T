@@ -159,7 +159,7 @@ SUPERNET_METRICS = {
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
     'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
-    'bert_base_sst2_quantized': ['params', 'latency', 'model_size', 'accuracy_sst2'],
+    'bert_base_sst2_quantized': ['latency', 'model_size', 'accuracy_sst2'],
 }
 
 
@@ -217,7 +217,6 @@ def get_csv_header(supernet: str) -> List[str]:
         csv_header = [
             'Sub-network',
             'Date',
-            'Model Parameters',
             'Latency (ms)',
             'Model Size',
             'SST-2 Acc',
