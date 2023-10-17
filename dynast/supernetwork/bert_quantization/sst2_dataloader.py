@@ -26,62 +26,6 @@ from transformers.models.bert.tokenization_bert import BertTokenizer
 warnings.filterwarnings("ignore")
 
 
-def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer):
-    """Loads a data file into a list of dictionaries."""
-
-    label_map = {label: i for i, label in enumerate(label_list)}
-
-    features = []
-    for ex_index, example in enumerate(examples):
-        tokens_a = tokenizer.tokenize(example.text_a)
-        # Account for [CLS] and [SEP] with "- 2"
-        if len(tokens_a) > max_seq_length - 2:
-            tokens_a = tokens_a[: (max_seq_length - 2)]
-
-        tokens = ["[CLS]"] + tokens_a + ["[SEP]"]
-        segment_ids = [0] * len(tokens)
-
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-        input_mask = [1] * len(input_ids)
-
-        # Zero-pad up to the sequence length.
-        padding = [0] * (max_seq_length - len(input_ids))
-        input_ids += padding
-        input_mask += padding
-        segment_ids += padding
-
-        assert len(input_ids) == max_seq_length
-        assert len(input_mask) == max_seq_length
-        assert len(segment_ids) == max_seq_length
-
-        label_id = label_map[example.label]
-        features.append(
-            {"input_ids": input_ids, "input_mask": input_mask, "segment_ids": segment_ids, "label_id": label_id}
-        )
-
-    return features
-
-
-def create_tensor_dataset(features):
-    batch_input_ids = []
-    batch_input_mask = []
-    batch_segment_ids = []
-    batch_label_ids = []
-
-    for feature in features:
-        batch_input_ids.append(feature["input_ids"])
-        batch_input_mask.append(feature["input_mask"])
-        batch_segment_ids.append(feature["segment_ids"])
-        batch_label_ids.append(feature["label_id"])
-
-    return TensorDataset(
-        torch.tensor(batch_input_ids, dtype=torch.long),
-        torch.tensor(batch_input_mask, dtype=torch.long),
-        torch.tensor(batch_segment_ids, dtype=torch.long),
-        torch.tensor(batch_label_ids, dtype=torch.long),
-    )
-
-
 def prepare_calib_loader(dataset_path, model, max_seq_length=128, eval_batch_size=16):
     device = 'cpu'
     raw_datasets = load_dataset("glue", "sst2")
