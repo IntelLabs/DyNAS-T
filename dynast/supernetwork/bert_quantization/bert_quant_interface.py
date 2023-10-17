@@ -172,6 +172,7 @@ class BertSST2QuantizedRunner:
         model_size_predictor: Optional[Predictor] = None,
         latency_predictor: Optional[Predictor] = None,
         batch_size: int = 16,
+        eval_batch_size: int = 16,
         checkpoint_path=None,
         device: str = 'cpu',
     ):
@@ -180,6 +181,7 @@ class BertSST2QuantizedRunner:
         self.model_size_predictor = model_size_predictor
         self.latency_predictor = latency_predictor
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
@@ -193,8 +195,8 @@ class BertSST2QuantizedRunner:
         }
 
         model_new = self.supernet_model
-        self.eval_dataloader = prepare_data_loader(self.dataset_path)
-        self.calib_dataloader = prepare_calib_loader(self.dataset_path, model_new, eval_batch_size=16)
+        self.eval_dataloader = prepare_data_loader(self.dataset_path, eval_batch_size=self.eval_batch_size)
+        self.calib_dataloader = prepare_calib_loader(self.dataset_path, model_new, eval_batch_size=self.eval_batch_size)
 
         self.supernet_model.set_sample_config(supernet_config)
 
