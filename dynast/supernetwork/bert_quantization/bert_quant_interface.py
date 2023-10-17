@@ -42,12 +42,6 @@ from .sst2_dataloader import prepare_calib_loader
 warnings.filterwarnings("ignore")
 
 
-def get_weights_copy(model):
-    weights_path = 'weights_temp.pt'
-    torch.save(model.state_dict(), weights_path)
-    return torch.load(weights_path)
-
-
 def load_supernet(checkpoint_path):
     bert_config = BertConfig()
     model = BertSupernetForSequenceClassification(bert_config, num_labels=2)
