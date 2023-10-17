@@ -774,7 +774,7 @@ class RandomSearch(NASBaseConfig):
 
         # High-Fidelity Validation measurements
         for _, individual in enumerate(latest_population):
-            log.info(f'Evaluating subnetwork {_+1}/{self.population}')
+            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)}')
             self.validation_interface.eval_subnet(individual)
 
         output = list()
@@ -1176,7 +1176,7 @@ class RandomSearchDistributed(RandomSearch):
 
         # High-Fidelity Validation measurements
         for _, individual in enumerate(latest_population):
-            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.population}]')
+            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.num_evals}]')
             self.validation_interface.eval_subnet(individual)
 
         output = list()
