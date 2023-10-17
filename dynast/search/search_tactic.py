@@ -770,7 +770,7 @@ class RandomSearch(NASBaseConfig):
         self._init_search()
 
         # Randomly sample search space for initial population
-        latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+        latest_population = [self.supernet_manager.random_sample() for _ in range(self.num_evals)]
 
         # High-Fidelity Validation measurements
         for _, individual in enumerate(latest_population):
@@ -1164,7 +1164,7 @@ class RandomSearchDistributed(RandomSearch):
         if is_main_process():
             log.info('Creating data')
             # Randomly sample search space for initial population
-            latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+            latest_population = [self.supernet_manager.random_sample() for _ in range(self.num_evals)]
             data = split_list(latest_population, WORLD_SIZE)
         else:
             data = [None for _ in range(WORLD_SIZE)]
