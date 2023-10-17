@@ -19,9 +19,9 @@ import logging
 import os
 import shutil
 import time
-from typing import Optional
 import warnings
 from datetime import datetime
+from typing import Optional
 
 import numpy as np
 import torch
@@ -29,6 +29,7 @@ import torchprofile
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 from transformers import BertConfig
+
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.supernetwork.text_classification.sst2_dataloader import prepare_data_loader
@@ -257,9 +258,7 @@ class BertSST2QuantizedRunner:
             mean latency; std latency
         """
 
-        logging.debug(
-            f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}'
-        )
+        logging.debug(f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}')
 
         regex_module_names = get_regex_names(self.supernet_model)
         config_new = {
