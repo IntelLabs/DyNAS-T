@@ -128,3 +128,7 @@ runs/
 
 # Neural Compressor
 nc_workspace/
+
+mod/
+models/
+datasets/

@@ -322,7 +322,7 @@ class LINAS(NASBaseConfig):
         """
 
         # Store predictor objects by objective name in a dictionary
-        self.predictor_dict = dict()
+        self.predictors = dict()
 
         # Create/train a predictor for each objective
         for objective in SUPERNET_METRICS[self.supernet]:
@@ -339,10 +339,10 @@ class LINAS(NASBaseConfig):
                 )
                 log.info(f'Training {objective} predictor.')
                 predictor = objective_predictor.train_predictor()
-                log.info(f'Updated self.predictor_dict[{objective}].')
-                self.predictor_dict[objective] = predictor
+                log.info(f'Updated self.predictors[{objective}].')
+                self.predictors[objective] = predictor
             else:
-                self.predictor_dict[objective] = None
+                self.predictors[objective] = None
 
     def search(self):
         """Runs the LINAS search"""
@@ -373,10 +373,7 @@ class LINAS(NASBaseConfig):
             ]:
                 runner_predict = OFARunner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    predictors=self.predictors,
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
@@ -385,10 +382,10 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'transformer_lt_wmt_en_de':
                 runner_predict = TransformerLTRunner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['bleu'],
+                    latency_predictor=self.predictors['latency'],
+                    macs_predictor=self.predictors['macs'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['bleu'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                 )
@@ -396,10 +393,10 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'bert_base_sst2':
                 runner_predict = BertSST2Runner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    latency_predictor=self.predictors['latency'],
+                    macs_predictor=self.predictors['macs'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
@@ -407,10 +404,7 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'vit_base_imagenet':
                 runner_predict = ViTRunner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    predictors=self.predictors,
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     batch_size=self.batch_size,
@@ -420,10 +414,10 @@ class LINAS(NASBaseConfig):
             elif self.supernet == 'inc_quantization_ofa_resnet50':
                 runner_predict = QuantizedOFARunner(
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    model_size_predictor=self.predictor_dict['model_size'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    latency_predictor=self.predictors['latency'],
+                    model_size_predictor=self.predictors['model_size'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['accuracy_top1'],
                     dataset_path=self.dataset_path,
                     device=self.device,
                     dataloader_workers=self.dataloader_workers,
@@ -434,10 +428,10 @@ class LINAS(NASBaseConfig):
                 runner_predict = BootstrapNASRunner(
                     bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
                     supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    latency_predictor=self.predictors['latency'],
+                    macs_predictor=self.predictors['macs'],
+                    params_predictor=self.predictors['params'],
+                    acc_predictor=self.predictors['accuracy_top1'],
                     dataset_path=self.dataset_path,
                     batch_size=self.batch_size,
                     device=self.device,
@@ -888,10 +882,7 @@ class LINASDistributed(LINAS):
                 ]:
                     runner_predict = OFARunner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        predictors=self.predictors,
                         dataset_path=self.dataset_path,
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
@@ -900,10 +891,10 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'transformer_lt_wmt_en_de':
                     runner_predict = TransformerLTRunner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['bleu'],
+                        latency_predictor=self.predictors['latency'],
+                        macs_predictor=self.predictors['macs'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['bleu'],
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                     )
@@ -911,10 +902,10 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'bert_base_sst2':
                     runner_predict = BertSST2Runner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_sst2'],
+                        latency_predictor=self.predictors['latency'],
+                        macs_predictor=self.predictors['macs'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['accuracy_sst2'],
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                         device=self.device,
@@ -922,10 +913,7 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'vit_base_imagenet':
                     runner_predict = ViTRunner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        predictors=self.predictors,
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                         batch_size=self.batch_size,
@@ -935,10 +923,10 @@ class LINASDistributed(LINAS):
                 elif self.supernet == 'inc_quantization_ofa_resnet50':
                     runner_predict = QuantizedOFARunner(
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        model_size_predictor=self.predictor_dict['model_size'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        latency_predictor=self.predictors['latency'],
+                        model_size_predictor=self.predictors['model_size'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['accuracy_top1'],
                         dataset_path=self.dataset_path,
                         device=self.device,
                         dataloader_workers=self.dataloader_workers,
@@ -949,10 +937,10 @@ class LINASDistributed(LINAS):
                     runner_predict = BootstrapNASRunner(
                         bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
                         supernet=self.supernet,
-                        latency_predictor=self.predictor_dict['latency'],
-                        macs_predictor=self.predictor_dict['macs'],
-                        params_predictor=self.predictor_dict['params'],
-                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        latency_predictor=self.predictors['latency'],
+                        macs_predictor=self.predictors['macs'],
+                        params_predictor=self.predictors['params'],
+                        acc_predictor=self.predictors['accuracy_top1'],
                         dataset_path=self.dataset_path,
                         batch_size=self.batch_size,
                         device=self.device,

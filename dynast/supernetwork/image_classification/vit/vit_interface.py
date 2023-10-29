@@ -19,12 +19,15 @@ import logging
 import time
 import warnings
 from datetime import datetime
+from typing import Dict, Tuple, Union
 
 import numpy as np
 import torch
 import torchprofile
 
+from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
+from dynast.supernetwork.runner import Runner
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import validate_classification
@@ -89,7 +92,7 @@ def compute_latency(
     batch_size=128,
     device: str = 'cpu',
     warmup_steps: int = 10,
-    measure_steps: int = 100,
+    measure_steps: int = 50,
 ):
     """Measure latency of the ViT-based model."""
 
@@ -154,7 +157,7 @@ def compute_macs(config, model, device: str = 'cpu'):
     return macs, params
 
 
-class ViTRunner:
+class ViTRunner(Runner):
     """The ViTRunner class manages the sub-network selection from the BERT super-network and
     the validation measurements of the sub-networks. Bert-Base network finetuned on SST-2 dataset is
     currently supported.
@@ -163,33 +166,29 @@ class ViTRunner:
     def __init__(
         self,
         supernet,
-        dataset_path,
-        acc_predictor=None,
-        macs_predictor=None,
-        latency_predictor=None,
-        params_predictor=None,
+        dataset_path: Union[None, str] = None,
+        predictors: Dict[str, Predictor] = {},
         batch_size: int = 16,
         eval_batch_size: int = 128,
-        checkpoint_path=None,
+        dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
-        warmup_steps: int = 10,
-        measure_steps: int = 100,
-    ):
-        self.supernet = supernet
-        self.acc_predictor = acc_predictor
-        self.macs_predictor = macs_predictor
-        self.latency_predictor = latency_predictor
-        self.params_predictor = params_predictor
-        self.batch_size = batch_size
-        self.eval_batch_size = eval_batch_size
-        self.dataset_path = dataset_path
-        self.checkpoint_path = checkpoint_path
-        self.device = device
-        self.test_fraction = test_fraction
-        self.warmup_steps = warmup_steps
-        self.measure_steps = measure_steps
+        verbose: bool = False,
+        checkpoint_path=None,
+    ) -> None:
+        super().__init__(
+            supernet=supernet,
+            dataset_path=dataset_path,
+            predictors=predictors,
+            batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
+            dataloader_workers=dataloader_workers,
+            device=device,
+            test_fraction=test_fraction,
+            verbose=verbose,
+        )
 
+        self.checkpoint_path = checkpoint_path
         self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
         self._init_data()
@@ -203,34 +202,6 @@ class ViTRunner:
         else:
             self.dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
-
-    def estimate_accuracy_imagenet(
-        self,
-        subnet_cfg: dict,
-    ) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
-        return top1
-
-    def estimate_macs(
-        self,
-        subnet_cfg: dict,
-    ) -> int:
-        macs = self.macs_predictor.predict(subnet_cfg)
-        return macs
-
-    def estimate_parameters(
-        self,
-        subnet_cfg: dict,
-    ) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
-        return parameters
-
-    def estimate_latency(
-        self,
-        subnet_cfg: dict,
-    ) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
-        return latency
 
     def validate_accuracy_imagenet(
         self,
@@ -247,7 +218,7 @@ class ViTRunner:
     def validate_macs(
         self,
         subnet_cfg: dict,
-    ) -> float:
+    ) -> Tuple[float, float]:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model
@@ -262,6 +233,9 @@ class ViTRunner:
     def measure_latency(
         self,
         subnet_cfg: dict,
+        warmup_steps: int = 10,
+        measure_steps: int = 50,
+        device: str = None,
     ):
         """Measure Torch model's latency.
         Args:
@@ -270,9 +244,11 @@ class ViTRunner:
             mean latency; std latency
         """
 
+        device = self.device if not device else device
+
         logging.info(
-            f'Performing Latency measurements. Warmup = {self.warmup_steps},\
-             Measure steps = {self.measure_steps}'
+            f'Performing Latency measurements. Warmup = {warmup_steps},\
+             Measure steps = {measure_steps}'
         )
 
         lat_mean, lat_std = compute_latency(
@@ -280,8 +256,8 @@ class ViTRunner:
             model=self.supernet_model,
             batch_size=self.batch_size,
             device=self.device,
-            warmup_steps=self.warmup_steps,
-            measure_steps=self.measure_steps,
+            warmup_steps=warmup_steps,
+            measure_steps=measure_steps,
         )
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
@@ -319,21 +295,9 @@ class EvaluationInterfaceViT(EvaluationInterface):
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
-                )[0]
-            if 'latency' in self.optimization_metrics:
-                individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
-                )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
-                )[0]
-            if 'accuracy_top1' in self.optimization_metrics:
-                individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_imagenet(
-                    self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
+            for metric in self.optimization_metrics:
+                individual_results[metric] = self.evaluator.estimate_metric(
+                    metric, self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
 
         # Validation Mode
