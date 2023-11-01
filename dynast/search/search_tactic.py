@@ -422,7 +422,6 @@ class LINAS(NASBaseConfig):
                     supernet=self.supernet,
                     latency_predictor=self.predictor_dict['latency'],
                     model_size_predictor=self.predictor_dict['model_size'],
-                    params_predictor=self.predictor_dict['params'],
                     acc_predictor=self.predictor_dict['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
