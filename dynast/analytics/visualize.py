@@ -592,7 +592,7 @@ if __name__ == '__main__':
             target_metrics=['cycles', 'accuracy_top1'],
             columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1', 'cycles'],
         )
-    if True:
+    if False:
         evals_limit = 1000
         # Model's latency: 78.156 +/- 1.453 accuracy_sst2 0.9208715596330275
         plot_search_progression(
@@ -610,6 +610,37 @@ if __name__ == '__main__':
                     'FP32 BERT-SST2',
                     {'latency': 170.272, 'accuracy_sst2': 0.9243119266055045},
                     color='tab:purple',
+                ),
+            ]
+        )
+    if True:
+        evals_limit = 1000
+        # Model's latency: 78.156 +/- 1.453 accuracy_sst2 0.9208715596330275
+        plot_search_progression(
+            results_path='bert_bs1_seq16.csv',
+            target_metrics=['latency', 'accuracy_sst2'],
+            columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+            evals_limit=evals_limit,
+            reference_points=[
+                # ReferencePoint(
+                #     'FP32 SuperNet',
+                #     {'latency': 78.156, 'accuracy_sst2': 0.9208715596330275},
+                #     color='tab:red',
+                # ),
+                ReferencePoint(
+                    'INC INT8 SuperNet',
+                    {'latency': 11.8, 'accuracy_sst2': 0.9208715596330275},
+                    color='tab:orange',
+                ),
+                ReferencePoint(
+                    'FP32 HuggingFace',
+                    {'latency': 14.274, 'accuracy_sst2': 0.9174311926605505},
+                    color='tab:purple',
+                ),
+                ReferencePoint(
+                    'INC INT8 HuggingFace',
+                    {'latency': 11.843, 'accuracy_sst2': 0.9139908256880734},
+                    color='tab:pink',
                 ),
             ]
         )
