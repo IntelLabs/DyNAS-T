@@ -622,11 +622,17 @@ if __name__ == '__main__':
             columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
             evals_limit=evals_limit,
             reference_points=[
-                # ReferencePoint(
-                #     'FP32 SuperNet',
-                #     {'latency': 78.156, 'accuracy_sst2': 0.9208715596330275},
-                #     color='tab:red',
-                # ),
+
+                ReferencePoint(
+                    'subnet',
+                    {'latency': 8.864, 'accuracy_sst2': 0.925459},
+                    color='tab:cyan',
+                ),
+                ReferencePoint(
+                    'FP32 SuperNet',
+                    {'latency': 14.342, 'accuracy_sst2': 0.9243119266055045},
+                    color='tab:red',
+                ),
                 ReferencePoint(
                     'INC INT8 SuperNet',
                     {'latency': 11.8, 'accuracy_sst2': 0.9208715596330275},
