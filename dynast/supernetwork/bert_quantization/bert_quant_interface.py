@@ -21,7 +21,7 @@ import shutil
 import time
 import warnings
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -119,16 +119,17 @@ def compute_accuracy_sst2(
 
 def compute_latency(
     model,
-    eval_batch_size=4,
+    batch_size: int = 128,
     device: str = 'cpu',
     warmup_steps: int = 50,
     measure_steps: int = 500,
-):
+    max_seq_length: int = 128,
+) -> Tuple[float, float]:
     """Measure latency of the BERT-based model."""
 
-    input_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
-    segment_ids = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
-    input_mask = torch.zeros([eval_batch_size, 128], dtype=torch.long, device=device)
+    input_ids = torch.zeros([batch_size, max_seq_length], dtype=torch.long, device=device)
+    segment_ids = torch.zeros([batch_size, max_seq_length], dtype=torch.long, device=device)
+    input_mask = torch.zeros([batch_size, max_seq_length], dtype=torch.long, device=device)
 
     latencies = []
 
@@ -247,9 +248,9 @@ class BertSST2QuantizedRunner:
         self,
         subnet_sample: dict,
         qbit_list,
-        eval_batch_size=128,
         warmup_steps: int = 10,
         measure_steps: int = 100,
+        max_seq_length: int = 128,
     ):
         """Measure Torch model's latency.
         Args:
@@ -271,7 +272,12 @@ class BertSST2QuantizedRunner:
         model_fp32.set_sample_config(config_new)
 
         q_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
-        lat_mean, lat_std = compute_latency(q_model, eval_batch_size, device=self.device)
+        lat_mean, lat_std = compute_latency(
+            model=q_model,
+            batch_size=self.batch_size,
+            device=self.device,
+            max_seq_length=max_seq_length,
+        )
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
@@ -389,7 +395,8 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
                 individual_results['model_size'] = self.evaluator.validate_modelsize(subnet_sample, qbit_list)
             if 'latency' in self.measurements:
                 individual_results['latency'], _ = self.evaluator.measure_latency(
-                    subnet_sample, qbit_list, eval_batch_size=16
+                    subnet_sample,
+                    qbit_list,
                 )
 
         subnet_sample = param_dict
