@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import warnings
+from typing import Optional
 
 import torch
 from datasets import load_dataset, load_metric
@@ -26,14 +27,19 @@ from transformers.models.bert.tokenization_bert import BertTokenizer
 warnings.filterwarnings("ignore")
 
 
-def prepare_calib_loader(dataset_path, model, max_seq_length=128, eval_batch_size=16):
+def prepare_calib_loader(
+    dataset_path: str,
+    model,
+    max_seq_length=128,
+    eval_batch_size=16,
+    cache_dir: Optional[str] = None,
+):
     device = 'cpu'
-    raw_datasets = load_dataset("glue", "sst2")
+    raw_datasets = load_dataset("glue", "sst2", cache_dir=cache_dir)
     label_list = raw_datasets["train"].features["label"].names
     num_labels = len(label_list)
     label_to_id = None  # {v: i for i, v in enumerate(label_list)}
     padding = "max_length"
-    max_seq_length = 128
     sentence1_key = "sentence"
     sentence2_key = None
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
