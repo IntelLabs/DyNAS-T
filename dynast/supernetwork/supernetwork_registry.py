@@ -25,6 +25,7 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_encoding import OFAQuantizedResNet50Encoding
 from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
 from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
+from dynast.supernetwork.image_classification.vit_quantized.vit_encoding import ViTQuantizedEncoding
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
@@ -43,6 +44,7 @@ SUPERNET_ENCODING = {
     'transformer_lt_wmt_en_de': TransformerLTEncoding,
     'bert_base_sst2': BertSST2Encoding,
     'vit_base_imagenet': ViTEncoding,
+    'vit_base_imagenet_quantized': ViTQuantizedEncoding,
     'inc_quantization_ofa_resnet50': OFAQuantizedResNet50Encoding,
     'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
@@ -96,6 +98,12 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
+    'vit_base_imagenet_quantized': {
+        'num_layers': {'count': 1, 'vars': [10, 11, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
+        'q_bits': {'count': 74, 'vars': [8, 32]},
+    },  # TODO(macsz) Extend with quantization parameters
 }
 
 EVALUATION_INTERFACE = {
@@ -106,6 +114,7 @@ EVALUATION_INTERFACE = {
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
     'vit_base_imagenet': EvaluationInterfaceViT,
+    'vit_base_imagenet_quantized': None,  # TODO(macsz) Implement
     'inc_quantization_ofa_resnet50': EvaluationInterfaceQuantizedOFAResNet50,
     'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
 }
@@ -118,6 +127,7 @@ LINAS_INNERLOOP_EVALS = {
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
     'vit_base_imagenet': 20000,
+    'vit_base_imagenet_quantized': None,  # TODO(macsz) Implement
     'inc_quantization_ofa_resnet50': 10000,
     'bootstrapnas_image_classification': 5000,
 }
@@ -133,7 +143,7 @@ SUPERNET_TYPE = {
     ],
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
-    'quantization': ['inc_quantization_ofa_resnet50'],
+    'quantization': ['inc_quantization_ofa_resnet50', 'vit_base_imagenet_quantized'],
     'recommendation': [],
 }
 
@@ -146,11 +156,9 @@ SUPERNET_METRICS = {
     'transformer_lt_wmt_en_de': ['params', 'latency', 'macs', 'bleu'],
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
     'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
+    'vit_base_imagenet_quantized': ['params', 'latency', 'model_size', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
 }
-
-
-SEARCH_ALGORITHMS = ['linas', 'evolutionary', 'random']
 
 
 def get_csv_header(supernet: str) -> List[str]:

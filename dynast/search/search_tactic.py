@@ -30,6 +30,7 @@ from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
+from dynast.supernetwork.image_classification.vit_quantized.vit_interface import ViTQuantizedRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
@@ -187,6 +188,16 @@ class NASBaseConfig:
             )
         elif self.supernet == 'vit_base_imagenet':
             self.runner_validate = ViTRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+                test_fraction=self.test_fraction,
+            )
+        elif self.supernet == 'vit_base_imagenet_quantized':
+            self.runner_validate = ViTQuantizedRunner(
                 supernet=self.supernet,
                 dataset_path=self.dataset_path,
                 batch_size=self.batch_size,
@@ -417,6 +428,9 @@ class LINAS(NASBaseConfig):
                     batch_size=self.batch_size,
                     device=self.device,
                 )
+            elif self.supernet == 'vit_base_imagenet_quantized':
+                # TODO(macsz) Implement
+                raise NotImplementedError
 
             elif self.supernet == 'inc_quantization_ofa_resnet50':
                 runner_predict = QuantizedOFARunner(
