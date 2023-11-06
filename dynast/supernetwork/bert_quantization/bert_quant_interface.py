@@ -25,7 +25,6 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
-import torchprofile
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 from transformers import BertConfig

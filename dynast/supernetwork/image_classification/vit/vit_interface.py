@@ -216,14 +216,14 @@ class ViTRunner:
         self,
         subnet_cfg: dict,
     ) -> int:
-        macs = self.macs_predictor.predict(subnet_cfg) if self.macs_predictor else int("nan")
+        macs = self.macs_predictor.predict(subnet_cfg) if self.macs_predictor else -1
         return macs
 
     def estimate_parameters(
         self,
         subnet_cfg: dict,
     ) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else int("nan")
+        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else -1
         return parameters
 
     def estimate_latency(

@@ -153,7 +153,7 @@ class QuantizedOFARunner:
         return top1
 
     def estimate_model_size(self, subnet_cfg) -> int:
-        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else int("nan")
+        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else -1
         return model_size
 
     def estimate_latency(self, subnet_cfg) -> float:
@@ -161,7 +161,7 @@ class QuantizedOFARunner:
         return latency
 
     def estimate_parameters(self, subnet_cfg) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else int("nan")
+        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else -1
         return parameters
 
     def quantize_and_calibrate(self, subnet, subnet_cfg):
