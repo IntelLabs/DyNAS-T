@@ -149,19 +149,19 @@ class QuantizedOFARunner:
             log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
+        top1 = self.acc_predictor.predict(subnet_cfg) if self.acc_predictor else float("nan")
         return top1
 
     def estimate_model_size(self, subnet_cfg) -> int:
-        model_size = self.model_size_predictor.predict(subnet_cfg)
+        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else int("nan")
         return model_size
 
     def estimate_latency(self, subnet_cfg) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
+        latency = self.latency_predictor.predict(subnet_cfg) if self.latency_predictor else float("nan")
         return latency
 
     def estimate_parameters(self, subnet_cfg) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
+        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else int("nan")
         return parameters
 
     def quantize_and_calibrate(self, subnet, subnet_cfg):
