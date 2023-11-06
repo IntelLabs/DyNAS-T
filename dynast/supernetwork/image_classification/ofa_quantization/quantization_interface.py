@@ -18,10 +18,11 @@ import os
 import shutil
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
+from torch.utils.data.dataloader import DataLoader
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
