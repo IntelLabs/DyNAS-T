@@ -32,7 +32,7 @@ class ViTQuantizedRunner(ViTRunner):
         supernet,
         dataset_path,
         acc_predictor: Optional[Predictor] = None,
-        macs_predictor: Optional[Predictor] = None,
+        model_size_predictor: Optional[Predictor] = None,
         latency_predictor: Optional[Predictor] = None,
         params_predictor: Optional[Predictor] = None,
         batch_size: int = 128,
@@ -47,7 +47,7 @@ class ViTQuantizedRunner(ViTRunner):
     ) -> None:
         self.supernet = supernet
         self.acc_predictor = acc_predictor
-        self.macs_predictor = macs_predictor
+        self.model_size_predictor = model_size_predictor
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
         self.batch_size = batch_size
@@ -84,6 +84,34 @@ class ViTQuantizedRunner(ViTRunner):
             self.dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
 
+    def estimate_model_size(self, subnet_cfg) -> int:
+        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else -1
+        return model_size
+
+    def measure_modelsize(self, subnet_cfg: dict, device: Optional[str] = None) -> float:
+        # TODO(macsz) Implement
+        return float("nan")
+
+
+    def quantize_and_calibrate(self, subnet, subnet_cfg):
+        # TODO(macsz) Implement
+        return None
+
+    @torch.no_grad()
+    def measure_latency(
+        self,
+        subnet_cfg: dict,
+    ):
+        # TODO(macsz) Implement
+        return -1
+
+    def validate_accuracy_imagenet(
+        self,
+        subnet_cfg: dict,
+    ) -> float:  # pragma: no cover
+        # TODO(macsz) Implement
+        return -1
+
 
 class EvaluationInterfaceViTQuantized(EvaluationInterface):
     def __init__(
@@ -111,7 +139,7 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
         subnet_sample = copy.deepcopy(sample)
 
         individual_results = dict()
-        for metric in ['params', 'latency', 'macs', 'accuracy_top1']:
+        for metric in ['params', 'latency', 'model_size', 'accuracy_top1']:
             individual_results[metric] = 0
 
         # Predictor Mode
@@ -124,8 +152,8 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
                 individual_results['latency'] = self.evaluator.estimate_latency(
                     self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
+            if 'model_size' in self.optimization_metrics:
+                individual_results['model_size'] = self.evaluator.estimate_macs(
                     self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'accuracy_top1' in self.optimization_metrics:
@@ -135,12 +163,15 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
 
         # Validation Mode
         else:
-            if 'macs' in self.measurements or 'params' in self.measurements:
-                individual_results['macs'], individual_results['params'] = self.evaluator.validate_macs(subnet_sample)
+            # TODO(macsz) Quantize `model` constructed with `subne_sample` w/ `qbit_list`
+            if 'model_size' in self.measurements:
+                individual_results['model_size'] = self.evaluator.validate_model_size(subnet_sample)
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
+                individual_results['latency'] = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_accuracy_imagenet(subnet_sample)
+            if 'params' in self.measurements:
+                _, individual_results['params'] = self.evaluator.validate_macs(subnet_sample)
 
         subnet_sample = param_dict
         sample = param_dict
@@ -154,7 +185,7 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
                     date,
                     individual_results['params'],
                     individual_results['latency'],
-                    individual_results['macs'],
+                    individual_results['model_size'],
                     individual_results['accuracy_top1'],
                 ]
                 writer.writerow(result)
