@@ -19,6 +19,7 @@ import logging
 import time
 import warnings
 from datetime import datetime
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -127,7 +128,7 @@ def compute_latency(
     return latency_mean, latency_std
 
 
-def compute_macs(config, model, device: str = 'cpu'):
+def compute_macs(config, model, device: str = 'cpu') -> Tuple[int, int]:
     """Calculate MACs for ViT-based models."""
 
     # TODO(macsz) Use built-in methods
@@ -208,28 +209,28 @@ class ViTRunner:
         self,
         subnet_cfg: dict,
     ) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
+        top1 = self.acc_predictor.predict(subnet_cfg) if self.acc_predictor else float("nan")
         return top1
 
     def estimate_macs(
         self,
         subnet_cfg: dict,
     ) -> int:
-        macs = self.macs_predictor.predict(subnet_cfg)
+        macs = self.macs_predictor.predict(subnet_cfg) if self.macs_predictor else int("nan")
         return macs
 
     def estimate_parameters(
         self,
         subnet_cfg: dict,
     ) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
+        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else int("nan")
         return parameters
 
     def estimate_latency(
         self,
         subnet_cfg: dict,
     ) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
+        latency = self.latency_predictor.predict(subnet_cfg) if self.latency_predictor else float("nan")
         return latency
 
     def validate_accuracy_imagenet(
@@ -247,7 +248,7 @@ class ViTRunner:
     def validate_macs(
         self,
         subnet_cfg: dict,
-    ) -> float:
+    ) -> Tuple[int, int]:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model

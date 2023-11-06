@@ -31,7 +31,7 @@ from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
-from dynast.supernetwork.image_classification.vit_quantized.vit_interface import ViTQuantizedRunner
+from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_interface import ViTQuantizedRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
@@ -256,7 +256,7 @@ class NASBaseConfig:
         # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
-    def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
+    def get_best_configs(self, sort_by: Optional[str] = None, ascending: bool = False, limit: Optional[int] = None):
         """Returns the best sub-networks.
 
         Number of returned networks is controlled by the `limit` parameter. If it's not set, then
