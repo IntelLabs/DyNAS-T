@@ -27,7 +27,10 @@ from dynast.supernetwork.image_classification.ofa.ofa_interface import (
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_encoding import OFAQuantizedResNet50Encoding
 from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncoding
 from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
-from dynast.supernetwork.image_classification.vit_quantized.vit_encoding import ViTQuantizedEncoding
+from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_encoding import ViTQuantizedEncoding
+from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_interface import (
+    EvaluationInterfaceViTQuantized,
+)
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
@@ -123,7 +126,7 @@ EVALUATION_INTERFACE = {
     'transformer_lt_wmt_en_de': EvaluationInterfaceTransformerLT,
     'bert_base_sst2': EvaluationInterfaceBertSST2,
     'vit_base_imagenet': EvaluationInterfaceViT,
-    'vit_base_imagenet_quantized': None,  # TODO(macsz) Implement
+    'vit_base_imagenet_quantized': EvaluationInterfaceViTQuantized,
     'inc_quantization_ofa_resnet50': EvaluationInterfaceQuantizedOFAResNet50,
     'bert_base_sst2_quantized': EvaluationInterfaceBertSST2Quantized,
     'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
