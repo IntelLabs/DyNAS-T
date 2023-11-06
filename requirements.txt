@@ -1,4 +1,5 @@
 autograd>=1.5
+datasets
 fairseq>=0.12.2
 gdown
 numba>=0.56.4
@@ -12,4 +13,4 @@ scipy>=1.7.3
 torch>=1.12.0
 torchprofile>=0.0.4
 torchvision>=0.13.0
-transformers>=4.10.0
+transformers>=4.10.0,<=4.27.1
