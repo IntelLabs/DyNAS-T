@@ -48,7 +48,7 @@ class NASBaseConfig:
 
     def __init__(
         self,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
         measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
@@ -60,12 +60,12 @@ class NASBaseConfig:
         eval_batch_size: int = 128,
         verbose: bool = False,
         search_algo: str = 'nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         """Params:
@@ -554,6 +554,7 @@ class LINAS(NASBaseConfig):
                     )
             else:
                 log.error('Number of objectives not supported. Update optimization_metrics!')
+                raise Exception
 
             results = search_manager.run_search(problem)
 
@@ -695,6 +696,7 @@ class Evolutionary(NASBaseConfig):
                 search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
+            raise Exception
 
         results = search_manager.run_search(problem)
 
@@ -1070,6 +1072,7 @@ class LINASDistributed(LINAS):
                         )
                 else:
                     log.error('Number of objectives not supported. Update optimization_metrics!')
+                    raise Exception
 
                 results = search_manager.run_search(problem)
 
