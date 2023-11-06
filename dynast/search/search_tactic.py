@@ -14,6 +14,7 @@
 
 
 import os
+from typing import Optional
 
 import pandas as pd
 import torch.distributed as dist
@@ -264,19 +265,19 @@ class LINAS(NASBaseConfig):
         measurements: list,
         num_evals: int,
         results_path: str,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
         batch_size: int = 128,
         eval_batch_size: int = 128,
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         """Params:
@@ -314,7 +315,7 @@ class LINAS(NASBaseConfig):
             **kwargs,
         )
 
-    def train_predictors(self, results_path: str = None):
+    def train_predictors(self, results_path: Optional[str] = None):
         """Handles the training of predictors for the LINAS inner-loop based on the
         user-defined optimization metrics.
 
@@ -564,7 +565,7 @@ class Evolutionary(NASBaseConfig):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
@@ -705,19 +706,19 @@ class RandomSearch(NASBaseConfig):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         super().__init__(
@@ -771,14 +772,14 @@ class LINASDistributed(LINAS):
         measurements: list,
         num_evals: int,
         results_path: str,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
         batch_size: int = 128,
         eval_batch_size: int = 128,
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
@@ -1085,14 +1086,14 @@ class RandomSearchDistributed(RandomSearch):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
