@@ -16,7 +16,7 @@ import copy
 import csv
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 
@@ -46,10 +46,10 @@ class OFARunner:
         self,
         supernet: str,
         dataset_path: str,
-        acc_predictor: Predictor = None,
-        macs_predictor: Predictor = None,
-        latency_predictor: Predictor = None,
-        params_predictor: Predictor = None,
+        acc_predictor: Optional[Predictor] = None,
+        macs_predictor: Optional[Predictor] = None,
+        latency_predictor: Optional[Predictor] = None,
+        params_predictor: Optional[Predictor] = None,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         dataloader_workers: int = 4,
