@@ -57,6 +57,10 @@ def set_logger(
     for logger_3rd_party in loggers_3rd_party:
         logging.getLogger(logger_3rd_party).setLevel(auxiliary_log_level)
 
+    # We want to see `neural_compressor` logs when debugging, so make sure it is set accordingly.
+    if level == logging.DEBUG:
+        logging.getLogger('neural_compressor').setLevel(logging.INFO)
+
 
 log = None
 
