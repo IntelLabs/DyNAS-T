@@ -70,7 +70,7 @@ def validate_classification(
     data_loader,
     device='cpu',
     log_frequency: int = 5,
-):
+) -> Tuple[float, float, float]:
     test_criterion = nn.CrossEntropyLoss()
 
     model.to(device)
@@ -137,6 +137,7 @@ def get_macs(
     return macs
 
 
+@measure_time
 @torch.no_grad()
 def measure_latency(
     model: nn.Module,
