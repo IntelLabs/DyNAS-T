@@ -84,7 +84,7 @@ class ViTQuantizedRunner(ViTRunner):
         test_fraction: float = 1.0,
         warmup_steps: int = 10,
         measure_steps: int = 100,
-        mp_calibration_samples: int = 100,
+        mp_calibration_samples: int = 128,
     ) -> None:
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -106,7 +106,7 @@ class ViTQuantizedRunner(ViTRunner):
 
         self._init_data()
 
-        self.quantizer = Quantization(
+        self.quantizer = Quantization(  # TODO(macsz) This is not needed most likely (not called)
             calibration_dataloader=self.calibration_dataloader, mp_calibration_samples=self.mp_calibration_samples
         )
 
@@ -147,7 +147,7 @@ class ViTQuantizedRunner(ViTRunner):
         conf = PostTrainingQuantConfig(
             approach="static",
             tuning_criterion=tuning_criterion,
-            calibration_sampling_size=16,  # TODO(macsz) `self.mp_calibration_samples`?
+            calibration_sampling_size=self.mp_calibration_samples,
             op_name_dict=q_config_dict,
         )
         log.debug(f'Applying quantization policy: {conf}')
