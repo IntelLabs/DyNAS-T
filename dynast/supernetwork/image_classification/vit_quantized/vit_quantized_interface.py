@@ -18,12 +18,42 @@ import csv
 from datetime import datetime
 from typing import Optional
 
+import torch
+from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
+from neural_compressor.quantization import fit
+
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import Quantization
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner, load_supernet
+from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_encoding import ViTQuantizedEncoding
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
+
+
+def get_regex_names(model):
+    regex_module_names = []
+    for name, module in model.named_modules():
+        # if name.endswith('.query') \
+        #     or name.endswith('.key') \
+        #     or name.endswith('.value') \
+        #     or name.endswith('.dense') \
+        #     or 'mlp.linear' in name \
+        #     or '.ln_' in name:
+        if (
+            'mlp.linear_' in name
+            or name.endswith('query')
+            or name.endswith('key')
+            or name.endswith('value')
+            or name.endswith('dense')
+        ):
+            regex_module_names.append(name)
+    #         print(name)
+    # print(f'{len(regex_module_names)=}')
+    # print(f'{regex_module_names=}')
+    # exit()
+    log.debug(f'Matched {len(regex_module_names)} layers for Quantization: {regex_module_names}')
+    return regex_module_names
 
 
 class ViTQuantizedRunner(ViTRunner):
@@ -61,13 +91,62 @@ class ViTQuantizedRunner(ViTRunner):
         self.mp_calibration_samples = mp_calibration_samples
         self.dataloader_workers = dataloader_workers
 
-        self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
+        self.reload_supernet()
 
         self._init_data()
 
         self.quantizer = Quantization(
             calibration_dataloader=self.calibration_dataloader, mp_calibration_samples=self.mp_calibration_samples
         )
+
+    def reload_supernet(self):
+        log.debug(f'Reloading supernetwork from {self.checkpoint_path}')
+        self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
+
+    def activate_subnet(self, subnet_config: dict) -> None:
+        log.debug(f'Activating subnet with config: {subnet_config}')
+        self.supernet_model.set_sample_config(subnet_config)
+
+    def quantize_subnet(self, subnet_config: dict, qbit_list: list):
+        log.debug('Applying quantization policy on subnet.')
+        self.reload_supernet()
+        self.activate_subnet(subnet_config)
+        # qbit_list = [8]*74
+
+        regex_module_names = get_regex_names(self.supernet_model)
+
+        default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
+        q_config_dict = {}
+        count = 0
+        # model_fp32 = copy.deepcopy(model)
+        for mod_name in regex_module_names:
+            q_config_dict[mod_name] = copy.deepcopy(default_config)
+            # import ipdb;db.set_trace()
+            if qbit_list[count] == 32:
+                dtype = ['fp32']
+            else:
+                dtype = ['int8']
+
+            q_config_dict[mod_name]['weight']['dtype'] = dtype
+            q_config_dict[mod_name]['activation']['dtype'] = dtype
+            count = count + 1
+        tuning_criterion = TuningCriterion(max_trials=1)
+
+        conf = PostTrainingQuantConfig(
+            approach="static",
+            tuning_criterion=tuning_criterion,
+            calibration_sampling_size=16,  # TODO(macsz) `self.mp_calibration_samples`?
+            op_name_dict=q_config_dict,
+        )
+        log.debug(f'Applying quantization policy: {conf}')
+        q_model = fit(self.supernet_model, conf=conf, calib_dataloader=self.calibration_dataloader)
+        log.debug('Quantization finished.')
+        del (
+            q_config_dict,
+            conf,
+            self.supernet_model,
+        )
+        return q_model
 
     def _init_data(self) -> None:
         ImageNet.PATH = self.dataset_path
@@ -92,7 +171,6 @@ class ViTQuantizedRunner(ViTRunner):
         # TODO(macsz) Implement
         return float("nan")
 
-
     def quantize_and_calibrate(self, subnet, subnet_cfg):
         # TODO(macsz) Implement
         return None
@@ -116,8 +194,8 @@ class ViTQuantizedRunner(ViTRunner):
 class EvaluationInterfaceViTQuantized(EvaluationInterface):
     def __init__(
         self,
-        evaluator,
-        manager,
+        evaluator: ViTQuantizedRunner,
+        manager: ViTQuantizedEncoding,
         optimization_metrics: list = ['accuracy_top1', 'latency'],
         measurements: list = ['accuracy_top1', 'latency'],
         csv_path=None,
@@ -128,6 +206,8 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
     def eval_subnet(self, x):
         # PyMoo vector to Elastic Parameter Mapping
         param_dict = self.manager.translate2param(x)
+
+        qbit_list = param_dict['q_bits']
 
         sample = {
             'vit_hidden_sizes': 768,
@@ -164,14 +244,20 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
         # Validation Mode
         else:
             # TODO(macsz) Quantize `model` constructed with `subne_sample` w/ `qbit_list`
+            #  subnet_config: dict, qbit_list: list, regex_module_names: list
+            q_model = self.evaluator.quantize_subnet(
+                subnet_config=subnet_sample,
+                qbit_list=qbit_list,
+            )
+
             if 'model_size' in self.measurements:
-                individual_results['model_size'] = self.evaluator.validate_model_size(subnet_sample)
+                individual_results['model_size'] = self.evaluator.validate_model_size(q_model)
             if 'latency' in self.measurements:
-                individual_results['latency'] = self.evaluator.measure_latency(subnet_sample)
+                individual_results['latency'] = self.evaluator.measure_latency(q_model)
             if 'accuracy_top1' in self.measurements:
-                individual_results['accuracy_top1'] = self.evaluator.validate_accuracy_imagenet(subnet_sample)
+                individual_results['accuracy_top1'] = self.evaluator.validate_accuracy_imagenet(q_model)
             if 'params' in self.measurements:
-                _, individual_results['params'] = self.evaluator.validate_macs(subnet_sample)
+                _, individual_results['params'] = self.evaluator.validate_macs(q_model)
 
         subnet_sample = param_dict
         sample = param_dict
