@@ -40,18 +40,25 @@ def get_regex_names(model):
         #     or name.endswith('.dense') \
         #     or 'mlp.linear' in name \
         #     or '.ln_' in name:
-        if (
-            'mlp.linear_' in name
-            or name.endswith('query')
-            or name.endswith('key')
-            or name.endswith('value')
-            or name.endswith('dense')
-        ):
+        # if (
+        #     'mlp.linear_' in name \
+        #     or name.endswith('query') \
+        #     or name.endswith('key') \
+        #     or name.endswith('value') \
+        #     or name.endswith('dense') \
+        #     or 'encoder.ln' in name \
+        #     or 'heads.head' in name
+        # ):
+        if name.endswith('layer') or 'encoder.ln' in name or 'heads.head' in name:
             regex_module_names.append(name)
-    #         print(name)
+            # print(">>>", name)
+        else:
+            pass
+            # print(name)
     # print(f'{len(regex_module_names)=}')
     # print(f'{regex_module_names=}')
     # exit()
+
     log.debug(f'Matched {len(regex_module_names)} layers for Quantization: {regex_module_names}')
     return regex_module_names
 

@@ -47,11 +47,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from dynast.supernetwork.bert_quantization.modules_supernetwork import LinearSuper
+
 from .modules_supernetwork import (
     Conv2dNormActivation,
     SuperEmbedding,
     SuperLayerNorm,
-    SuperLinear,
+    # SuperLinear,
     SuperMultiheadAttention,
     SuperSelfAttentionOutput,
 )
@@ -62,10 +64,10 @@ class MLPBlock(nn.Sequential):
 
     def __init__(self, in_dim, mlp_dim, dropout):
         super().__init__()
-        self.linear_1 = SuperLinear(super_in_dim=in_dim, super_out_dim=mlp_dim)
+        self.linear_1 = LinearSuper(super_in_dim=in_dim, super_out_dim=mlp_dim)
         self.act = nn.GELU()
         self.dropout_1 = nn.Dropout(dropout)
-        self.linear_2 = SuperLinear(super_in_dim=mlp_dim, super_out_dim=in_dim)
+        self.linear_2 = LinearSuper(super_in_dim=mlp_dim, super_out_dim=in_dim)
         self.dropout_2 = nn.Dropout(dropout)
 
         nn.init.xavier_uniform_(self.linear_1.weight)

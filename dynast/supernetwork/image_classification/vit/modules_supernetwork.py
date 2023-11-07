@@ -15,7 +15,7 @@
 """
 BSD 3-Clause License
 
-Copyright (c) Soumith Chintala 2016, 
+Copyright (c) Soumith Chintala 2016,
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from dynast.supernetwork.bert_quantization.modules_supernetwork import LinearSuper
 
 
 class SuperEmbedding(nn.Embedding):
@@ -146,56 +148,56 @@ class SuperLayerNorm(torch.nn.LayerNorm):
         self.profiling = mode
 
 
-class SuperLinear(nn.Linear):
-    def __init__(self, super_in_dim, super_out_dim, bias=True):
-        super().__init__(super_in_dim, super_out_dim, bias=bias)
+# class SuperLinear(nn.Linear):
+#     def __init__(self, super_in_dim, super_out_dim, bias=True):
+#         super().__init__(super_in_dim, super_out_dim, bias=bias)
 
-        self.super_in_dim = super_in_dim
-        self.super_out_dim = super_out_dim
+#         self.super_in_dim = super_in_dim
+#         self.super_out_dim = super_out_dim
 
-        self.sample_in_dim = None
-        self.sample_out_dim = None
+#         self.sample_in_dim = None
+#         self.sample_out_dim = None
 
-        self.samples = {}
-        super().reset_parameters()
+#         self.samples = {}
+#         super().reset_parameters()
 
-        self.profiling = False
+#         self.profiling = False
 
-    def sample_parameters(self, resample=False):
-        if self.profiling or resample:
-            return self._sample_parameters()
-        return self.samples
+#     def sample_parameters(self, resample=False):
+#         if self.profiling or resample:
+#             return self._sample_parameters()
+#         return self.samples
 
-    def set_sample_config(self, sample_in_dim, sample_out_dim):
-        self.sample_in_dim = sample_in_dim
-        self.sample_out_dim = sample_out_dim
+#     def set_sample_config(self, sample_in_dim, sample_out_dim):
+#         self.sample_in_dim = sample_in_dim
+#         self.sample_out_dim = sample_out_dim
 
-        self._sample_parameters()
+#         self._sample_parameters()
 
-    def _sample_parameters(self):
-        self.samples['weight'] = sample_weight(self.weight, self.sample_in_dim, self.sample_out_dim)
-        self.samples['bias'] = self.bias
-        if self.bias is not None:
-            self.samples['bias'] = sample_bias(self.bias, self.sample_out_dim)
-        return self.samples
+#     def _sample_parameters(self):
+#         self.samples['weight'] = sample_weight(self.weight, self.sample_in_dim, self.sample_out_dim)
+#         self.samples['bias'] = self.bias
+#         if self.bias is not None:
+#             self.samples['bias'] = sample_bias(self.bias, self.sample_out_dim)
+#         return self.samples
 
-    def forward(self, x):
-        self.sample_parameters()
-        return F.linear(x, self.samples['weight'], self.samples['bias'])
+#     def forward(self, x):
+#         self.sample_parameters()
+#         return F.linear(x, self.samples['weight'], self.samples['bias'])
 
-    def calc_sampled_param_num(self):
-        assert 'weight' in self.samples.keys()
-        weight_numel = self.samples['weight'].numel()
+#     def calc_sampled_param_num(self):
+#         assert 'weight' in self.samples.keys()
+#         weight_numel = self.samples['weight'].numel()
 
-        if self.samples['bias'] is not None:
-            bias_numel = self.samples['bias'].numel()
-        else:
-            bias_numel = 0
+#         if self.samples['bias'] is not None:
+#             bias_numel = self.samples['bias'].numel()
+#         else:
+#             bias_numel = 0
 
-        return weight_numel + bias_numel
+#         return weight_numel + bias_numel
 
-    def profile(self, mode=True):
-        self.profiling = mode
+#     def profile(self, mode=True):
+#         self.profiling = mode
 
 
 def sample_weight(weight, sample_in_dim, sample_out_dim):
@@ -310,7 +312,7 @@ class Conv2dNormActivation(ConvNormActivation):
 class SuperSelfAttentionOutput(nn.Module):
     def __init__(self, hidden_size, layer_norm_eps, hidden_dropout_prob, num_attention_heads):
         super().__init__()
-        self.dense = SuperLinear(hidden_size, hidden_size)
+        self.dense = LinearSuper(hidden_size, hidden_size)
         self.LayerNorm = SuperLayerNorm(hidden_size, eps=layer_norm_eps)
         self.dropout = nn.Dropout(hidden_dropout_prob)
 
@@ -347,9 +349,9 @@ class SuperMultiheadAttention(nn.Module):
         self.attention_head_size = int(hidden_size / num_heads)  # 384 / 6 = 64
         self.all_head_size = self.num_attention_heads * self.attention_head_size  # 6 * 64 = 384
 
-        self.query = SuperLinear(hidden_size, self.all_head_size)
-        self.key = SuperLinear(hidden_size, self.all_head_size)
-        self.value = SuperLinear(hidden_size, self.all_head_size)
+        self.query = LinearSuper(hidden_size, self.all_head_size)
+        self.key = LinearSuper(hidden_size, self.all_head_size)
+        self.value = LinearSuper(hidden_size, self.all_head_size)
 
         self.dropout = nn.Dropout(dropout)
 
