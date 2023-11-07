@@ -141,7 +141,7 @@ LINAS_INNERLOOP_EVALS = {
     'bert_base_sst2': 20000,
     'bert_base_sst2_quantized': 20000,
     'vit_base_imagenet': 20000,
-    'vit_base_imagenet_quantized': None,  # TODO(macsz) Implement
+    'vit_base_imagenet_quantized': 20000,
     'inc_quantization_ofa_resnet50': 10000,
     'bootstrapnas_image_classification': 5000,
 }
