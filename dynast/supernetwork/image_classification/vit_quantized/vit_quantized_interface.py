@@ -15,11 +15,14 @@
 
 import copy
 import csv
+import os
+import shutil
 from datetime import datetime
 from typing import Optional
 
 import torch
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
+from neural_compressor.model.torch_model import PyTorchFXModel
 from neural_compressor.quantization import fit
 
 from dynast.predictors.dynamic_predictor import Predictor
@@ -27,7 +30,7 @@ from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import Quantization
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner, load_supernet
 from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_encoding import ViTQuantizedEncoding
-from dynast.utils import log
+from dynast.utils import log, measure_time
 from dynast.utils.datasets import ImageNet
 
 
@@ -114,6 +117,7 @@ class ViTQuantizedRunner(ViTRunner):
         log.debug(f'Activating subnet with config: {subnet_config}')
         self.supernet_model.set_sample_config(subnet_config)
 
+    @measure_time
     def quantize_subnet(self, subnet_config: dict, qbit_list: list):
         log.debug('Applying quantization policy on subnet.')
         self.reload_supernet()
@@ -158,7 +162,7 @@ class ViTQuantizedRunner(ViTRunner):
     def _init_data(self) -> None:
         ImageNet.PATH = self.dataset_path
         if self.dataset_path:
-            self.dataloader = ImageNet.validation_dataloader(
+            self.eval_dataloader = ImageNet.validation_dataloader(
                 batch_size=self.eval_batch_size,
                 num_workers=self.dataloader_workers,
                 fraction=self.test_fraction,
@@ -167,16 +171,25 @@ class ViTQuantizedRunner(ViTRunner):
             self.calibration_dataloader = ImageNet.train_dataloader(batch_size=self.eval_batch_size)
 
         else:
-            self.dataloader = None
+            self.eval_dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_model_size(self, subnet_cfg) -> int:
         model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else -1
         return model_size
 
-    def measure_modelsize(self, subnet_cfg: dict, device: Optional[str] = None) -> float:
-        # TODO(macsz) Implement
-        return float("nan")
+    def measure_model_size(
+        self,
+        model: PyTorchFXModel,
+    ) -> float:
+        tmp_name = 'temp.pt'  # TODO(macsz) Should be random.
+        model.save(tmp_name)
+        model_size = os.path.getsize(f'{tmp_name}/best_model.pt') / 1e6
+        print('Size (MB):', model_size)
+
+        shutil.rmtree(tmp_name)
+
+        return model_size
 
     def quantize_and_calibrate(self, subnet, subnet_cfg):
         # TODO(macsz) Implement
@@ -258,7 +271,7 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
             )
 
             if 'model_size' in self.measurements:
-                individual_results['model_size'] = self.evaluator.validate_model_size(q_model)
+                individual_results['model_size'] = self.evaluator.measure_model_size(q_model)
             if 'latency' in self.measurements:
                 individual_results['latency'] = self.evaluator.measure_latency(q_model)
             if 'accuracy_top1' in self.measurements:
