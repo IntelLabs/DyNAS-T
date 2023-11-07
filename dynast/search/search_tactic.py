@@ -452,8 +452,18 @@ class LINAS(NASBaseConfig):
                     device=self.device,
                 )
             elif self.supernet == 'vit_base_imagenet_quantized':
-                # TODO(macsz) Implement
-                raise NotImplementedError
+                runner_predict = ViTQuantizedRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                    test_fraction=self.test_fraction,
+                )
 
             elif self.supernet == 'inc_quantization_ofa_resnet50':
                 runner_predict = QuantizedOFARunner(
