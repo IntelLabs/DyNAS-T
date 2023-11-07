@@ -28,10 +28,11 @@ from neural_compressor.quantization import fit
 from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.supernetwork.image_classification.ofa_quantization.quantization_interface import Quantization
-from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner, load_supernet
+from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner, compute_latency, load_supernet
 from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_encoding import ViTQuantizedEncoding
 from dynast.utils import log, measure_time
 from dynast.utils.datasets import ImageNet
+from dynast.utils.nn import measure_latency, validate_classification
 
 
 def get_regex_names(model):
@@ -198,17 +199,25 @@ class ViTQuantizedRunner(ViTRunner):
     @torch.no_grad()
     def measure_latency(
         self,
-        subnet_cfg: dict,
+        model: PyTorchFXModel,
     ):
-        # TODO(macsz) Implement
-        return -1
+        latency_mean, _ = measure_latency(
+            model,
+            input_size=(self.batch_size, 3, 224, 224),
+            device=self.device,
+        )
+        return latency_mean
 
     def validate_accuracy_imagenet(
         self,
-        subnet_cfg: dict,
-    ) -> float:  # pragma: no cover
-        # TODO(macsz) Implement
-        return -1
+        model: PyTorchFXModel,
+    ) -> float:
+        loss, top1, top5 = validate_classification(
+            model=model,
+            data_loader=self.eval_dataloader,
+            device=self.device,
+        )
+        return top1
 
 
 class EvaluationInterfaceViTQuantized(EvaluationInterface):
