@@ -109,7 +109,7 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
         'q_bits': {'count': 74, 'vars': [8, 32]},
-    },  # TODO(macsz) Extend with quantization parameters
+    },
     'bert_base_sst2_quantized': {
         'num_layers': {'count': 1, 'vars': [6, 7, 8, 9, 10, 11, 12]},
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
