@@ -35,6 +35,7 @@ warnings.filterwarnings("ignore")
 
 
 def load_supernet(checkpoint_path):
+    log.debug('Loading supernet from {}'.format(checkpoint_path))
     bert_config = BertConfig()
     model = BertSupernetForSequenceClassification(bert_config, num_labels=2)
     model.load_state_dict(
