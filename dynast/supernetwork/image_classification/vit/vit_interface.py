@@ -47,7 +47,9 @@ HIDDEN_DIM_B_16 = 768
 MLP_DIM_B_16 = 3072
 
 
-def load_supernet(checkpoint_path):
+def load_supernet(checkpoint_path: str):
+    log.debug(f'Loading checkpoint from {checkpoint_path}')
+
     model = SuperViT(
         image_size=IMAGE_SIZE,
         patch_size=PATCH_SIZE,

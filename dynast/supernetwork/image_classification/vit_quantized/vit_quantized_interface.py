@@ -20,7 +20,7 @@ import random
 import shutil
 import string
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 import torch
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
@@ -37,7 +37,7 @@ from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import measure_latency, validate_classification
 
 
-def get_regex_names(model):
+def get_regex_names(model) -> List[str]:
     regex_module_names = []
     for name, module in model.named_modules():
         # if name.endswith('.query') \
@@ -112,20 +112,40 @@ class ViTQuantizedRunner(ViTRunner):
             calibration_dataloader=self.calibration_dataloader, mp_calibration_samples=self.mp_calibration_samples
         )
 
-    def reload_supernet(self):
-        log.debug(f'Reloading supernetwork from {self.checkpoint_path}')
-        self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
+    def reload_supernet(self) -> None:
+            """
+            Reloads the supernetwork from the checkpoint path specified in self.checkpoint_path.
+
+            Raises:
+            -------
+            * Exception: If the checkpoint path does not exist.
+            """
+            if not self.checkpoint_path or not os.path.exists(self.checkpoint_path):
+                raise Exception(f'Checkpoint path {self.checkpoint_path} does not exist.')
+            log.debug(f'Reloading supernetwork from {self.checkpoint_path}')
+            self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
     def activate_subnet(self, subnet_config: dict) -> None:
+        self.reload_supernet()
+
         log.debug(f'Activating subnet with config: {subnet_config}')
         self.supernet_model.set_sample_config(subnet_config)
 
     @measure_time
-    def quantize_subnet(self, subnet_config: dict, qbit_list: list):
-        log.debug('Applying quantization policy on subnet.')
-        self.reload_supernet()
+    def quantize_subnet(self, subnet_config: dict, qbit_list: list) -> PyTorchFXModel:
+        """
+        Quantizes a subnet of the supernet model using the provided subnet configuration and qbit list.
+
+        Args:
+            subnet_config (dict): Configuration of the subnet to be quantized.
+            qbit_list (list): List of qbits to be used for quantization.
+
+        Returns:
+            PyTorchFXModel: The quantized subnet model.
+        """
+
         self.activate_subnet(subnet_config)
-        # qbit_list = [8]*74
+        log.debug('Applying quantization policy on subnet.')
 
         regex_module_names = get_regex_names(self.supernet_model)
 
@@ -185,6 +205,17 @@ class ViTQuantizedRunner(ViTRunner):
         self,
         model: PyTorchFXModel,
     ) -> float:
+        """
+        Measures the size of a PyTorchFXModel or a PyTorch model in MB.
+
+        Args:
+        -----
+        * model (PyTorchFXModel or PyTorch model): The model to measure the size of.
+
+        Returns:
+        --------
+        * float: The size of the model in MB.
+        """
         tmp_name = f"/tmp/dynast_{''.join(random.choices(string.ascii_letters, k=6))}"
         if isinstance(model, PyTorchFXModel):
             model.save(tmp_name)
@@ -275,8 +306,6 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
 
         # Validation Mode
         else:
-            # TODO(macsz) Quantize `model` constructed with `subne_sample` w/ `qbit_list`
-            #  subnet_config: dict, qbit_list: list, regex_module_names: list
             q_model = self.evaluator.quantize_subnet(
                 subnet_config=subnet_sample,
                 qbit_list=qbit_list,
