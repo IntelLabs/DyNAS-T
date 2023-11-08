@@ -25,8 +25,22 @@ from dynast.utils import log, measure_time
 
 
 def _dataset_fraction(dataset: torchvision.datasets.DatasetFolder, fraction: float, seed: int = 21):
+    """
+    Returns a random subset of the input dataset, with a size determined by the given fraction.
+
+    Args:
+    -----
+    * `dataset` (torchvision.datasets.DatasetFolder): The input dataset to sample from.
+    * `fraction` (float): The fraction of the dataset to include in the output subset.
+    * `seed` (int, optional): The random seed to use for reproducibility. Defaults to 21.
+
+    Returns:
+    --------
+    * torch.utils.data.Subset: A random subset of the input dataset.
+    """
     # Use random subset of validation data if valid fraction specified
     if (fraction > 0.0) and (fraction < 1.0):
+        log.debug(f'Sampling {fraction*100}% of dataset with seed {seed}')
         torch.manual_seed(seed)
         random_indices = torch.randperm(len(dataset))
         example_count = round(fraction * len(dataset))
