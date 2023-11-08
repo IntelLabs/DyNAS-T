@@ -296,7 +296,7 @@ class EvaluationInterfaceViTQuantized(EvaluationInterface):
                     self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'model_size' in self.optimization_metrics:
-                individual_results['model_size'] = self.evaluator.estimate_macs(
+                individual_results['model_size'] = self.evaluator.estimate_model_size(
                     self.manager.onehot_custom(param_dict, max_layers=self.evaluator.max_layers).reshape(1, -1)
                 )[0]
             if 'accuracy_top1' in self.optimization_metrics:
