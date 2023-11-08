@@ -151,19 +151,14 @@ class ViTQuantizedRunner(ViTRunner):
 
         default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
         q_config_dict = {}
-        count = 0
-        # model_fp32 = copy.deepcopy(model)
-        for mod_name in regex_module_names:
+        for i, mod_name in enumerate(regex_module_names):
             q_config_dict[mod_name] = copy.deepcopy(default_config)
-            # import ipdb;db.set_trace()
-            if qbit_list[count] == 32:
+            if qbit_list[i] == 32:
                 dtype = ['fp32']
             else:
                 dtype = ['int8']
-
             q_config_dict[mod_name]['weight']['dtype'] = dtype
             q_config_dict[mod_name]['activation']['dtype'] = dtype
-            count = count + 1
         tuning_criterion = TuningCriterion(max_trials=1)
 
         conf = PostTrainingQuantConfig(
