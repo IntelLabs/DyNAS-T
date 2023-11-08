@@ -21,7 +21,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from dynast.utils import measure_time
+from dynast.utils import log, measure_time
 
 
 def _dataset_fraction(dataset: torchvision.datasets.DatasetFolder, fraction: float, seed: int = 21):
@@ -149,7 +149,7 @@ class ImageNet(Dataset):
     ) -> DataLoader:
         if not val_dir:
             val_dir = os.path.join(ImageNet.PATH, "val")
-
+        log.debug(f'Loading ImageNet(validation) from {val_dir}')
         val_dataset = datasets.ImageFolder(
             val_dir,
             ImageNet.val_transforms(image_size),
