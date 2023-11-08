@@ -16,7 +16,9 @@
 import copy
 import csv
 import os
+import random
 import shutil
+import string
 from datetime import datetime
 from typing import Optional
 
@@ -183,18 +185,19 @@ class ViTQuantizedRunner(ViTRunner):
         self,
         model: PyTorchFXModel,
     ) -> float:
-        tmp_name = 'temp.pt'  # TODO(macsz) Should be random.
-        model.save(tmp_name)
-        model_size = os.path.getsize(f'{tmp_name}/best_model.pt') / 1e6
-        print('Size (MB):', model_size)
-
-        shutil.rmtree(tmp_name)
+        tmp_name = f"/tmp/dynast_{''.join(random.choices(string.ascii_letters, k=6))}"
+        if isinstance(model, PyTorchFXModel):
+            model.save(tmp_name)
+            model_size = os.path.getsize(f'{tmp_name}/best_model.pt')
+            shutil.rmtree(tmp_name)
+        else:
+            torch.save(model, tmp_name)
+            model_size = os.path.getsize(f'{tmp_name}')
+            os.remove(tmp_name)
+        model_size = model_size / 1e6
+        log.debug(f'Size (MB): {model_size} : {tmp_name}')
 
         return model_size
-
-    def quantize_and_calibrate(self, subnet, subnet_cfg):
-        # TODO(macsz) Implement
-        return None
 
     @torch.no_grad()
     def measure_latency(
