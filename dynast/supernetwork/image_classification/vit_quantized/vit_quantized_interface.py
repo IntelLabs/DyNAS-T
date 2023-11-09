@@ -115,17 +115,17 @@ class ViTQuantizedRunner(ViTRunner):
         )
 
     def reload_supernet(self) -> None:
-            """
-            Reloads the supernetwork from the checkpoint path specified in self.checkpoint_path.
+        """
+        Reloads the supernetwork from the checkpoint path specified in self.checkpoint_path.
 
-            Raises:
-            -------
-            * Exception: If the checkpoint path does not exist.
-            """
-            if not self.checkpoint_path or not os.path.exists(self.checkpoint_path):
-                raise Exception(f'Checkpoint path {self.checkpoint_path} does not exist.')
-            log.debug(f'Reloading supernetwork from {self.checkpoint_path}')
-            self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
+        Raises:
+        -------
+        * Exception: If the checkpoint path does not exist.
+        """
+        if not self.checkpoint_path or not os.path.exists(self.checkpoint_path):
+            raise Exception(f'Checkpoint path {self.checkpoint_path} does not exist.')
+        log.debug(f'Reloading supernetwork from {self.checkpoint_path}')
+        self.supernet_model, self.max_layers = load_supernet(self.checkpoint_path)
 
     def activate_subnet(self, subnet_config: dict) -> None:
         self.reload_supernet()
