@@ -23,6 +23,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import torch
+from neural_compressor import set_workspace
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.model.torch_model import PyTorchFXModel
 from neural_compressor.quantization import fit
@@ -34,6 +35,7 @@ from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_encoding import ViTQuantizedEncoding
 from dynast.utils import log, measure_time
 from dynast.utils.datasets import ImageNet
+from dynast.utils.distributed import get_distributed_vars
 from dynast.utils.nn import measure_latency, validate_classification
 
 
@@ -160,7 +162,10 @@ class ViTQuantizedRunner(ViTRunner):
             q_config_dict[mod_name]['weight']['dtype'] = dtype
             q_config_dict[mod_name]['activation']['dtype'] = dtype
         tuning_criterion = TuningCriterion(max_trials=1)
-
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        workspace_name = f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+        set_workspace(workspace_name)
         conf = PostTrainingQuantConfig(
             approach="static",
             tuning_criterion=tuning_criterion,
@@ -211,7 +216,12 @@ class ViTQuantizedRunner(ViTRunner):
         --------
         * float: The size of the model in MB.
         """
-        tmp_name = f"/tmp/dynast_{''.join(random.choices(string.ascii_letters, k=6))}"
+
+        # TODO(macsz) Save fn generation should be more centralized.
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        tmp_name = f"/tmp/dynast_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+
         if isinstance(model, PyTorchFXModel):
             model.save(tmp_name)
             model_size = os.path.getsize(f'{tmp_name}/best_model.pt')
