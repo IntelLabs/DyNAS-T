@@ -181,8 +181,11 @@ def measure_latency(
         ed = time.time()
         times.append(ed - st)
 
+    # Drop the first and last 5% latency numbers
+    truncated_latency = np.array(times)[int(measure_steps * 0.05) : int(measure_steps * 0.95)]
+
     # Convert to [ms] and round to 0.001
-    latency_mean = float(np.round(np.mean(times) * 1e3, 3))
-    latency_std = float(np.round(np.std(times) * 1e3, 3))
+    latency_mean = float(np.round(np.mean(truncated_latency) * 1e3, 3))
+    latency_std = float(np.round(np.std(truncated_latency) * 1e3, 3))
 
     return latency_mean, latency_std
