@@ -49,11 +49,10 @@ import torch.nn.functional as F
 
 from dynast.supernetwork.bert_quantization.modules_supernetwork import LinearSuper
 
-from .modules_supernetwork import (
+from .modules_supernetwork import (  # SuperLinear,
     Conv2dNormActivation,
     SuperEmbedding,
     SuperLayerNorm,
-    # SuperLinear,
     SuperMultiheadAttention,
     SuperSelfAttentionOutput,
 )
