@@ -613,7 +613,7 @@ if __name__ == '__main__':
                 ),
             ]
         )
-    if True:
+    if False:
         evals_limit = 1000
         # Model's latency: 78.156 +/- 1.453 accuracy_sst2 0.9208715596330275
         plot_search_progression(
@@ -674,6 +674,26 @@ if __name__ == '__main__':
         #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
         #     evals_limit=evals_limit,
         # )
+    if True:
+        plot_search_progression(
+            results_path='qvit_linas_spr_tf02_s20.csv',
+            target_metrics=['model_size', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            #random_results_path='qvit_random_spr_tf02_combined.csv',
+            #reference_points=[
+            #    ReferencePoint(
+            #        'SuperNet FP32',
+            #        {'model_size': 346.516, 'accuracy_top1': 79.497},
+            #        color='tab:orange',
+            #    ),
+            #    ReferencePoint(
+            #        'SuperNet INT8',
+            #        {'model_size': 89.111, 'accuracy_top1': 69.280},
+            #        color='tab:red',
+            #    ),
+            #],
+            # evals_limit=evals_limit,
+        )
 
 
 # correlation()
