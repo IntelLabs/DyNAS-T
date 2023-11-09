@@ -166,6 +166,7 @@ class ViTQuantizedRunner(ViTRunner):
         WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
         workspace_name = f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
         set_workspace(workspace_name)
+        log.debug(f'Neural Compressor workspace: {workspace_name}')
         conf = PostTrainingQuantConfig(
             approach="static",
             tuning_criterion=tuning_criterion,
