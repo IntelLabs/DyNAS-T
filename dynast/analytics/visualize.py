@@ -676,25 +676,39 @@ if __name__ == '__main__':
         #     evals_limit=evals_limit,
         # )
     if True:
-        plot_search_progression(
-            results_path='qvit_linas_spr_tf02_s20.csv',
-            target_metrics=['model_size', 'accuracy_top1'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-            #random_results_path='qvit_random_spr_tf02_combined.csv',
-            #reference_points=[
-            #    ReferencePoint(
-            #        'SuperNet FP32',
-            #        {'model_size': 346.516, 'accuracy_top1': 79.497},
-            #        color='tab:orange',
-            #    ),
-            #    ReferencePoint(
-            #        'SuperNet INT8',
-            #        {'model_size': 89.111, 'accuracy_top1': 69.280},
-            #        color='tab:red',
-            #    ),
-            #],
-            # evals_limit=evals_limit,
-        )
+        import pandas as pd
+        df = pd.concat([
+            pd.read_csv('qvit_results/qvit_random_spr_tf02_s31_incfix.csv'),
+            pd.read_csv('qvit_results/qvit_random_spr_tf02_s32_incfix.csv'),
+        ])
+        print(len(df))
+        df.to_csv('qvit_results/qvit_random_spr_tf02_combined_incfix.csv', index=False)
+
+        for f in [
+            'qvit_results/qvit_nsga2_spr_tf02_s20_incfix.csv',
+            'qvit_results/qvit_nsga2_spr_tf10_s20_incfix.csv',
+            'qvit_results/qvit_linas_spr_tf02_s20_incfix.csv',
+            'qvit_results/qvit_linas_spr_tf10_s20_incfix.csv',
+        ]:
+            plot_search_progression(
+                results_path=f,
+                target_metrics=['model_size', 'accuracy_top1'],
+                columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+                # random_results_path='qvit_results/qvit_random_spr_tf02_combined_incfix.csv',
+                reference_points=[
+                #    ReferencePoint(
+                #        'SuperNet FP32',
+                #        {'model_size': 346.516, 'accuracy_top1': 79.497},
+                #        color='tab:orange',
+                #    ),
+                #    ReferencePoint(
+                #        'SuperNet INT8',
+                #        {'model_size': 89.111, 'accuracy_top1': 69.280},
+                #        color='tab:red',
+                #    ),
+                ],
+                # evals_limit=evals_limit,
+            )
 
 
 # correlation()
