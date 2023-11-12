@@ -16,7 +16,7 @@ import itertools
 import math
 import os
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import alphashape
 import matplotlib.pyplot as plt
@@ -161,14 +161,14 @@ def frontier_builder(df, optimization_metrics, alpha=0):
 
 def plot_search_progression(
     results_path: str,
-    evals_limit: int = None,
-    random_results_path: str = None,
+    evals_limit: Optional[int] = None,
+    random_results_path: Optional[str] = None,
     target_metrics: List[str] = ['latency', 'accuracy_top1'],
     reference_points: List[ReferencePoint] = [],
     columns: List[str] = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1'],
 ) -> None:
     df = pd.read_csv(results_path)
-
+    log.info(f'Loaded {len(df)} entries from {results_path}')
     if evals_limit:
         df = df[:evals_limit]
 
@@ -182,6 +182,7 @@ def plot_search_progression(
     if random_results_path:
         df_random = pd.read_csv(random_results_path)
         df_random.columns = columns
+        log.info(f'Random entries: {len(df_random)}')
         ax.scatter(
             df_random[target_metrics[0]].values,
             df_random[target_metrics[1]].values,
