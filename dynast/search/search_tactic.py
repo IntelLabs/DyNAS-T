@@ -33,6 +33,7 @@ from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
+from dynast.supernetwork.multi_domain_networks.beit_interface import Beit3ImageNetRunner
 from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetException
@@ -206,6 +207,14 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
                 test_fraction=self.test_fraction,
+            )
+        elif self.supernet == 'beit3_imagenet':
+            self.runner_validate = Beit3ImageNetRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
             )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
@@ -465,6 +474,21 @@ class LINAS(NASBaseConfig):
                     batch_size=self.batch_size,
                     device=self.device,
                 )
+            
+            elif self.supernet == 'beit3_imagenet':
+                runner_predict = Beit3ImageNetRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    model_size_predictor = self.predictor_dict['model_size'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+
+
             else:
                 raise NotImplementedError
             # Setup validation interface
