@@ -16,8 +16,10 @@
 import copy
 import csv
 import logging
+import string
 import time
 import warnings
+import random
 
 import numpy as np
 import torch
@@ -26,6 +28,7 @@ from transformers import BertConfig
 from fvcore.nn import FlopCountAnalysis
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
+from neural_compressor import set_workspace
 from neural_compressor.quantization import fit
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from .beit3_supernetwork import BEiT3ForImageClassification
@@ -35,6 +38,7 @@ from .utils import *
 from .engine_for_elastic_finetuning import train_one_epoch, get_handler, evaluate
 from datetime import datetime
 import shutil
+from dynast.utils.distributed import get_distributed_vars
 warnings.filterwarnings("ignore")
 
 
@@ -48,7 +52,7 @@ def get_regex_names(model):
     for name in module_names:
         if 'A' in name.split('.'):
             regex_module_names.append(name)
-    
+
     return regex_module_names
 
 def validate_accuracy_top1(model,data_loader_test,task_handler,device,sample_config):
@@ -57,12 +61,12 @@ def validate_accuracy_top1(model,data_loader_test,task_handler,device,sample_con
     ext_test_stats, task_key = evaluate(data_loader_test, model, device, task_handler)#,search_space_choices,supernet_config)
     print(f"Accuracy of the network on the {len(data_loader_test.dataset)} test images: {ext_test_stats[task_key]:.3f}%")
     return ext_test_stats[task_key]
-   
+
 
 
 def compute_macs(model,sample_config,device):
 
- 
+
     model.set_sample_config(sample_config)
     numels = []
     for module_name, module in model.named_modules():
@@ -74,7 +78,7 @@ def compute_macs(model,sample_config,device):
                     continue
 
             numels.append(module.calc_sampled_param_num())
-    params = sum(numels) 
+    params = sum(numels)
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     input_image = torch.randn((1,3,224,224),device=device)
     for module in model.modules():
@@ -93,7 +97,7 @@ def create_model_dataset(checkpoint_path,num_layers=12):
 
     args_new, ds_init = get_args()
     args_new.data_path = '/datasets/imagenet-ilsvrc2012/'
-    
+
     args_new.finetune = checkpoint_path
     args_new.model = 'beit3_base_patch16_224'
     args_new.task = 'imagenet'
@@ -103,7 +107,7 @@ def create_model_dataset(checkpoint_path,num_layers=12):
     args_new.eval_batch_size = 32
     args_new.eval = True
     device = 'cpu' #torch.device(args_new.device)
-   
+
     data_loader_test = create_downstream_dataset(args_new, is_eval=True)
     args_model = _get_base_config(drop_path_rate=args_new.drop_path)
     args_model.normalize_output = False
@@ -130,7 +134,7 @@ def create_model_dataset(checkpoint_path,num_layers=12):
 
     model.to(device)
     supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num":12*[12],"ffn_size":[3072]*12}
-    
+
     model.set_sample_config(supernet_config)
     return model, data_loader_test, task_handler,device
 
@@ -267,7 +271,7 @@ class Beit3ImageNetRunner:
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
 
         return lat_mean, lat_std
-    
+
     def quantize_subnet(
         self,
         model,
@@ -291,7 +295,7 @@ class Beit3ImageNetRunner:
 
             q_config_dict[mod_name]['weight']['dtype']= dtype
             q_config_dict[mod_name]['activation']['dtype']= dtype
-            count = count +1 
+            count = count +1
         tuning_criterion = TuningCriterion(max_trials=1)
 
         conf = PostTrainingQuantConfig(approach="static",tuning_criterion=tuning_criterion, calibration_sampling_size=100,
@@ -325,7 +329,7 @@ class Beit3ImageNetRunner:
 
             q_config_dict[mod_name]['weight']['dtype']= dtype
             q_config_dict[mod_name]['activation']['dtype']= dtype
-            count = count +1 
+            count = count +1
         tuning_criterion = TuningCriterion(max_trials=1)
 
         conf = PostTrainingQuantConfig(approach="dynamic",tuning_criterion=tuning_criterion, calibration_sampling_size=100,
@@ -337,8 +341,10 @@ class Beit3ImageNetRunner:
 
     def validate_modelsize(self,subnet_sample,qbit_list):
 
-        temp_name = "temp_23"
-        #supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12, 
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        tmp_name = f"/tmp/dynast_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+        #supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12,
         #               'subnet_intermediate_sizes': [3072]*12}
         regex_module_names = get_regex_names(self.supernet_model)
         config_new ={'embed_size': 768,
@@ -347,16 +353,16 @@ class Beit3ImageNetRunner:
             'ffn_size': subnet_sample["ffn_size"][:subnet_sample['num_layers']],
         }
         model_fp32,_,_,_ = create_model_dataset(self.checkpoint_path,num_layers=subnet_sample['num_layers'])
-       
-   
+
+
         model_fp32.set_sample_config(config_new)
 
         q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list,regex_module_names)
-        q_model.save(temp_name)
-        model_size = os.path.getsize(f'{temp_name}/best_model.pt')/(1048576)
+        q_model.save(tmp_name)
+        model_size = os.path.getsize(f'{tmp_name}/best_model.pt')/(1048576)
         print('Size (MB):', model_size)
 
-        shutil.rmtree(temp_name)
+        shutil.rmtree(tmp_name)
         del q_model, model_fp32
 
         return model_size
@@ -375,6 +381,13 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
     ):
         super().__init__(evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode)
 
+    def _set_workspace(self):
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        workspace_name = f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+        set_workspace(workspace_name)
+        log.debug(f'Neural Compressor workspace: {workspace_name}')
+
     def eval_subnet(self, x):
         # PyMoo vector to Elastic Parameter Mapping
         param_dict = self.manager.translate2param(x)
@@ -387,6 +400,8 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
         }
 
         subnet_sample = copy.deepcopy(sample)
+
+        self._set_workspace()
 
         individual_results = dict()
         for metric in ['params', 'latency', 'macs', 'accuracy_top1']:
