@@ -533,10 +533,10 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
             checkpoint_model = checkpoint[model_key]
             print("Load state_dict by model_key = %s" % model_key)
             break
-    
+
     if checkpoint_model is None:
         checkpoint_model = checkpoint
-    
+
     state_dict = model.state_dict()
     for k in ['head.weight', 'head.bias']:
         if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
@@ -851,7 +851,7 @@ def dump_predictions(args, result, file_suffix):
                 each_file = os.path.join(args.task_cache_path, f"submit_{i}_{file_suffix}.json")
                 with open(each_file, "r") as fp:
                     jsons += json.load(fp)
-            
+
             new_jsons = []
             res_dict = dict()
             if args.task in ["coco_captioning", "nocaps"]:
@@ -870,7 +870,7 @@ def dump_predictions(args, result, file_suffix):
         os.remove(output_file)
     else:
         jsons = result
-    
+
     result_file = os.path.join(args.output_dir, f"submit_{file_suffix}.json")
     if jsons is not None:
         with open(result_file, "w") as fp:
@@ -892,10 +892,10 @@ def coco_caption_eval(gt_dir, results_file, split):
     filenames = {'coco_captioning_val':'coco_karpathy_val_gt.json',
                  'coco_captioning_test':'coco_karpathy_test_gt.json',
                  'nocaps_val':'nocaps_val_gt.json'}
-    
+
     download_url(urls[split], gt_dir)
     annotation_file = os.path.join(gt_dir, filenames[split])
-    
+
     # create coco object and coco_result object
     coco = COCO(annotation_file)
     coco_result = coco.loadRes(results_file)
@@ -906,9 +906,9 @@ def coco_caption_eval(gt_dir, results_file, split):
     # evaluate results
     # SPICE will take a few minutes the first time, but speeds up due to caching
     coco_eval.evaluate()
-    
+
     res_dict = dict()
     for metric, score in coco_eval.eval.items():
         res_dict[metric] = score
-    
+
     return res_dict

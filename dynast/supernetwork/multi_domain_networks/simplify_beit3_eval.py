@@ -265,7 +265,7 @@ def get_args():
         action='store_true',
         help='If set, a distributed implementation of the search algorithm will be used.',
     )
-    
+
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 
     #known_args, _ = parser.parse_known_args()
@@ -343,7 +343,7 @@ def get_macs():
     args.sentencepiece_model = 'beit3.spm'
     args.batch_size = 128
     args.eval = True
-   
+
     args_new = _get_base_config(drop_path_rate=args.drop_path)
     args_new.normalize_output = False
     model = BEiT3ForImageClassification(args_new, num_classes=1000)
@@ -358,7 +358,7 @@ def get_macs():
                     continue
 
             numels.append(module.calc_sampled_param_num())
-    params = sum(numels) 
+    params = sum(numels)
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     print(n_parameters)
