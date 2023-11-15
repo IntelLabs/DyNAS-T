@@ -31,8 +31,8 @@ def get_args():
     # Model parameters
     parser.add_argument('--model', default='beit_base_patch16_224', type=str, metavar='MODEL',
                         help='Name of model to train')
-    parser.add_argument('--task', type=str, required=False, 
-                        choices=['nlvr2', 'vqav2', 'flickr30k', 'coco_retrieval', 'coco_captioning', 'nocaps', 'imagenet'], 
+    parser.add_argument('--task', type=str, required=False,
+                        choices=['nlvr2', 'vqav2', 'flickr30k', 'coco_retrieval', 'coco_captioning', 'nocaps', 'imagenet'],
                         help='Name of task to fine-tuning')
 
     parser.add_argument('--input_size', default=224, type=int,
@@ -40,9 +40,9 @@ def get_args():
     parser.add_argument('--drop_path', type=float, default=0.1, metavar='PCT',
                         help='Drop path rate (default: 0.1)')
 
-    parser.add_argument('--checkpoint_activations', action='store_true', default=None, 
+    parser.add_argument('--checkpoint_activations', action='store_true', default=None,
                         help='Enable checkpointing to save your memory.')
-    parser.add_argument('--sentencepiece_model', type=str, required=False, 
+    parser.add_argument('--sentencepiece_model', type=str, required=False,
                         help='Sentencepiece model path for the pretrained model.')
     parser.add_argument('--vocab_size', type=int, default=64010)
     parser.add_argument('--num_max_bpe_tokens', type=int, default=64)
@@ -155,7 +155,7 @@ def get_args():
                         help='Probability of switching to cutmix when both mixup and cutmix enabled')
     parser.add_argument('--mixup_mode', type=str, default='batch',
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
-    
+
     # augmentation parameters for imagenet finetuning
     parser.add_argument('--color_jitter', type=float, default=0.4, metavar='PCT',
                         help='Color jitter factor (default: 0.4)')
@@ -192,7 +192,7 @@ def get_args():
     parser.add_argument('--initial_scale_power', type=int, default=16)
     parser.add_argument('--zero_stage', default=0, type=int,
                         help='ZeRO optimizer stage (default: 0)')
-    
+
 
     parser.add_argument(
         '--supernet',
@@ -227,7 +227,7 @@ def get_args():
         help='Measurements during search.',
     )
     parser.add_argument('--num_evals', default=250, type=int, help='Total number of evaluations during search.')
-   
+
     parser.add_argument(
         '--valid_size',
         default=None,
@@ -237,9 +237,14 @@ def get_args():
     parser.add_argument('--dataloader_workers', default=4, type=int, help='How many workers to use when loading data.')
     parser.add_argument('--population', default=50, type=int, help='Population size for each generation')
     parser.add_argument('--results_path', required=True, type=str, help='Path to store search results, csv format')
-    parser.add_argument('--dataset_path', default='/datasets/imagenet-ilsvrc2012', type=str, help='')
+    parser.add_argument('--dataset_path', default='/panfs/projects/ML_datasets/imagenet/ilsvrc12_raw/', type=str, help='')
     parser.add_argument('--supernet_ckpt_path', default=None, type=str, help='Path to supernet checkpoint.')
-
+    parser.add_argument(
+        '--test_fraction',
+        default=1.0,
+        type=float,
+        help='Fraction of the validation data to be used for testing and evaluation.',
+    )
     parser.add_argument(
         '--search_tactic',
         default='linas',
@@ -294,7 +299,7 @@ def get_accuracy_beit3(sample_config=None):
     args.batch_size = 128
     args.eval = True
     device = torch.device(args.device)
-   
+
     data_loader_test = create_downstream_dataset(args, is_eval=True)
     args_new = _get_base_config(drop_path_rate=args.drop_path)
     args_new.normalize_output = False
