@@ -675,7 +675,7 @@ if __name__ == '__main__':
         #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_sst2'],
         #     evals_limit=evals_limit,
         # )
-    if True:
+    if False:
         import pandas as pd
         df = pd.concat([
             pd.read_csv('qvit_results/qvit_random_spr_tf02_s31_incfix.csv'),
@@ -709,6 +709,28 @@ if __name__ == '__main__':
                 ],
                 # evals_limit=evals_limit,
             )
+    if False:
+        plot_search_progression(
+            results_path='/nfs/site/home/mszankin/store/nosnap/results/qbert/bert_lians_tf10_latency_spr_fp32.csv',
+            target_metrics=['latency', 'accuracy_sst2'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+        )
+        plot_search_progression(
+            results_path='/nfs/site/home/mszankin/store/nosnap/results/qbert/qbert_lians_tf10_latency_spr.csv',
+            target_metrics=['latency', 'accuracy_sst2'],
+            columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+        )
+    if True:
+        plot_search_progression(
+            results_path='results/qbeit/qbeit_linas_tf10.csv',
+            target_metrics=['model_size', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'model_size', 'accuracy_top1'],
+        )
+        plot_search_progression(
+            results_path='results/qbeit/qbeit_linas_tf10_latency.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'model_size', 'accuracy_top1'],
+        )
 
 
 # correlation()
