@@ -38,6 +38,7 @@ def _main(args):
         test_fraction=args.test_fraction,
         dataloader_workers=args.dataloader_workers,
         distributed=args.distributed,
+        dist_timeout=args.dist_timeout,
     )
 
     results = agent.search()
@@ -121,7 +122,17 @@ def main():
         help='If set, a distributed implementation of the search algorithm will be used.',
     )
     dist_parser.add_argument(
-        "--local_rank", type=int, help="Local rank. Necessary for using the torch.distributed.launch utility."
+        "--local_rank",
+        type=int,
+        help="Local rank. Necessary for using the torch.distributed.launch utility. Do not set manually.",
+    )
+    dist_parser.add_argument(
+        "--dist_timeout",
+        type=int,
+        default=3600,
+        help="Timeout for the distributed search in seconds. This timeout is for communication between workers, "
+        "not the total search time (time between workers that were first and last to finish evaluating assigned "
+        "configurations within a single population).",
     )
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 

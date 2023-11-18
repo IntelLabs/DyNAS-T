@@ -25,6 +25,7 @@ from dynast.search.evolutionary import (
     EvolutionaryMultiObjective,
     EvolutionarySingleObjective,
 )
+from dynast.supernetwork.bert_quantization.bert_quant_interface import BertSST2QuantizedRunner
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
@@ -184,6 +185,18 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
             )
+
+        elif self.supernet == 'bert_base_sst2_quantized':
+            # TODO(macsz) Add `test_fraction`
+            self.runner_validate = BertSST2QuantizedRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+            )
+
         elif self.supernet == 'vit_base_imagenet':
             self.runner_validate = ViTRunner(
                 supernet=self.supernet,
@@ -399,6 +412,16 @@ class LINAS(NASBaseConfig):
                     latency_predictor=self.predictor_dict['latency'],
                     macs_predictor=self.predictor_dict['macs'],
                     params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+            elif self.supernet == 'bert_base_sst2_quantized':
+                runner_predict = BertSST2QuantizedRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
                     acc_predictor=self.predictor_dict['accuracy_sst2'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
@@ -746,11 +769,11 @@ class RandomSearch(NASBaseConfig):
         self._init_search()
 
         # Randomly sample search space for initial population
-        latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+        latest_population = [self.supernet_manager.random_sample() for _ in range(self.num_evals)]
 
         # High-Fidelity Validation measurements
         for _, individual in enumerate(latest_population):
-            log.info(f'Evaluating subnetwork {_+1}/{self.population}')
+            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)}')
             self.validation_interface.eval_subnet(individual)
 
         output = list()
@@ -788,6 +811,9 @@ class LINASDistributed(LINAS):
         self.main_results_path = results_path
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         results_path = get_worker_results_path(results_path, WORLD_RANK)
+
+        if is_main_process() and os.path.exists(self.main_results_path):
+            os.remove(self.main_results_path)
 
         if 'cuda' in device:
             device = f'cuda:{LOCAL_RANK}'
@@ -1098,6 +1124,10 @@ class RandomSearchDistributed(RandomSearch):
     ):
         self.main_results_path = results_path
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+
+        if is_main_process() and os.path.exists(self.main_results_path):
+            os.remove(self.main_results_path)
+
         results_path = get_worker_results_path(results_path, WORLD_RANK)
 
         if 'cuda' in device:
@@ -1133,7 +1163,7 @@ class RandomSearchDistributed(RandomSearch):
         if is_main_process():
             log.info('Creating data')
             # Randomly sample search space for initial population
-            latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+            latest_population = [self.supernet_manager.random_sample() for _ in range(self.num_evals)]
             data = split_list(latest_population, WORLD_SIZE)
         else:
             data = [None for _ in range(WORLD_SIZE)]
@@ -1145,7 +1175,7 @@ class RandomSearchDistributed(RandomSearch):
 
         # High-Fidelity Validation measurements
         for _, individual in enumerate(latest_population):
-            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.population}]')
+            log.info(f'Evaluating subnetwork {_+1}/{len(latest_population)} [{self.num_evals}]')
             self.validation_interface.eval_subnet(individual)
 
         output = list()

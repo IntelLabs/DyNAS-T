@@ -15,6 +15,8 @@
 
 from typing import List
 
+from dynast.supernetwork.bert_quantization.bert_quant_encoding import BertSST2QuantizedEncoding
+from dynast.supernetwork.bert_quantization.bert_quant_interface import EvaluationInterfaceBertSST2Quantized
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding import BootstrapNASEncoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import EvaluationInterfaceBootstrapNAS
 from dynast.supernetwork.image_classification.ofa.ofa_encoding import OFAMobileNetV3Encoding, OFAResNet50Encoding
@@ -44,6 +46,7 @@ SUPERNET_ENCODING = {
     'bert_base_sst2': BertSST2Encoding,
     'vit_base_imagenet': ViTEncoding,
     'inc_quantization_ofa_resnet50': OFAQuantizedResNet50Encoding,
+    'bert_base_sst2_quantized': BertSST2QuantizedEncoding,
     'bootstrapnas_image_classification': BootstrapNASEncoding,
 }
 
@@ -96,6 +99,12 @@ SUPERNET_PARAMETERS = {
         'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
         'vit_intermediate_sizes': {'count': 12, 'vars': [1024, 2048, 3072]},
     },
+    'bert_base_sst2_quantized': {
+        'num_layers': {'count': 1, 'vars': [6, 7, 8, 9, 10, 11, 12]},
+        'num_attention_heads': {'count': 12, 'vars': [6, 8, 10, 12]},
+        'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
+        'q_bits': {'count': 74, 'vars': [8, 32]},
+    },
 }
 
 EVALUATION_INTERFACE = {
@@ -107,6 +116,7 @@ EVALUATION_INTERFACE = {
     'bert_base_sst2': EvaluationInterfaceBertSST2,
     'vit_base_imagenet': EvaluationInterfaceViT,
     'inc_quantization_ofa_resnet50': EvaluationInterfaceQuantizedOFAResNet50,
+    'bert_base_sst2_quantized': EvaluationInterfaceBertSST2Quantized,
     'bootstrapnas_image_classification': EvaluationInterfaceBootstrapNAS,
 }
 
@@ -117,6 +127,7 @@ LINAS_INNERLOOP_EVALS = {
     'ofa_proxyless_d234_e346_k357_w1.3': 20000,
     'transformer_lt_wmt_en_de': 10000,
     'bert_base_sst2': 20000,
+    'bert_base_sst2_quantized': 20000,
     'vit_base_imagenet': 20000,
     'inc_quantization_ofa_resnet50': 10000,
     'bootstrapnas_image_classification': 5000,
@@ -134,6 +145,7 @@ SUPERNET_TYPE = {
     'machine_translation': ['transformer_lt_wmt_en_de'],
     'text_classification': ['bert_base_sst2'],
     'quantization': ['inc_quantization_ofa_resnet50'],
+    'bert_quantization': ['bert_base_sst2_quantized'],
     'recommendation': [],
 }
 
@@ -147,6 +159,7 @@ SUPERNET_METRICS = {
     'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
     'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
+    'bert_base_sst2_quantized': ['latency', 'model_size', 'accuracy_sst2'],
 }
 
 
@@ -199,6 +212,16 @@ def get_csv_header(supernet: str) -> List[str]:
             'Model Size',
             'Top-1 Acc (%)',
         ]
+
+    elif supernet in SUPERNET_TYPE['bert_quantization']:
+        csv_header = [
+            'Sub-network',
+            'Date',
+            'Latency (ms)',
+            'Model Size',
+            'SST-2 Acc',
+        ]  # TODO(macsz) Should be based on specified measurements
+
     else:
         # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`
         raise Exception('Cound not detect supernet type. Please check supernetwork\'s registry.')
