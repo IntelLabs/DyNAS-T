@@ -474,7 +474,7 @@ class LINAS(NASBaseConfig):
                     batch_size=self.batch_size,
                     device=self.device,
                 )
-            
+
             elif self.supernet == 'beit3_imagenet':
                 runner_predict = Beit3ImageNetRunner(
                     supernet=self.supernet,
@@ -487,7 +487,6 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
                 )
-
 
             else:
                 raise NotImplementedError
@@ -1002,6 +1001,18 @@ class LINASDistributed(LINAS):
                         acc_predictor=self.predictor_dict['accuracy_top1'],
                         dataset_path=self.dataset_path,
                         batch_size=self.batch_size,
+                        device=self.device,
+                    )
+                elif self.supernet == 'beit3_imagenet':
+                    runner_predict = Beit3ImageNetRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        model_size_predictor = self.predictor_dict['model_size'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
                         device=self.device,
                     )
                 else:
