@@ -31,6 +31,7 @@ from dynast.utils import log
 from neural_compressor import set_workspace
 from neural_compressor.quantization import fit
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
+from dynast.utils.nn import measure_latency
 from .beit3_supernetwork import BEiT3ForImageClassification
 from .simplify_beit3_eval import get_args, create_downstream_dataset
 from .modeling_utils import _get_base_config
@@ -139,21 +140,6 @@ def create_model_dataset(checkpoint_path,num_layers=12):
     return model, data_loader_test, task_handler,device
 
 
-def compute_latency(
-    config,
-    model,
-    eval_batch_size=4,
-    device: str = 'cpu',
-    warmup_steps: int = 10,
-    measure_steps: int = 100,
-):
-    """Measure latency of the BERT-based model."""
-
-    latency_mean = 0
-    latency_std = 0
-    return latency_mean, latency_std
-
-
 class Beit3ImageNetRunner:
     """The BertSST2Runner class manages the sub-network selection from the BERT super-network and
     the validation measurements of the sub-networks. Bert-Base network finetuned on SST-2 dataset is
@@ -250,8 +236,8 @@ class Beit3ImageNetRunner:
     @torch.no_grad()
     def measure_latency(
         self,
-        subnet_cfg: dict,
-        eval_batch_size=4,
+        subnet_sample,
+        qbit_list,
         warmup_steps: int = 10,
         measure_steps: int = 100,
     ):
@@ -263,14 +249,31 @@ class Beit3ImageNetRunner:
         """
 
         logging.info(
-            f'Performing Latency measurements. Warmup = {warmup_steps},\
-             Measure steps = {measure_steps}'
+            f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}, Batch size = {self.batch_size}'
         )
 
-        lat_mean, lat_std = compute_latency(subnet_cfg, self.supernet_model, eval_batch_size, device=self.device)
-        logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
+        regex_module_names = get_regex_names(self.supernet_model)
+        config_new ={'embed_size': 768,
+            'num_layers': subnet_sample['num_layers'],
+            'head_num': subnet_sample['head_num'][:subnet_sample['num_layers']],
+            'ffn_size': subnet_sample["ffn_size"][:subnet_sample['num_layers']],
+        }
+        model_fp32,_,_,_ = create_model_dataset(self.checkpoint_path,num_layers=subnet_sample['num_layers'])
 
-        return lat_mean, lat_std
+
+        model_fp32.set_sample_config(config_new)
+
+        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list,regex_module_names)
+
+        lat_mean, lat_std = measure_latency(
+            q_model,
+            input_size=(self.batch_size, 3, 224, 224),
+            device=self.device,
+        )
+        del q_model, model_fp32
+        logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
+        return lat_mean
+
 
     def quantize_subnet(
         self,
@@ -404,7 +407,7 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
         self._set_workspace()
 
         individual_results = dict()
-        for metric in ['params', 'latency', 'macs', 'accuracy_top1']:
+        for metric in ['params', 'latency', 'macs', 'model_size', 'accuracy_top1']:
             individual_results[metric] = 0
 
         # Predictor Mode
@@ -435,7 +438,7 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
             if 'macs' in self.measurements or 'params' in self.measurements:
                 individual_results['macs'], individual_results['params'] = self.evaluator.validate_macs(subnet_sample)
             if 'latency' in self.measurements:
-                individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
+                individual_results['latency'] = self.evaluator.measure_latency(subnet_sample, qbit_list)
             if 'accuracy_top1' in self.measurements:
                 individual_results['accuracy_top1'] = self.evaluator.validate_accuracy_top1(subnet_sample, qbit_list)
             if 'model_size' in self.measurements:
