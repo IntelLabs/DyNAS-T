@@ -16,7 +16,7 @@ import itertools
 import math
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import alphashape
 import matplotlib.pyplot as plt
@@ -182,6 +182,8 @@ def plot_search_progression(
     columns: List[str] = ['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1'],
     normalize=False,
     title=None,
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
 ) -> None:
     df = pd.read_csv(results_path)
     log.info(f'Loaded {len(df)} entries from {results_path}')
@@ -254,7 +256,10 @@ def plot_search_progression(
         s=10,
     )
 
-    # ax.set_ylim(72,77.5)
+    if ylim:
+        ax.set_ylim(*ylim)
+    if xlim:
+        ax.set_xlim(*xlim)
 
     df_conc_front = frontier_builder(df, optimization_metrics=[target_metrics[0], target_metrics[1]])
     ax.plot(
@@ -578,6 +583,21 @@ def plot_hv():
 
 
 if __name__ == '__main__':
+    if False:
+        # warm-up test
+        plot_search_progression(
+                title='BERT Wamrup',
+                results_path='tmp.csv',
+                target_metrics=['macs', 'accuracy_sst2'],
+                columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+        )
+        plot_search_progression(
+                title='BERT Full',
+                results_path='tmp_completed.csv',
+                target_metrics=['macs', 'accuracy_sst2'],
+                columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+        )
+        exit()
     # plot_search_progression(
     #     # results_path='bnas_1_latency.csv',
     #     # results_path='results_tlt_linas_dist2_long.csv',
@@ -600,38 +620,6 @@ if __name__ == '__main__':
         plot_search_progression(results_path='bert_sst2_nsga2.csv')  # , random_results_path='bert_sst2_random.csv')
         plot_search_progression(results_path='bert_sst2_random.csv')
     # plot_hv()
-    if True:
-        plot_search_progression(
-            title='OFA ResNet50\nLatency vs. Accuracy',
-            results_path='results/ofa_resnet50/dynast_ofaresnet50_quant_linas_sprh9480.csv',
-            target_metrics=['latency', 'accuracy_top1'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-            normalize=True,
-            reference_points=[
-                ReferencePoint(
-                    'INT8 ResNet50',
-                    {'latency': 69.805, 'accuracy_top1': 75.921},
-                    color='tab:orange',
-                ),
-                ReferencePoint(
-                    'INT8 ResNet101',
-                    {'latency': 141.542, 'accuracy_top1': 77.283},
-                    color='tab:red',
-                ),
-                ReferencePoint(
-                    'INT8 ResNet152',
-                    {'latency': 210.97, 'accuracy_top1': 78.233},
-                    color='tab:brown',
-                ),
-            ],
-        )
-
-        plot_search_progression(
-            title='OFA ResNet50\nModel Size vs. Accuracy',
-            results_path='results/ofa/ofaresnet50_linas_tf10_model_size.csv',
-            target_metrics=['model_size', 'accuracy_top1'],
-            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-        )
     if False:
         plot_search_progression(
             results_path='/nfs/site/home/mszankin/store/nosnap/results/dynast/dynast_vit_linas_a100.csv'
@@ -758,7 +746,40 @@ if __name__ == '__main__':
                 ],
                 # evals_limit=evals_limit,
             )
-    if True:
+    ## QUANT PAPER
+    if False:
+        plot_search_progression(
+            title='OFA ResNet50\nLatency vs. Accuracy',
+            results_path='results/ofa_resnet50/dynast_ofaresnet50_quant_linas_sprh9480.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            normalize=True,
+            reference_points=[
+                ReferencePoint(
+                    'INT8 ResNet50',
+                    {'latency': 69.805, 'accuracy_top1': 75.921},
+                    color='tab:orange',
+                ),
+                ReferencePoint(
+                    'INT8 ResNet101',
+                    {'latency': 141.542, 'accuracy_top1': 77.283},
+                    color='tab:red',
+                ),
+                ReferencePoint(
+                    'INT8 ResNet152',
+                    {'latency': 210.97, 'accuracy_top1': 78.233},
+                    color='tab:brown',
+                ),
+            ],
+        )
+
+        plot_search_progression(
+            title='OFA ResNet50\nModel Size vs. Accuracy',
+            results_path='results/ofa/ofaresnet50_linas_tf10_model_size.csv',
+            target_metrics=['model_size', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+        )
+    if False:
         # BERT
         # plot_search_progression(
         #     results_path='results/qbert/qbert_lians_tf10_latency_fp32_icx.csv',
@@ -792,7 +813,7 @@ if __name__ == '__main__':
             columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
             reference_points=rps,
         )
-    if True:
+    if False:
         # BEIT
         plot_search_progression(
             title='BEiT\nModel Size vs. Accuracy',
@@ -808,7 +829,7 @@ if __name__ == '__main__':
             normalize=True,
         )
     if True:
-        # ViT
+        # ViT (Endeavour)
         plot_search_progression(
             title='ViT (pretrained)\nLatency vs. Accuracy',
             results_path='results/qvit/qvit_linas_icx_tf10_s20_bs16_latency_icx.csv',
@@ -821,6 +842,41 @@ if __name__ == '__main__':
             results_path='results/qvit/qvit_linas_spr_tf10_s20_incfix.csv',
             target_metrics=['model_size', 'accuracy_top1'],
             columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+        )
+
+        # ViT (k8s)
+        # results/k8s-quant/qvit_linas_latency_skx.csv  # single bare
+        # results/k8s-quant/qvit_linas_latency_clx_k8s_tf02_single.csv # single k8s
+        # results/k8s-quant/qvit_linas_latency_clx.csv  # dist combined bare
+        # results/k8s-quant/qvit_linas_latency_clx_k8s_tf02.csv  # dist combined k8s
+        plot_search_progression(
+            title='ViT\nLatency vs. Accuracy (1xSKX)',
+            results_path='results/k8s-quant/qvit_linas_latency_skx.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            normalize=True,
+        )
+        plot_search_progression(
+            title='ViT\nLatency vs. Accuracy (1xCLX K8S TF02)',
+            results_path='results/k8s-quant/qvit_linas_latency_clx_k8s_tf02_single.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            normalize=True,
+        )
+
+        plot_search_progression(
+            title='ViT\nLatency vs. Accuracy (2xCLX)',
+            results_path='results/k8s-quant/qvit_linas_latency_clx.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            normalize=True,
+        )
+        plot_search_progression(
+            title='ViT\nLatency vs. Accuracy (2xCLX k8s TF02)',
+            results_path='results/k8s-quant/qvit_linas_latency_clx_k8s_tf02.csv',
+            target_metrics=['latency', 'accuracy_top1'],
+            columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+            normalize=True,
         )
 
 
