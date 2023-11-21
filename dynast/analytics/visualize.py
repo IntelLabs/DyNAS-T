@@ -193,10 +193,12 @@ def plot_search_progression(
     df.columns = columns
 
     if 'accuracy_sst2' in target_metrics:
-        df['accuracy_sst2'] = df['accuracy_sst2']*100
+        df['accuracy_sst2'] = df['accuracy_sst2'] * 100
 
         for rp in reference_points:
-            rp.metrics['accuracy_sst2'] = rp.metrics['accuracy_sst2']*100 if rp.metrics['accuracy_sst2'] <= 1.0 else rp.metrics['accuracy_sst2']
+            rp.metrics['accuracy_sst2'] = (
+                rp.metrics['accuracy_sst2'] * 100 if rp.metrics['accuracy_sst2'] <= 1.0 else rp.metrics['accuracy_sst2']
+            )
 
     fig, ax = plt.subplots(figsize=(7, 5))
 
@@ -236,14 +238,18 @@ def plot_search_progression(
 
     if normalize and 'latency' in target_metrics:
         column = 'latency'
-        norm_min = min(df[column].min(), min([rp.metrics['latency'] for rp in reference_points] if reference_points else [99999]))
-        norm_max = max(df[column].max(), max([rp.metrics['latency'] for rp in reference_points] if reference_points else [0]))
+        norm_min = min(
+            df[column].min(), min([rp.metrics['latency'] for rp in reference_points] if reference_points else [99999])
+        )
+        norm_max = max(
+            df[column].max(), max([rp.metrics['latency'] for rp in reference_points] if reference_points else [0])
+        )
         df[column] = (df[column] - norm_min) / (norm_max - norm_min)
 
         for i in range(len(reference_points)):
-            reference_points[i].metrics[column] = (
-                reference_points[i].metrics[column] - norm_min
-            ) / (norm_max - norm_min)
+            reference_points[i].metrics[column] = (reference_points[i].metrics[column] - norm_min) / (
+                norm_max - norm_min
+            )
 
     ax.scatter(
         df[target_metrics[0]].values,
@@ -586,16 +592,16 @@ if __name__ == '__main__':
     if False:
         # warm-up test
         plot_search_progression(
-                title='BERT Wamrup',
-                results_path='tmp.csv',
-                target_metrics=['macs', 'accuracy_sst2'],
-                columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+            title='BERT Wamrup',
+            results_path='tmp.csv',
+            target_metrics=['macs', 'accuracy_sst2'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
         )
         plot_search_progression(
-                title='BERT Full',
-                results_path='tmp_completed.csv',
-                target_metrics=['macs', 'accuracy_sst2'],
-                columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+            title='BERT Full',
+            results_path='tmp_completed.csv',
+            target_metrics=['macs', 'accuracy_sst2'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
         )
         exit()
     # plot_search_progression(
@@ -649,7 +655,7 @@ if __name__ == '__main__':
                     {'latency': 170.272, 'accuracy_sst2': 0.9243119266055045},
                     color='tab:purple',
                 ),
-            ]
+            ],
         )
     if False:
         evals_limit = 1000
@@ -660,7 +666,6 @@ if __name__ == '__main__':
             columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
             evals_limit=evals_limit,
             reference_points=[
-
                 ReferencePoint(
                     'subnet',
                     {'latency': 8.864, 'accuracy_sst2': 0.925459},
@@ -686,7 +691,7 @@ if __name__ == '__main__':
                     {'latency': 11.843, 'accuracy_sst2': 0.9139908256880734},
                     color='tab:pink',
                 ),
-            ]
+            ],
         )
         # plot_search_progression(
         #     results_path='results_linas_subnet_qp_spr.csv',
@@ -714,10 +719,13 @@ if __name__ == '__main__':
         # )
     if False:
         import pandas as pd
-        df = pd.concat([
-            pd.read_csv('qvit_results/qvit_random_spr_tf02_s31_incfix.csv'),
-            pd.read_csv('qvit_results/qvit_random_spr_tf02_s32_incfix.csv'),
-        ])
+
+        df = pd.concat(
+            [
+                pd.read_csv('qvit_results/qvit_random_spr_tf02_s31_incfix.csv'),
+                pd.read_csv('qvit_results/qvit_random_spr_tf02_s32_incfix.csv'),
+            ]
+        )
         print(len(df))
         df.to_csv('qvit_results/qvit_random_spr_tf02_combined_incfix.csv', index=False)
 
@@ -733,16 +741,16 @@ if __name__ == '__main__':
                 columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
                 # random_results_path='qvit_results/qvit_random_spr_tf02_combined_incfix.csv',
                 reference_points=[
-                #    ReferencePoint(
-                #        'SuperNet FP32',
-                #        {'model_size': 346.516, 'accuracy_top1': 79.497},
-                #        color='tab:orange',
-                #    ),
-                #    ReferencePoint(
-                #        'SuperNet INT8',
-                #        {'model_size': 89.111, 'accuracy_top1': 69.280},
-                #        color='tab:red',
-                #    ),
+                    #    ReferencePoint(
+                    #        'SuperNet FP32',
+                    #        {'model_size': 346.516, 'accuracy_top1': 79.497},
+                    #        color='tab:orange',
+                    #    ),
+                    #    ReferencePoint(
+                    #        'SuperNet INT8',
+                    #        {'model_size': 89.111, 'accuracy_top1': 69.280},
+                    #        color='tab:red',
+                    #    ),
                 ],
                 # evals_limit=evals_limit,
             )
@@ -882,7 +890,6 @@ if __name__ == '__main__':
 
 # correlation()
 # results/qbert/qbert_lians_tf10_latency_icx.png results/qbert/qbert_linas_model_size.png results/qbeit/qbeit_linas_tf10.png results/qbeit/qbeit_linas_tf10_latency_icx.png results/qvit/qvit_linas_icx_tf10_s20_bs16_latency_icx.png results/qvit/qvit_linas_spr_tf10_s20_incfix.png dynast_ofaresnet50_quant_linas_sprh9480.png results/ofa/ofaresnet50_linas_tf10_model_size.png
-
 
 
 # ofa/ofaresnet50_linas_tf10_model_size.csv
