@@ -303,7 +303,7 @@ def plot_search_progression(
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=0.3)
-    save_path = '{}.png'.format(results_path.split('.')[0])
+    save_path = results_path.replace('.csv', '.png')
     plt.savefig(save_path)
     log.info(f'Search progression plot saved to {save_path}')
 
