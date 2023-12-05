@@ -86,8 +86,8 @@ class ViTQuantizedRunner(ViTRunner):
         device: str = 'cpu',
         dataloader_workers: int = 4,
         test_fraction: float = 1.0,
-        warmup_steps: int = 10,
-        measure_steps: int = 100,
+        warmup_steps: int = 100,
+        measure_steps: int = 300,
         mp_calibration_samples: int = 128,
     ) -> None:
         self.supernet = supernet
@@ -245,6 +245,8 @@ class ViTQuantizedRunner(ViTRunner):
             model,
             input_size=(self.batch_size, 3, 224, 224),
             device=self.device,
+            warmup_steps=self.warmup_steps,
+            measure_steps=self.measure_steps,
         )
         return latency_mean
 
