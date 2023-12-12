@@ -258,7 +258,7 @@ class ViTRunner:
             `macs`
         """
         macs, params = compute_macs(subnet_cfg, self.supernet_model)
-        logging.info('Model\'s macs: {}'.format(macs))
+        logging.info('Model\'s macs: {} params {}'.format(macs, params))
         return macs, params
 
     @torch.no_grad()
