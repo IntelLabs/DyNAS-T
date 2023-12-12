@@ -15,12 +15,13 @@
 import copy
 import os
 import time
-from typing import List, Union
+from typing import List, Optional, Tuple, Union
 
 import neural_compressor
 import torch
 import yaml
 from neural_compressor.experimental import Quantization
+from torch.utils.data import DataLoader
 
 from dynast.utils import reset_logger
 
@@ -51,7 +52,7 @@ def qparam_parse(
     bit: str,
     mode: str,
     granularity: str,
-) -> (str, str, str, str):
+) -> Tuple[str, str, str, str]:
     '''
     Parse quantization parameters
     Parameters:
@@ -166,7 +167,7 @@ def inc_qconfig_dict(
     q_activations_mode: Union[List[str], str],
     q_weights_granularity: Union[List[str], str],
     q_activations_granularity: Union[List[str], str],
-    regex_module_names: list = None,
+    regex_module_names: Optional[list] = None,
 ):
     '''
     Parameters:
@@ -227,8 +228,8 @@ def inc_qconfig_dict(
 def inc_quantize(
     model_fp: torch.nn.Module,
     qconfig_dict: dict,
-    data_loader: torch.utils.data.DataLoader = None,
-    mp_calibration_samples: int = None,
+    data_loader: Optional[DataLoader] = None,
+    mp_calibration_samples: Optional[int] = None,
 ) -> neural_compressor.model.torch_model.PyTorchFXModel:
     '''
     Parameters:

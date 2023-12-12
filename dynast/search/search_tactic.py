@@ -14,6 +14,7 @@
 
 
 import os
+from typing import Optional
 
 import pandas as pd
 import torch.distributed as dist
@@ -30,6 +31,7 @@ from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_encoding
 from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interface import BootstrapNASRunner
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
+from dynast.supernetwork.image_classification.vit_quantized.vit_quantized_interface import ViTQuantizedRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
@@ -47,7 +49,7 @@ class NASBaseConfig:
 
     def __init__(
         self,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         supernet: str = 'ofa_mbv3_d234_e346_k357_w1.0',
         optimization_metrics: list = ['latency', 'accuracy_top1'],
         measurements: list = ['latency', 'macs', 'params', 'accuracy_top1'],
@@ -59,12 +61,12 @@ class NASBaseConfig:
         eval_batch_size: int = 128,
         verbose: bool = False,
         search_algo: str = 'nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         """Params:
@@ -207,6 +209,16 @@ class NASBaseConfig:
                 device=self.device,
                 test_fraction=self.test_fraction,
             )
+        elif self.supernet == 'vit_base_imagenet_quantized':
+            self.runner_validate = ViTQuantizedRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+                test_fraction=self.test_fraction,
+            )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
                 bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
@@ -244,7 +256,7 @@ class NASBaseConfig:
         # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
-    def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
+    def get_best_configs(self, sort_by: Optional[str] = None, ascending: bool = False, limit: Optional[int] = None):
         """Returns the best sub-networks.
 
         Number of returned networks is controlled by the `limit` parameter. If it's not set, then
@@ -277,19 +289,19 @@ class LINAS(NASBaseConfig):
         measurements: list,
         num_evals: int,
         results_path: str,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
         batch_size: int = 128,
         eval_batch_size: int = 128,
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         """Params:
@@ -327,7 +339,7 @@ class LINAS(NASBaseConfig):
             **kwargs,
         )
 
-    def train_predictors(self, results_path: str = None):
+    def train_predictors(self, results_path: Optional[str] = None):
         """Handles the training of predictors for the LINAS inner-loop based on the
         user-defined optimization metrics.
 
@@ -438,6 +450,19 @@ class LINAS(NASBaseConfig):
                     checkpoint_path=self.supernet_ckpt_path,
                     batch_size=self.batch_size,
                     device=self.device,
+                )
+            elif self.supernet == 'vit_base_imagenet_quantized':
+                runner_predict = ViTQuantizedRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                    test_fraction=self.test_fraction,
                 )
 
             elif self.supernet == 'inc_quantization_ofa_resnet50':
@@ -562,6 +587,7 @@ class LINAS(NASBaseConfig):
                     )
             else:
                 log.error('Number of objectives not supported. Update optimization_metrics!')
+                raise Exception
 
             results = search_manager.run_search(problem)
 
@@ -587,7 +613,7 @@ class Evolutionary(NASBaseConfig):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
@@ -703,6 +729,7 @@ class Evolutionary(NASBaseConfig):
                 search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
         else:
             log.error('Number of objectives not supported. Update optimization_metrics!')
+            raise Exception
 
         results = search_manager.run_search(problem)
 
@@ -728,19 +755,19 @@ class RandomSearch(NASBaseConfig):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
-        metric_eval_fns: dict = None,
+        metric_eval_fns: Optional[dict] = None,
         **kwargs,
     ):
         super().__init__(
@@ -794,14 +821,14 @@ class LINASDistributed(LINAS):
         measurements: list,
         num_evals: int,
         results_path: str,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         verbose: bool = False,
         search_algo: str = 'nsga2',
         population: int = 50,
         seed: int = 42,
         batch_size: int = 128,
         eval_batch_size: int = 128,
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
@@ -942,6 +969,16 @@ class LINASDistributed(LINAS):
                         checkpoint_path=self.supernet_ckpt_path,
                         device=self.device,
                     )
+                elif self.supernet == 'bert_base_sst2_quantized':
+                    runner_predict = BertSST2QuantizedRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        model_size_predictor=self.predictor_dict['model_size'],
+                        acc_predictor=self.predictor_dict['accuracy_sst2'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        device=self.device,
+                    )
                 elif self.supernet == 'vit_base_imagenet':
                     runner_predict = ViTRunner(
                         supernet=self.supernet,
@@ -953,6 +990,19 @@ class LINASDistributed(LINAS):
                         checkpoint_path=self.supernet_ckpt_path,
                         batch_size=self.batch_size,
                         device=self.device,
+                    )
+                elif self.supernet == 'vit_base_imagenet_quantized':
+                    runner_predict = ViTQuantizedRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        model_size_predictor=self.predictor_dict['model_size'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        batch_size=self.batch_size,
+                        device=self.device,
+                        test_fraction=self.test_fraction,
                     )
 
                 elif self.supernet == 'inc_quantization_ofa_resnet50':
@@ -1078,6 +1128,7 @@ class LINASDistributed(LINAS):
                         )
                 else:
                     log.error('Number of objectives not supported. Update optimization_metrics!')
+                    raise Exception
 
                 results = search_manager.run_search(problem)
 
@@ -1108,14 +1159,14 @@ class RandomSearchDistributed(RandomSearch):
         measurements,
         num_evals,
         results_path,
-        dataset_path: str = None,
+        dataset_path: Optional[str] = None,
         seed=42,
         population=50,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         verbose=False,
         search_algo='nsga2',
-        supernet_ckpt_path: str = None,
+        supernet_ckpt_path: Optional[str] = None,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,

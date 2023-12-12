@@ -48,6 +48,7 @@ DyNAS-T included support for the following super-network frameworks suchs as [On
 |Quantization-aware BERT-SST2 | `bert_base_sst2_quantized` | [SST2](https://huggingface.co/datasets/sst2) | `latency`, `model_size`, `accuracy_sst2` |
 |BootstrapNAS | - | - | `accuracy_top1`, `macs`, `params`, `latency` |
 |Vision Transformer | `vit_base_imagenet` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `macs`, `params`, `latency` |
+|Quantization-aware Vision Transformer | `vit_base_imagenet_quantized` | [ImageNet 1K](https://huggingface.co/datasets/imagenet-1k) | `accuracy_top1`, `model_size`, `params`, `latency` |
 
 > **_ImageNet:_**  When using any of the OFA super-networks, the ImageNet directory tree should have a separate directory for each of the classes in both `train` and `val` sets. To prepare your ImageNet dataset for use with OFA you could follow instructions available [here](https://jkjung-avt.github.io/ilsvrc2012-in-digits/).
 > **_WMT En-De:_** To obtain and prepare dataset please follow instructions available [here](https://github.com/mit-han-lab/hardware-aware-transformers).

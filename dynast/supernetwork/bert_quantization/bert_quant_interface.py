@@ -17,7 +17,9 @@ import copy
 import csv
 import logging
 import os
+import random
 import shutil
+import string
 import time
 import warnings
 from datetime import datetime
@@ -25,7 +27,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
-import torchprofile
+from neural_compressor import set_workspace
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 from transformers import BertConfig
@@ -34,6 +36,7 @@ from dynast.predictors.dynamic_predictor import Predictor
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.supernetwork.text_classification.sst2_dataloader import prepare_data_loader
 from dynast.utils import log
+from dynast.utils.distributed import get_distributed_vars
 
 from .bert_subnetwork import BertSubnetForSequenceClassification
 from .bert_supernetwork import BertSupernetForSequenceClassification
@@ -283,7 +286,10 @@ class BertSST2QuantizedRunner:
         return lat_mean, lat_std
 
     def validate_modelsize(self, subnet_sample, qbit_list):
-        temp_name = "temp_23"
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        tmp_name = f"/tmp/dynast_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+
         regex_module_names = get_regex_names(self.supernet_model)
         config_new = {
             'subnet_hidden_sizes': 768,
@@ -296,11 +302,11 @@ class BertSST2QuantizedRunner:
         model_fp32.set_sample_config(config_new)
 
         q_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
-        q_model.save(temp_name)
-        model_size = os.path.getsize(f'{temp_name}/best_model.pt') / 1e6
+        q_model.save(tmp_name)
+        model_size = os.path.getsize(f'{tmp_name}/best_model.pt') / 1e6
         print('Size (MB):', model_size)
 
-        shutil.rmtree(temp_name)
+        shutil.rmtree(tmp_name)
         del q_model, model_fp32
         return model_size
 
@@ -388,6 +394,13 @@ class EvaluationInterfaceBertSST2Quantized(EvaluationInterface):
 
         # Validation Mode
         else:
+            LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+            WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+            workspace_name = (
+                f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+            )
+            log.debug(f'Neural Compressor workspace: {workspace_name}')
+            set_workspace(workspace_name)
             if 'accuracy_sst2' in self.measurements:
                 individual_results['accuracy_sst2'] = self.evaluator.validate_accuracy_sst2(subnet_sample, qbit_list)
 

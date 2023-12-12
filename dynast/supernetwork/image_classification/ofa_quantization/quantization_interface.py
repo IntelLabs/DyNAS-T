@@ -18,10 +18,11 @@ import os
 import shutil
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
+from torch.utils.data.dataloader import DataLoader
 
 from dynast.measure.latency import auto_steps
 from dynast.predictors.dynamic_predictor import Predictor
@@ -43,7 +44,11 @@ from .inc_quantization import inc_qconfig_dict, inc_quantize
 
 
 class Quantization:
-    def __init__(self, calibration_dataloader=None, mp_calibration_samples=None):
+    def __init__(
+        self,
+        calibration_dataloader: Optional[DataLoader] = None,
+        mp_calibration_samples: Optional[int] = None,
+    ):
         super(Quantization, self).__init__()
         self.calibration_dataloader = calibration_dataloader
         self.mp_calibration_samples = mp_calibration_samples
@@ -85,10 +90,10 @@ class QuantizedOFARunner:
         self,
         supernet: str,
         dataset_path: str,
-        acc_predictor: Predictor = None,
-        model_size_predictor: Predictor = None,
-        latency_predictor: Predictor = None,
-        params_predictor: Predictor = None,
+        acc_predictor: Optional[Predictor] = None,
+        model_size_predictor: Optional[Predictor] = None,
+        latency_predictor: Optional[Predictor] = None,
+        params_predictor: Optional[Predictor] = None,
         batch_size: int = 128,
         eval_batch_size: int = 128,
         mp_calibration_samples: int = 100,
@@ -144,19 +149,19 @@ class QuantizedOFARunner:
             log.warning('No dataset path provided. Cannot validate sub-networks.')
 
     def estimate_accuracy_top1(self, subnet_cfg) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
+        top1 = self.acc_predictor.predict(subnet_cfg) if self.acc_predictor else float("nan")
         return top1
 
     def estimate_model_size(self, subnet_cfg) -> int:
-        model_size = self.model_size_predictor.predict(subnet_cfg)
+        model_size = self.model_size_predictor.predict(subnet_cfg) if self.model_size_predictor else -1
         return model_size
 
     def estimate_latency(self, subnet_cfg) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
+        latency = self.latency_predictor.predict(subnet_cfg) if self.latency_predictor else float("nan")
         return latency
 
     def estimate_parameters(self, subnet_cfg) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
+        parameters = self.params_predictor.predict(subnet_cfg) if self.params_predictor else -1
         return parameters
 
     def quantize_and_calibrate(self, subnet, subnet_cfg):
@@ -205,7 +210,7 @@ class QuantizedOFARunner:
 
         return top1
 
-    def validate_params(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:
+    def validate_params(self, subnet_cfg: dict, device: Optional[str] = None) -> int:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model
@@ -225,7 +230,7 @@ class QuantizedOFARunner:
 
         return params
 
-    def measure_modelsize(self, subnet_cfg: dict, device: str = None) -> Tuple[int, int]:
+    def measure_modelsize(self, subnet_cfg: dict, device: Optional[str] = None) -> float:
         """Measure Torch model's FLOPs/MACs as per FVCore calculation
         Args:
             subnet_cfg: sub-network Torch model
@@ -252,7 +257,7 @@ class QuantizedOFARunner:
         subnet_cfg: dict,
         warmup_steps: int = 10,
         measure_steps: int = 50,
-        device: str = None,
+        device: Optional[str] = None,
     ) -> Tuple[float, float]:
         """Measure Torch model's latency.
         Args:

@@ -14,7 +14,7 @@
 
 """
 BSD 3-Clause License
-Copyright (c) Soumith Chintala 2016, 
+Copyright (c) Soumith Chintala 2016,
 All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -47,11 +47,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .modules_supernetwork import (
+from dynast.supernetwork.bert_quantization.modules_supernetwork import LinearSuper
+
+from .modules_supernetwork import (  # SuperLinear,
     Conv2dNormActivation,
     SuperEmbedding,
     SuperLayerNorm,
-    SuperLinear,
     SuperMultiheadAttention,
     SuperSelfAttentionOutput,
 )
@@ -62,10 +63,10 @@ class MLPBlock(nn.Sequential):
 
     def __init__(self, in_dim, mlp_dim, dropout):
         super().__init__()
-        self.linear_1 = SuperLinear(super_in_dim=in_dim, super_out_dim=mlp_dim)
+        self.linear_1 = LinearSuper(super_in_dim=in_dim, super_out_dim=mlp_dim)
         self.act = nn.GELU()
         self.dropout_1 = nn.Dropout(dropout)
-        self.linear_2 = SuperLinear(super_in_dim=mlp_dim, super_out_dim=in_dim)
+        self.linear_2 = LinearSuper(super_in_dim=mlp_dim, super_out_dim=in_dim)
         self.dropout_2 = nn.Dropout(dropout)
 
         nn.init.xavier_uniform_(self.linear_1.weight)

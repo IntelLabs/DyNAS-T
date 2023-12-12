@@ -13,18 +13,35 @@
 # limitations under the License.
 
 import os
+from typing import Optional
 
 import torch
 import torchvision
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 
-from dynast.utils import measure_time
+from dynast.utils import log, measure_time
 
 
-def _dataset_fraction(dataset: torchvision.datasets.DatasetFolder, fraction: float):
+def _dataset_fraction(dataset: torchvision.datasets.DatasetFolder, fraction: float, seed: int = 21):
+    """
+    Returns a random subset of the input dataset, with a size determined by the given fraction.
+
+    Args:
+    -----
+    * `dataset` (torchvision.datasets.DatasetFolder): The input dataset to sample from.
+    * `fraction` (float): The fraction of the dataset to include in the output subset.
+    * `seed` (int, optional): The random seed to use for reproducibility. Defaults to 21.
+
+    Returns:
+    --------
+    * torch.utils.data.Subset: A random subset of the input dataset.
+    """
     # Use random subset of validation data if valid fraction specified
     if (fraction > 0.0) and (fraction < 1.0):
+        log.debug(f'Sampling {fraction*100}% of dataset with seed {seed}')
+        torch.manual_seed(seed)
         random_indices = torch.randperm(len(dataset))
         example_count = round(fraction * len(dataset))
         dataset = torch.utils.data.Subset(dataset, random_indices[:example_count])
@@ -60,22 +77,22 @@ class Dataset(object):
 
     @staticmethod
     @measure_time
-    def train_dataloader() -> torch.utils.data.DataLoader:
+    def train_dataloader() -> DataLoader:
         raise NotImplementedError()
 
     @staticmethod
     @measure_time
-    def validation_dataloader() -> torch.utils.data.DataLoader:
+    def validation_dataloader() -> DataLoader:
         raise NotImplementedError()
 
     @staticmethod
     @measure_time
-    def test_dataloader() -> torch.utils.data.DataLoader:
+    def test_dataloader() -> DataLoader:
         raise NotImplementedError()
 
 
 class ImageNet(Dataset):
-    PATH = "/datasets/imagenet-ilsvrc2012/"
+    PATH: str = "/datasets/imagenet-ilsvrc2012/"
 
     @staticmethod
     def name() -> str:
@@ -112,10 +129,10 @@ class ImageNet(Dataset):
     def train_dataloader(
         batch_size: int,
         image_size: int = 224,
-        train_dir: str = None,
+        train_dir: Optional[str] = None,
         shuffle: bool = True,
         num_workers: int = 16,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         if not train_dir:
             train_dir = os.path.join(ImageNet.PATH, "train")
 
@@ -123,7 +140,7 @@ class ImageNet(Dataset):
             train_dir,
             ImageNet.train_transforms(image_size),
         )
-        train_loader = torch.utils.data.DataLoader(
+        train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -139,14 +156,14 @@ class ImageNet(Dataset):
     def validation_dataloader(
         batch_size: int,
         image_size: int = 224,
-        val_dir: str = None,
+        val_dir: Optional[str] = None,
         shuffle: bool = False,
         num_workers: int = 16,
         fraction: float = 1.0,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         if not val_dir:
             val_dir = os.path.join(ImageNet.PATH, "val")
-
+        log.debug(f'Loading ImageNet(validation) from {val_dir}')
         val_dataset = datasets.ImageFolder(
             val_dir,
             ImageNet.val_transforms(image_size),
@@ -155,7 +172,7 @@ class ImageNet(Dataset):
         val_dataset = _dataset_fraction(val_dataset, fraction)
 
         val_sampler = torch.utils.data.SequentialSampler(val_dataset)
-        val_loader = torch.utils.data.DataLoader(
+        val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -186,10 +203,10 @@ class Imagenette(Dataset):
     def train_dataloader(
         batch_size: int,
         image_size: int = 224,
-        train_dir: str = None,
+        train_dir: Optional[str] = None,
         shuffle: bool = True,
         num_workers: int = 16,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         if not train_dir:
             train_dir = os.path.join(Imagenette.PATH, "train")
 
@@ -197,7 +214,7 @@ class Imagenette(Dataset):
             train_dir,
             ImageNet.train_transforms(image_size),
         )
-        train_loader = torch.utils.data.DataLoader(
+        train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -213,11 +230,11 @@ class Imagenette(Dataset):
     def validation_dataloader(
         batch_size: int,
         image_size: int = 224,
-        val_dir: str = None,
+        val_dir: Optional[str] = None,
         shuffle: bool = False,
         num_workers: int = 16,
         fraction: float = 1.0,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         if not val_dir:
             val_dir = os.path.join(Imagenette.PATH, "val")
 
@@ -229,7 +246,7 @@ class Imagenette(Dataset):
         val_dataset = _dataset_fraction(val_dataset, fraction)
 
         val_sampler = torch.utils.data.SequentialSampler(val_dataset)
-        val_loader = torch.utils.data.DataLoader(
+        val_loader = DataLoader(
             val_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -271,14 +288,14 @@ class CIFAR10(Dataset):
         batch_size: int,
         shuffle: bool = True,
         num_workers=16,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         trainset = torchvision.datasets.CIFAR10(
             root=CIFAR10.PATH,
             train=True,
             download=True,
             transform=CIFAR10.train_transforms(),
         )
-        trainloader = torch.utils.data.DataLoader(
+        trainloader = DataLoader(
             trainset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -294,7 +311,7 @@ class CIFAR10(Dataset):
         shuffle: bool = False,
         num_workers=16,
         fraction: float = 1.0,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         testset = torchvision.datasets.CIFAR10(
             root=CIFAR10.PATH,
             train=False,
@@ -304,7 +321,7 @@ class CIFAR10(Dataset):
 
         testset = _dataset_fraction(testset, fraction)
 
-        testloader = torch.utils.data.DataLoader(
+        testloader = DataLoader(
             testset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -327,9 +344,9 @@ class CustomDataset(Dataset):
         data_transforms: transforms.Compose,
         shuffle: bool = True,
         num_workers: int = 16,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         image_dataset = datasets.ImageFolder(train_dir, data_transforms)
-        return torch.utils.data.DataLoader(
+        return DataLoader(
             image_dataset,
             batch_size=batch_size,
             shuffle=shuffle,
@@ -346,12 +363,12 @@ class CustomDataset(Dataset):
         shuffle: bool = False,
         num_workers: int = 16,
         fraction: float = 1.0,
-    ) -> torch.utils.data.DataLoader:
+    ) -> DataLoader:
         image_dataset = datasets.ImageFolder(val_dir, data_transforms)
 
         image_dataset = _dataset_fraction(image_dataset, fraction)
 
-        return torch.utils.data.DataLoader(
+        return DataLoader(
             image_dataset,
             batch_size=batch_size,
             shuffle=shuffle,

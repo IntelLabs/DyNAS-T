@@ -25,6 +25,7 @@ from pymoo.algorithms.moo.unsga3 import UNSGA3
 from pymoo.algorithms.soo.nonconvex.cmaes import CMAES
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.core.problem import Problem
+from pymoo.core.result import Result
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
 from pymoo.operators.repair.rounding import RoundingRepair
@@ -326,7 +327,7 @@ class EvolutionaryManager:
             mutation=PM(prob=mutation_prob, eta=mutation_eta, vtype=float, repair=RoundingRepair()),
         )
 
-    def run_search(self, problem, save_history=False):
+    def run_search(self, problem, save_history=False) -> Result:
         '''
         Note: Known issue (memory leak) with the pymoo save history option v0.5.0
         '''
