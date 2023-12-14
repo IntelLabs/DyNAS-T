@@ -46,5 +46,5 @@ class EvaluationInterface:
             result = csv_header
             writer.writerow(result)
             f.close()
-        log.info(f'(Re)Formatted results file: {self.csv_path}')
-        log.info(f'csv file header: {csv_header}')
+        log.debug(f'(Re)Formatted results file: {self.csv_path}')
+        log.debug(f'csv file header: {csv_header}')
