@@ -231,6 +231,7 @@ class BertSST2Runner:
         subnet_cfg: dict,
     ) -> float:  # pragma: no cover
         accuracy_sst2 = compute_accuracy_sst2(subnet_cfg, self.eval_dataloader, self.supernet_model, device=self.device)
+        log.debug(f'Model\'s accuracy_sst2: {accuracy_sst2}')
         return accuracy_sst2
 
     def validate_macs(
@@ -244,7 +245,7 @@ class BertSST2Runner:
             `macs`
         """
         macs, params = compute_macs(subnet_cfg, self.supernet_model, self.base_config)
-        logging.info('Model\'s macs: {}'.format(macs))
+        logging.debug(f'Model\'s macs: {macs}')
         return macs, params
 
     @torch.no_grad()
@@ -261,7 +262,7 @@ class BertSST2Runner:
             mean latency; std latency
         """
 
-        logging.info(
+        logging.debug(
             f'Performing Latency measurements. Warmup = {warmup_steps},\
              Measure steps = {measure_steps}'
         )
@@ -275,7 +276,7 @@ class BertSST2Runner:
             measure_steps=measure_steps,
         )
 
-        logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
+        logging.debug(f'Model\'s latency: {lat_mean} +/- {lat_std}')
 
         return lat_mean, lat_std
 
