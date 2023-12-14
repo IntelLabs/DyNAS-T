@@ -186,6 +186,7 @@ class BertSST2Runner:
         supernet,
         dataset_path,
         acc_predictor=None,
+        acc_proxy_predictor=None,
         macs_predictor=None,
         latency_predictor=None,
         params_predictor=None,
@@ -195,6 +196,7 @@ class BertSST2Runner:
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
+        self.acc_proxy_predictor = acc_proxy_predictor
         self.macs_predictor = macs_predictor
         self.latency_predictor = latency_predictor
         self.params_predictor = params_predictor
@@ -210,6 +212,13 @@ class BertSST2Runner:
         subnet_cfg: dict,
     ) -> float:
         top1 = self.acc_predictor.predict(subnet_cfg)
+        return top1
+
+    def estimate_accuracy_sst2_proxy(
+        self,
+        subnet_cfg: dict,
+    ) -> float:
+        top1 = self.acc_proxy_predictor.predict(subnet_cfg)
         return top1
 
     def estimate_macs(
@@ -233,6 +242,26 @@ class BertSST2Runner:
         accuracy_sst2 = compute_accuracy_sst2(subnet_cfg, self.eval_dataloader, self.supernet_model, device=self.device)
         log.debug(f'Model\'s accuracy_sst2: {accuracy_sst2}')
         return accuracy_sst2
+
+    def validate_accuracy_sst2_proxy(
+        self,
+        subnet_cfg: dict,
+    ) -> float:  # pragma: no cover
+        macs, _ = self.validate_macs(subnet_cfg)
+
+        def normalize_custom_range(x, x_min, x_max, y_min, y_max):
+            return (x - x_min) / (x_max - x_min) * (y_max - y_min) + y_min
+
+        macs_range = (0, 11176674944)
+        acc_range = (0, 0.91743119266055)
+        accuracy_sst2_proxy = normalize_custom_range(
+            macs,
+            *macs_range,
+            *acc_range,
+        )
+
+        log.debug(f'Model\'s accuracy_sst2_proxy: {accuracy_sst2_proxy}')
+        return accuracy_sst2_proxy
 
     def validate_macs(
         self,
@@ -307,7 +336,7 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
         subnet_sample = copy.deepcopy(sample)
 
         individual_results = dict()
-        for metric in ['params', 'latency', 'macs', 'accuracy_sst2']:
+        for metric in ['params', 'latency', 'macs', 'accuracy_sst2', 'accuracy_sst2_proxy']:
             individual_results[metric] = 0
 
         # Predictor Mode
@@ -328,6 +357,10 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
                 individual_results['accuracy_sst2'] = self.evaluator.estimate_accuracy_sst2(
                     self.manager.onehot_custom(param_dict).reshape(1, -1)
                 )[0]
+            if 'accuracy_sst2_proxy' in self.optimization_metrics:
+                individual_results['accuracy_sst2_proxy'] = self.evaluator.estimate_accuracy_sst2_proxy(
+                    self.manager.onehot_custom(param_dict).reshape(1, -1)
+                )[0]
 
         # Validation Mode
         else:
@@ -337,6 +370,8 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
                 individual_results['latency'], _ = self.evaluator.measure_latency(subnet_sample)
             if 'accuracy_sst2' in self.measurements:
                 individual_results['accuracy_sst2'] = self.evaluator.validate_accuracy_sst2(subnet_sample)
+            if 'accuracy_sst2_proxy' in self.measurements:
+                individual_results['accuracy_sst2_proxy'] = self.evaluator.validate_accuracy_sst2_proxy(subnet_sample)
 
         subnet_sample = param_dict
         sample = param_dict
@@ -352,11 +387,13 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
                     individual_results['latency'],
                     individual_results['macs'],
                     individual_results['accuracy_sst2'],
+                    individual_results['accuracy_sst2_proxy'],
                 ]
                 writer.writerow(result)
 
         # PyMoo only minimizes objectives, thus accuracy needs to be negative
         individual_results['accuracy_sst2'] = -individual_results['accuracy_sst2']
+        individual_results['accuracy_sst2_proxy'] = -individual_results['accuracy_sst2_proxy']
         # Return results to pymoo
         if len(self.optimization_metrics) == 1:
             return sample, individual_results[self.optimization_metrics[0]]

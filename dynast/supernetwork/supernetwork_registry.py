@@ -156,7 +156,7 @@ SUPERNET_METRICS = {
     'ofa_proxyless_d234_e346_k357_w1.3': ['params', 'latency', 'macs', 'accuracy_top1'],
     'bootstrapnas_image_classification': ['params', 'latency', 'macs', 'accuracy_top1'],
     'transformer_lt_wmt_en_de': ['params', 'latency', 'macs', 'bleu'],
-    'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2'],
+    'bert_base_sst2': ['params', 'latency', 'macs', 'accuracy_sst2', 'accuracy_sst2_proxy'],
     'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
     'bert_base_sst2_quantized': ['latency', 'model_size', 'accuracy_sst2'],
@@ -193,6 +193,7 @@ def get_csv_header(supernet: str) -> List[str]:
             'Latency (ms)',
             'MACs',
             'SST-2 Acc',
+            'SST-2 Acc Proxy',
         ]  # TODO(macsz) Should be based on specified measurements
     elif supernet in SUPERNET_TYPE['recommendation']:
         csv_header = [
