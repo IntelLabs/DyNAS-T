@@ -299,7 +299,7 @@ def plot_search_progression(
 
     ax.set_xlabel(x_label, fontsize=13)
     ax.set_ylabel(y_label, fontsize=13)
-    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
+    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, )#loc='lower right')
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=0.3)
@@ -836,7 +836,7 @@ if __name__ == '__main__':
             columns=['config', 'date', 'params', 'latency', 'macs', 'model_size', 'accuracy_top1'],
             normalize=True,
         )
-    if True:
+    if False:
         # ViT (Endeavour)
         plot_search_progression(
             title='ViT (pretrained)\nLatency vs. Accuracy',
@@ -887,6 +887,14 @@ if __name__ == '__main__':
             normalize=True,
         )
 
+    if True:
+        plot_search_progression(
+            title='BERT\nLatency & MACs as proxy',
+            results_path='data/bert_linas_titanv_lat_macs.csv',
+            target_metrics=['latency', 'macs'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+            # xlim=[50, 150],
+        )
 
 # correlation()
 # results/qbert/qbert_lians_tf10_latency_icx.png results/qbert/qbert_linas_model_size.png results/qbeit/qbeit_linas_tf10.png results/qbeit/qbeit_linas_tf10_latency_icx.png results/qvit/qvit_linas_icx_tf10_s20_bs16_latency_icx.png results/qvit/qvit_linas_spr_tf10_s20_incfix.png dynast_ofaresnet50_quant_linas_sprh9480.png results/ofa/ofaresnet50_linas_tf10_model_size.png
