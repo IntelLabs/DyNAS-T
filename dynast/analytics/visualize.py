@@ -299,7 +299,13 @@ def plot_search_progression(
 
     ax.set_xlabel(x_label, fontsize=13)
     ax.set_ylabel(y_label, fontsize=13)
-    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, )#loc='lower right')
+    ax.legend(
+        fancybox=True,
+        fontsize=10,
+        framealpha=1,
+        borderpad=0.2,
+        loc='lower right',
+    )
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=0.3)
