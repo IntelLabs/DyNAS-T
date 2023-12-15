@@ -5,12 +5,13 @@ SEED=37
 RESULTS_PATH="/tmp"
 DATASET_IMAGENET_PATH="/datasets/imagenet-ilsvrc2012/"
 DATASET_CIFAR10_PATH="/tmp/cifar10/"
-DEVICE="cpu"
+DATASET_SST2_PATH="/nfs/site/home/mszankin/store/nosnap/datasets/SST-2"
 BATCH_SIZE=128
 TEST_FRACTION=1.0
 
 CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
 
+CHECKPOINT_BERT_BASE_SST2_PATH="/nfs/site/home/mszankin/store/nosnap/models/glue_ckpt.pt"
 
 ########################################################################################################
 # SHORT runs config. Shoud use random search tactic to allow for a very limited number of evaluations. #
