@@ -29,10 +29,13 @@ from dynast.supernetwork.image_classification.vit.vit_encoding import ViTEncodin
 from dynast.supernetwork.image_classification.vit.vit_interface import EvaluationInterfaceViT
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
+from dynast.supernetwork.multi_domain_networks.beit_encoding import BeitImageNetEncoding
+from dynast.supernetwork.multi_domain_networks.beit_interface import (
+    Beit3ImageNetRunner,
+    EvaluationInterfaceBeit3ImageNet,
+)
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
-from dynast.supernetwork.multi_domain_networks.beit_interface import EvaluationInterfaceBeit3ImageNet, Beit3ImageNetRunner
-from dynast.supernetwork.multi_domain_networks.beit_encoding import BeitImageNetEncoding
 from dynast.utils import LazyImport
 
 EvaluationInterfaceQuantizedOFAResNet50 = LazyImport(
@@ -108,7 +111,6 @@ SUPERNET_PARAMETERS = {
         'intermediate_size': {'count': 12, 'vars': [1024, 2048, 3072]},
         'q_bits': {'count': 74, 'vars': [8, 32]},
     },
-
     'beit3_imagenet': {
         'num_layers': {'count': 1, 'vars': [11, 12]},
         'head_num': {'count': 12, 'vars': [6, 8, 10, 12]},
@@ -116,7 +118,6 @@ SUPERNET_PARAMETERS = {
         'q_bits': {'count': 72, 'vars': [8, 32]},
     },
 }
-
 
 
 EVALUATION_INTERFACE = {
@@ -175,8 +176,7 @@ SUPERNET_METRICS = {
     'vit_base_imagenet': ['params', 'latency', 'macs', 'accuracy_top1'],
     'inc_quantization_ofa_resnet50': ['params', 'latency', 'model_size', 'accuracy_top1'],
     'bert_base_sst2_quantized': ['latency', 'model_size', 'accuracy_sst2'],
-    'beit3_imagenet': ['params', 'latency','macs','model_size', 'accuracy_top1'],
-
+    'beit3_imagenet': ['params', 'latency', 'macs', 'model_size', 'accuracy_top1'],
 }
 
 
@@ -238,17 +238,17 @@ def get_csv_header(supernet: str) -> List[str]:
             'Model Size',
             'SST-2 Acc',
         ]  # TODO(macsz) Should be based on specified measurements
-    
+
     elif supernet in SUPERNET_TYPE['multi_domain_networks']:
         csv_header = [
-                'Sub-network',
-                'Date',
-                'Model Parameters',
-                'Latency (ms)',
-                'MACS',
-                'Model Size (MB)',
-                'Top-1 Acc (%)'
-            ]  # TODO(macsz) Should be based on specified measuremen
+            'Sub-network',
+            'Date',
+            'Model Parameters',
+            'Latency (ms)',
+            'MACS',
+            'Model Size (MB)',
+            'Top-1 Acc (%)',
+        ]  # TODO(macsz) Should be based on specified measuremen
 
     else:
         # TODO(macsz) Exception's type could be more specific, e.g. `SupernetNotRegisteredError`

@@ -32,10 +32,10 @@ class BeitImageNetEncoding(EncodingBase):
         num_layers = subnet_cfg['num_layers'][0]
 
         attn_head_list = subnet_cfg['head_num'][:num_layers] + [0] * (max_layers - num_layers)
-        #Change for full search space
+        # Change for full search space
         intermediate_size_list = subnet_cfg['ffn_size'][:num_layers] + [0] * (max_layers - num_layers)
         features = [num_layers] + attn_head_list + intermediate_size_list
-        qbit_list = subnet_cfg['q_bits'][:6*num_layers]+[0]*(max_layers-num_layers)*6 
+        qbit_list = subnet_cfg['q_bits'][: 6 * num_layers] + [0] * (max_layers - num_layers) * 6
         features = features + qbit_list
         if provide_onehot == True:
             examples = np.array([features])

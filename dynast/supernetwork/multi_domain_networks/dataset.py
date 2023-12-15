@@ -19,27 +19,38 @@
 # Licensed under The MIT License [see LICENSE for details]
 # --------------------------------------------------------'
 
-import os
-import json
-import random
-import torch
 import glob
-from collections import defaultdict, Counter
+import json
+import os
+import random
+from collections import Counter, defaultdict
+
+import torch
+from timm.data import create_transform
+from timm.data.constants import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    IMAGENET_INCEPTION_MEAN,
+    IMAGENET_INCEPTION_STD,
+)
+from timm.data.transforms import RandomResizedCropAndInterpolation
 from torchvision import transforms
 from torchvision.datasets.folder import default_loader
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
-from timm.data.transforms import RandomResizedCropAndInterpolation
-from timm.data import create_transform
 
-from .utils import *
 from .glossary import normalize_word
 from .randaug import RandomAugment
+from .utils import *
 
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(
-        self, data_path, split, transform,
-        tokenizer, num_max_bpe_tokens, task=None,
+        self,
+        data_path,
+        split,
+        transform,
+        tokenizer,
+        num_max_bpe_tokens,
+        task=None,
     ):
         index_files = self.get_index_files(split, task=task)
         self.tokenizer = tokenizer
@@ -86,7 +97,7 @@ class BaseDataset(torch.utils.data.Dataset):
             max_len = self.num_max_bpe_tokens
 
         if len(tokens) > max_len - 2:
-            tokens = tokens[:max_len - 2]
+            tokens = tokens[: max_len - 2]
 
         tokens = [self.bos_token_id] + tokens[:] + [self.eos_token_id]
         num_tokens = len(tokens)
@@ -137,10 +148,10 @@ def _write_data_into_jsonl(items, jsonl_file):
 
 
 def _make_retrieval_coco_karpathy_dataset_index(
-        data_path,
-        tokenizer,
-        split=("train", "restval"),
-        split_name="train",
+    data_path,
+    tokenizer,
+    split=("train", "restval"),
+    split_name="train",
 ):
     coco_karpathy_split_json_file = os.path.join(data_path, "dataset_coco.json")
     items = []
@@ -154,25 +165,29 @@ def _make_retrieval_coco_karpathy_dataset_index(
                 for sent in item["sentences"]:
                     tokens = tokenizer.tokenize(sent["raw"])
                     token_ids = tokenizer.convert_tokens_to_ids(tokens)
-                    items.append({
+                    items.append(
+                        {
                             "image_path": image_path,
                             "text_segment": token_ids,
                             "image_id": len(image_counter),
-                    })
+                        }
+                    )
                 if image_path not in image_counter:
                     image_counter.add(image_path)
-    print("Find %d images and %d image-text pairs for karpathy dataset %s split !" % \
-        (len(image_counter), len(items), split_name))
+    print(
+        "Find %d images and %d image-text pairs for karpathy dataset %s split !"
+        % (len(image_counter), len(items), split_name)
+    )
     index_file = os.path.join(data_path, "coco_retrieval.%s.jsonl" % split_name)
     _write_data_into_jsonl(items, index_file)
     pass
 
 
 def _make_captioning_coco_karpathy_dataset_index(
-        data_path,
-        tokenizer,
-        split=("train", "restval"),
-        split_name="train",
+    data_path,
+    tokenizer,
+    split=("train", "restval"),
+    split_name="train",
 ):
     coco_karpathy_split_json_file = os.path.join(data_path, "dataset_coco.json")
     items = []
@@ -187,29 +202,35 @@ def _make_captioning_coco_karpathy_dataset_index(
                     for sent in item["sentences"]:
                         tokens = tokenizer.tokenize(sent["raw"])
                         token_ids = tokenizer.convert_tokens_to_ids(tokens)
-                        items.append({
+                        items.append(
+                            {
                                 "image_path": image_path,
                                 "text_segment": token_ids,
                                 "image_id": item["cocoid"],
-                        })
+                            }
+                        )
                 else:
-                    items.append({
-                                "image_path": image_path,
-                                "text_segment": None,
-                                "image_id": item["cocoid"],
-                    })
+                    items.append(
+                        {
+                            "image_path": image_path,
+                            "text_segment": None,
+                            "image_id": item["cocoid"],
+                        }
+                    )
                 if image_path not in image_counter:
                     image_counter.add(image_path)
-    print("Find %d images and %d image-text pairs for karpathy dataset %s split !" % \
-        (len(image_counter), len(items), split_name))
+    print(
+        "Find %d images and %d image-text pairs for karpathy dataset %s split !"
+        % (len(image_counter), len(items), split_name)
+    )
     index_file = os.path.join(data_path, "coco_captioning.%s.jsonl" % split_name)
     _write_data_into_jsonl(items, index_file)
     pass
 
 
 def _make_nocaps_dataset_index(
-        data_path,
-        split="val",
+    data_path,
+    split="val",
 ):
     if split == "val":
         json_file = "nocaps_val_4500_captions.json"
@@ -223,17 +244,20 @@ def _make_nocaps_dataset_index(
         data = json.loads(reader.read())
         for item in data["images"]:
             image_path = os.path.join(split, item["file_name"])
-            items.append({
-                "image_path": image_path,
-                "text_segment": None,
-                "image_id": item["id"],
-            })
+            items.append(
+                {
+                    "image_path": image_path,
+                    "text_segment": None,
+                    "image_id": item["id"],
+                }
+            )
 
             if image_path not in image_counter:
                 image_counter.add(image_path)
 
-    print("Find %d images and %d image-text pairs for nocaps dataset %s split !" % \
-        (len(image_counter), len(items), split))
+    print(
+        "Find %d images and %d image-text pairs for nocaps dataset %s split !" % (len(image_counter), len(items), split)
+    )
     index_file = os.path.join(data_path, "nocaps.%s.jsonl" % split)
     _write_data_into_jsonl(items, index_file)
 
@@ -242,11 +266,11 @@ class NLVR2Dataset(BaseDataset):
     @staticmethod
     def get_index_files(split, task=None):
         if split == "train":
-            return ("nlvr2.train.index.jsonl", )
+            return ("nlvr2.train.index.jsonl",)
         elif split == "val":
-            return ("nlvr2.dev.index.jsonl", )
+            return ("nlvr2.dev.index.jsonl",)
         elif split == "test":
-            return ("nlvr2.test-P.index.jsonl", )
+            return ("nlvr2.test-P.index.jsonl",)
         else:
             raise RuntimeError("split %s is not found!" % split)
 
@@ -269,28 +293,36 @@ class NLVR2Dataset(BaseDataset):
                 path = os.path.join(path, "-".join(data["identifier"].split("-")[:-1]))
                 tokens = tokenizer.tokenize(data["sentence"])
                 token_ids = tokenizer.convert_tokens_to_ids(tokens)
-                items.append({
-                    "image_path": path + "-img0.png",
-                    "image2_path": path + "-img1.png",
-                    "text_segment": token_ids,
-                    "label": 1 if data["label"] == "True" else 0,
-                    "identifier": data["identifier"],
-                })
+                items.append(
+                    {
+                        "image_path": path + "-img0.png",
+                        "image2_path": path + "-img1.png",
+                        "text_segment": token_ids,
+                        "label": 1 if data["label"] == "True" else 0,
+                        "identifier": data["identifier"],
+                    }
+                )
         _write_data_into_jsonl(items, index_file)
 
     @classmethod
     def make_dataset_index(cls, data_path, tokenizer, nlvr_repo_path):
         cls.__preprocess_json(
-            preifx="images/train", json_file=os.path.join(nlvr_repo_path, "nlvr2/data/train.json"),
-            tokenizer=tokenizer, index_file=os.path.join(data_path, cls.get_index_files("train")[0]),
+            preifx="images/train",
+            json_file=os.path.join(nlvr_repo_path, "nlvr2/data/train.json"),
+            tokenizer=tokenizer,
+            index_file=os.path.join(data_path, cls.get_index_files("train")[0]),
         )
         cls.__preprocess_json(
-            preifx="dev", json_file=os.path.join(nlvr_repo_path, "nlvr2/data/dev.json"),
-            tokenizer=tokenizer, index_file=os.path.join(data_path, cls.get_index_files("val")[0]),
+            preifx="dev",
+            json_file=os.path.join(nlvr_repo_path, "nlvr2/data/dev.json"),
+            tokenizer=tokenizer,
+            index_file=os.path.join(data_path, cls.get_index_files("val")[0]),
         )
         cls.__preprocess_json(
-            preifx="test1", json_file=os.path.join(nlvr_repo_path, "nlvr2/data/test1.json"),
-            tokenizer=tokenizer, index_file=os.path.join(data_path, cls.get_index_files("test")[0]),
+            preifx="test1",
+            json_file=os.path.join(nlvr_repo_path, "nlvr2/data/test1.json"),
+            tokenizer=tokenizer,
+            index_file=os.path.join(data_path, cls.get_index_files("test")[0]),
         )
 
 
@@ -298,11 +330,11 @@ class ImageNetDataset(BaseDataset):
     @staticmethod
     def get_index_files(split, task=None):
         if split == "train":
-            return ("imagenet.train.index.jsonl", )
+            return ("imagenet.train.index.jsonl",)
         elif split == "val":
-            return ("imagenet.val.index.jsonl", )
+            return ("imagenet.val.index.jsonl",)
         elif split == "test":
-            return ("imagenet.val.index.jsonl", )
+            return ("imagenet.val.index.jsonl",)
         else:
             raise RuntimeError("split %s is not found!" % split)
 
@@ -345,25 +377,33 @@ class ImageNetDataset(BaseDataset):
                 for fname in sorted(fnames):
                     path = os.path.join(root, fname)
                     path = path.replace(data_path_prefix, "")
-                    items.append({
-                        "image_path": path,
-                        "label": class_index,
-                    })
+                    items.append(
+                        {
+                            "image_path": path,
+                            "label": class_index,
+                        }
+                    )
 
         _write_data_into_jsonl(items, index_file)
 
     @classmethod
     def make_dataset_index(cls, train_data_path, val_data_path, index_path):
         index_path = "imagenet_index"
-        data_path_prefix = train_data_path[:[x[0]==x[1] for x in zip(train_data_path, val_data_path)].index(0)]
+        data_path_prefix = train_data_path[: [x[0] == x[1] for x in zip(train_data_path, val_data_path)].index(0)]
         classes, class_to_idx = cls._find_classes(train_data_path)
         cls._make_imagenet_index(
-             data_path=train_data_path, index_path=index_path, data_path_prefix=data_path_prefix,
-             class_to_idx=class_to_idx, split="train",
+            data_path=train_data_path,
+            index_path=index_path,
+            data_path_prefix=data_path_prefix,
+            class_to_idx=class_to_idx,
+            split="train",
         )
         cls._make_imagenet_index(
-             data_path=val_data_path, index_path=index_path, data_path_prefix=data_path_prefix,
-             class_to_idx=class_to_idx, split="val",
+            data_path=val_data_path,
+            index_path=index_path,
+            data_path_prefix=data_path_prefix,
+            class_to_idx=class_to_idx,
+            split="val",
         )
 
 
@@ -391,18 +431,18 @@ class VQAv2Dataset(BaseDataset):
         if split == "train":
             return ("vqa.train.jsonl", "vqa.trainable_val.jsonl")
         elif split == "val":
-            return ("vqa.rest_val.jsonl", )
+            return ("vqa.rest_val.jsonl",)
         elif split == "test":
-            return ("vqa.test.jsonl", )
+            return ("vqa.test.jsonl",)
         elif split == "test-dev":
-            return ("vqa.test-dev.jsonl", )
+            return ("vqa.test-dev.jsonl",)
         else:
             raise RuntimeError("split %s is not found!" % split)
 
     def __getitem__(self, index: int):
         data = super().__getitem__(index)
         if "labels" in self.items[index] and len(self.items[index]["labels"]) > 0:
-            labels = [0.] * len(self.label2ans)
+            labels = [0.0] * len(self.label2ans)
             for l, s in zip(self.items[index]["labels"], self.items[index]["scores"]):
                 labels[l] = s
             data["labels"] = torch.FloatTensor(labels)
@@ -462,7 +502,8 @@ class VQAv2Dataset(BaseDataset):
         all_major_answers = list()
 
         for split, annots in zip(
-            ["train", "val"], [annotations_train2014, annotations_val2014],
+            ["train", "val"],
+            [annotations_train2014, annotations_val2014],
         ):
             # _annot = annotations[split]
             for q in annots:
@@ -474,7 +515,8 @@ class VQAv2Dataset(BaseDataset):
         label2ans = list(counter.keys())
 
         for split, annots in zip(
-            ["train", "val"], [annotations_train2014, annotations_val2014],
+            ["train", "val"],
+            [annotations_train2014, annotations_val2014],
         ):
             _annot = annotations[split]
             for q in annots:
@@ -520,8 +562,7 @@ class VQAv2Dataset(BaseDataset):
             }[split]
             paths = list(glob.glob(f"{data_path}/{split_name}/*.jpg"))
             random.shuffle(paths)
-            annot_paths = [path for path in paths \
-                if int(path.split("/")[-1].split("_")[-1][:-4]) in annot]
+            annot_paths = [path for path in paths if int(path.split("/")[-1].split("_")[-1][:-4]) in annot]
 
             if len(paths) == len(annot_paths):
                 print("all images have caption annotations")
@@ -541,13 +582,15 @@ class VQAv2Dataset(BaseDataset):
                     else:
                         labels, scores = [], []
 
-                    items.append({
-                        "image_path": os.path.join(split_name, path.split('/')[-1]),
-                        "text_segment": q["token_ids"],
-                        "labels": labels,
-                        "scores": scores,
-                        "qid": qid,
-                    })
+                    items.append(
+                        {
+                            "image_path": os.path.join(split_name, path.split('/')[-1]),
+                            "text_segment": q["token_ids"],
+                            "labels": labels,
+                            "scores": scores,
+                            "qid": qid,
+                        }
+                    )
             split2items[split] = items
 
             _write_data_into_jsonl(items=items, jsonl_file=os.path.join(data_path, "vqa.%s.jsonl" % split))
@@ -574,10 +617,7 @@ class VQAv2Dataset(BaseDataset):
 
         with open(os.path.join(data_path, "answer2label.txt"), mode="w", encoding="utf-8") as writer:
             for ans in ans2label:
-                to_json = {
-                    "answer": ans,
-                    "label": ans2label[ans]
-                }
+                to_json = {"answer": ans, "label": ans2label[ans]}
                 writer.write("%s\n" % json.dumps(to_json))
 
 
@@ -585,11 +625,11 @@ class RetrievalDataset(BaseDataset):
     @staticmethod
     def get_index_files(split, task=None):
         if split == "train":
-            return (f"{task}.train.jsonl", )
+            return (f"{task}.train.jsonl",)
         elif split == "val":
-            return (f"{task}.val.jsonl", )
+            return (f"{task}.val.jsonl",)
         elif split == "test":
-            return (f"{task}.test.jsonl", )
+            return (f"{task}.test.jsonl",)
         else:
             raise RuntimeError("split %s is not found!" % split)
 
@@ -600,7 +640,6 @@ class RetrievalDataset(BaseDataset):
 
     @staticmethod
     def make_flickr30k_dataset_index(data_path, tokenizer, karpathy_path):
-
         with open(os.path.join(karpathy_path, "dataset_flickr30k.json"), "r") as reader:
             captions = json.loads(reader.read())
 
@@ -616,11 +655,13 @@ class RetrievalDataset(BaseDataset):
                 tokens = tokenizer.tokenize(text_segment["raw"])
                 token_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-                split2items[split].append({
-                    "image_path": image_path,
-                    "text_segment": token_ids,
-                    "image_id": len(split2images[split]),
-                })
+                split2items[split].append(
+                    {
+                        "image_path": image_path,
+                        "text_segment": token_ids,
+                        "image_id": len(split2images[split]),
+                    }
+                )
 
             assert each_item["filename"] not in split2images[split]
             split2images[split].add(each_item["filename"])
@@ -631,19 +672,22 @@ class RetrievalDataset(BaseDataset):
 
     @staticmethod
     def make_coco_dataset_index(data_path, tokenizer):
-        _make_retrieval_coco_karpathy_dataset_index(data_path, tokenizer, split=("train", "restval"), split_name="train")
-        _make_retrieval_coco_karpathy_dataset_index(data_path, tokenizer, split=("val", ), split_name="val")
-        _make_retrieval_coco_karpathy_dataset_index(data_path, tokenizer, split=("test", ), split_name="test")
+        _make_retrieval_coco_karpathy_dataset_index(
+            data_path, tokenizer, split=("train", "restval"), split_name="train"
+        )
+        _make_retrieval_coco_karpathy_dataset_index(data_path, tokenizer, split=("val",), split_name="val")
+        _make_retrieval_coco_karpathy_dataset_index(data_path, tokenizer, split=("test",), split_name="test")
 
 
 class CaptioningDataset(BaseDataset):
-
-    def __init__(self, data_path, split, transform,
-                tokenizer, num_max_bpe_tokens, task, mask_prob):
+    def __init__(self, data_path, split, transform, tokenizer, num_max_bpe_tokens, task, mask_prob):
         super().__init__(
-            data_path=data_path, split=split,
-            transform=transform, tokenizer=tokenizer,
-            num_max_bpe_tokens=num_max_bpe_tokens, task=task,
+            data_path=data_path,
+            split=split,
+            transform=transform,
+            tokenizer=tokenizer,
+            num_max_bpe_tokens=num_max_bpe_tokens,
+            task=task,
         )
         self.mask_token_id = tokenizer.mask_token_id
         self.language_vocab_size = tokenizer.vocab_size
@@ -652,11 +696,11 @@ class CaptioningDataset(BaseDataset):
     @staticmethod
     def get_index_files(split, task=None):
         if split == "train":
-            return ("coco_captioning.train.jsonl", )
+            return ("coco_captioning.train.jsonl",)
         elif split == "val":
-            return (f"{task}.val.jsonl", )
+            return (f"{task}.val.jsonl",)
         elif split == "test":
-            return (f"{task}.test.jsonl", )
+            return (f"{task}.test.jsonl",)
         else:
             raise RuntimeError("split %s is not found!" % split)
 
@@ -695,8 +739,7 @@ class CaptioningDataset(BaseDataset):
         if text_segment is not None:
             language_tokens, padding_mask, num_tokens = self._get_text_segment(text_segment)
             masked_tokens = language_tokens[:]
-            masked_tokens, language_masked_pos = \
-                self._masking_on_text_tokens(masked_tokens, num_tokens, self.mask_prob)
+            masked_tokens, language_masked_pos = self._masking_on_text_tokens(masked_tokens, num_tokens, self.mask_prob)
             data["language_tokens"] = language_tokens
             data["masked_tokens"] = masked_tokens
             data["language_masked_pos"] = language_masked_pos
@@ -705,9 +748,11 @@ class CaptioningDataset(BaseDataset):
 
     @staticmethod
     def make_coco_captioning_dataset_index(data_path, tokenizer):
-        _make_captioning_coco_karpathy_dataset_index(data_path, tokenizer, split=("train", "restval"), split_name="train")
-        _make_captioning_coco_karpathy_dataset_index(data_path, tokenizer, split=("val", ), split_name="val")
-        _make_captioning_coco_karpathy_dataset_index(data_path, tokenizer, split=("test", ), split_name="test")
+        _make_captioning_coco_karpathy_dataset_index(
+            data_path, tokenizer, split=("train", "restval"), split_name="train"
+        )
+        _make_captioning_coco_karpathy_dataset_index(data_path, tokenizer, split=("val",), split_name="val")
+        _make_captioning_coco_karpathy_dataset_index(data_path, tokenizer, split=("test",), split_name="test")
 
     @staticmethod
     def make_nocaps_captioning_dataset_index(data_path):
@@ -732,9 +777,11 @@ def create_dataloader(dataset, is_train, batch_size, num_workers, pin_mem, dist_
         global_rank = get_rank()
 
         if not is_train and dist_eval and len(dataset) % num_tasks != 0:
-            print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
-                    'This will slightly alter validation results as extra duplicate entries are added to achieve '
-                    'equal num of samples per-process.')
+            print(
+                'Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
+                'This will slightly alter validation results as extra duplicate entries are added to achieve '
+                'equal num of samples per-process.'
+            )
 
         sampler = torch.utils.data.DistributedSampler(
             dataset, num_replicas=num_tasks, rank=global_rank, shuffle=is_train
@@ -743,7 +790,8 @@ def create_dataloader(dataset, is_train, batch_size, num_workers, pin_mem, dist_
         sampler = torch.utils.data.SequentialSampler(dataset)
 
     return torch.utils.data.DataLoader(
-        dataset, sampler=sampler,
+        dataset,
+        sampler=sampler,
         batch_size=batch_size,
         num_workers=num_workers,
         pin_memory=pin_mem,
@@ -758,28 +806,44 @@ def build_transform(is_train, args):
 
     if is_train:
         t = [
-            RandomResizedCropAndInterpolation(args.input_size, scale=(0.5, 1.0), interpolation=args.train_interpolation),
+            RandomResizedCropAndInterpolation(
+                args.input_size, scale=(0.5, 1.0), interpolation=args.train_interpolation
+            ),
             transforms.RandomHorizontalFlip(),
         ]
         if args.randaug:
             t.append(
                 RandomAugment(
-                    2, 7, isPIL=True,
+                    2,
+                    7,
+                    isPIL=True,
                     augs=[
-                        'Identity','AutoContrast','Equalize','Brightness','Sharpness',
-                        'ShearX', 'ShearY', 'TranslateX', 'TranslateY', 'Rotate',
-                    ]))
+                        'Identity',
+                        'AutoContrast',
+                        'Equalize',
+                        'Brightness',
+                        'Sharpness',
+                        'ShearX',
+                        'ShearY',
+                        'TranslateX',
+                        'TranslateY',
+                        'Rotate',
+                    ],
+                )
+            )
         t += [
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_INCEPTION_MEAN, std=IMAGENET_INCEPTION_STD),
         ]
         t = transforms.Compose(t)
     else:
-        t = transforms.Compose([
-            transforms.Resize((args.input_size, args.input_size), interpolation=3),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_INCEPTION_MEAN, std=IMAGENET_INCEPTION_STD)
-        ])
+        t = transforms.Compose(
+            [
+                transforms.Resize((args.input_size, args.input_size), interpolation=3),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=IMAGENET_INCEPTION_MEAN, std=IMAGENET_INCEPTION_STD),
+            ]
+        )
 
     return t
 
@@ -803,8 +867,7 @@ def build_imagenet_transform(is_train, args):
         if not resize_im:
             # replace RandomResizedCropAndInterpolation with
             # RandomCrop
-            transform.transforms[0] = transforms.RandomCrop(
-                args.input_size, padding=4)
+            transform.transforms[0] = transforms.RandomCrop(args.input_size, padding=4)
         return transform
 
     t = []
@@ -824,6 +887,7 @@ def build_imagenet_transform(is_train, args):
 
 def get_sentencepiece_model_for_beit3(args):
     from transformers import XLMRobertaTokenizer
+
     return XLMRobertaTokenizer(args.sentencepiece_model)
 
 
@@ -837,10 +901,13 @@ def create_dataset_by_split(args, split, is_train=True):
         opt_kwargs["mask_prob"] = args.captioning_mask_prob
 
     dataset = dataset_class(
-        data_path=args.data_path, split=split,
-        transform=transform, tokenizer=tokenizer,
+        data_path=args.data_path,
+        split=split,
+        transform=transform,
+        tokenizer=tokenizer,
         num_max_bpe_tokens=args.num_max_bpe_tokens,
-        task=args.task, **opt_kwargs,
+        task=args.task,
+        **opt_kwargs,
     )
     if is_train:
         batch_size = args.batch_size
@@ -850,8 +917,12 @@ def create_dataset_by_split(args, split, is_train=True):
         batch_size = int(args.batch_size * 1.5)
 
     return create_dataloader(
-        dataset, is_train=is_train, batch_size=batch_size,
-        num_workers=args.num_workers, pin_mem=args.pin_mem, dist_eval=args.dist_eval,
+        dataset,
+        is_train=is_train,
+        batch_size=batch_size,
+        num_workers=args.num_workers,
+        pin_mem=args.pin_mem,
+        dist_eval=args.dist_eval,
     )
 
 
@@ -859,6 +930,6 @@ def create_downstream_dataset(args, is_eval=False):
     if is_eval:
         return create_dataset_by_split(args, split="test", is_train=False)
     else:
-        return \
-            create_dataset_by_split(args, split="train", is_train=True), \
-            create_dataset_by_split(args, split="val", is_train=False)
+        return create_dataset_by_split(args, split="train", is_train=True), create_dataset_by_split(
+            args, split="val", is_train=False
+        )

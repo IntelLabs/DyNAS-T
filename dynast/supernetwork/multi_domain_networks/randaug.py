@@ -23,7 +23,7 @@ def identity_func(img):
 
 def autocontrast_func(img, cutoff=0):
     '''
-        same output as PIL.ImageOps.autocontrast
+    same output as PIL.ImageOps.autocontrast
     '''
     n_bins = 256
 
@@ -56,8 +56,8 @@ def autocontrast_func(img, cutoff=0):
 
 def equalize_func(img):
     '''
-        same output as PIL.ImageOps.equalize
-        PIL's implementation is different from cv2.equalize
+    same output as PIL.ImageOps.equalize
+    PIL's implementation is different from cv2.equalize
     '''
     n_bins = 256
 
@@ -65,7 +65,8 @@ def equalize_func(img):
         hist = cv2.calcHist([ch], [0], None, [n_bins], [0, n_bins])
         non_zero_hist = hist[hist != 0].reshape(-1)
         step = np.sum(non_zero_hist[:-1]) // (n_bins - 1)
-        if step == 0: return ch
+        if step == 0:
+            return ch
         n = np.empty_like(hist)
         n[0] = step // 2
         n[1:] = hist[:-1]
@@ -90,7 +91,7 @@ def rotate_func(img, degree, fill=(0, 0, 0)):
 
 def solarize_func(img, thresh=128):
     '''
-        same output as PIL.ImageOps.posterize
+    same output as PIL.ImageOps.posterize
     '''
     table = np.array([el if el < thresh else 255 - el for el in range(256)])
     table = table.clip(0, 255).astype(np.uint8)
@@ -100,7 +101,7 @@ def solarize_func(img, thresh=128):
 
 def color_func(img, factor):
     '''
-        same output as PIL.ImageEnhance.Color
+    same output as PIL.ImageEnhance.Color
     '''
     ## implementation according to PIL definition, quite slow
     #  degenerate = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[:, :, np.newaxis]
@@ -109,12 +110,8 @@ def color_func(img, factor):
     #      np.eye(3) * factor
     #      + np.float32([0.114, 0.587, 0.299]).reshape(3, 1) * (1. - factor)
     #  )[np.newaxis, np.newaxis, :]
-    M = (
-            np.float32([
-                [0.886, -0.114, -0.114],
-                [-0.587, 0.413, -0.587],
-                [-0.299, -0.299, 0.701]]) * factor
-            + np.float32([[0.114], [0.587], [0.299]])
+    M = np.float32([[0.886, -0.114, -0.114], [-0.587, 0.413, -0.587], [-0.299, -0.299, 0.701]]) * factor + np.float32(
+        [[0.114], [0.587], [0.299]]
     )
     out = np.matmul(img, M).clip(0, 255).astype(np.uint8)
     return out
@@ -122,20 +119,17 @@ def color_func(img, factor):
 
 def contrast_func(img, factor):
     """
-        same output as PIL.ImageEnhance.Contrast
+    same output as PIL.ImageEnhance.Contrast
     """
     mean = np.sum(np.mean(img, axis=(0, 1)) * np.array([0.114, 0.587, 0.299]))
-    table = np.array([(
-        el - mean) * factor + mean
-        for el in range(256)
-    ]).clip(0, 255).astype(np.uint8)
+    table = np.array([(el - mean) * factor + mean for el in range(256)]).clip(0, 255).astype(np.uint8)
     out = table[img]
     return out
 
 
 def brightness_func(img, factor):
     '''
-        same output as PIL.ImageEnhance.Contrast
+    same output as PIL.ImageEnhance.Contrast
     '''
     table = (np.arange(256, dtype=np.float32) * factor).clip(0, 255).astype(np.uint8)
     out = table[img]
@@ -172,7 +166,7 @@ def shear_x_func(img, factor, fill=(0, 0, 0)):
 
 def translate_x_func(img, offset, fill=(0, 0, 0)):
     '''
-        same output as PIL.Image.transform
+    same output as PIL.Image.transform
     '''
     H, W = img.shape[0], img.shape[1]
     M = np.float32([[1, 0, -offset], [0, 1, 0]])
@@ -182,7 +176,7 @@ def translate_x_func(img, offset, fill=(0, 0, 0)):
 
 def translate_y_func(img, offset, fill=(0, 0, 0)):
     '''
-        same output as PIL.Image.transform
+    same output as PIL.Image.transform
     '''
     H, W = img.shape[0], img.shape[1]
     M = np.float32([[1, 0, 0], [0, 1, -offset]])
@@ -192,7 +186,7 @@ def translate_y_func(img, offset, fill=(0, 0, 0)):
 
 def posterize_func(img, bits):
     '''
-        same output as PIL.ImageOps.posterize
+    same output as PIL.ImageOps.posterize
     '''
     out = np.bitwise_and(img, np.uint8(255 << (8 - bits)))
     return out
@@ -222,13 +216,15 @@ def cutout_func(img, pad_size, replace=(0, 0, 0)):
 def enhance_level_to_args(MAX_LEVEL):
     def level_to_args(level):
         return ((level / MAX_LEVEL) * 1.8 + 0.1,)
+
     return level_to_args
 
 
 def shear_level_to_args(MAX_LEVEL, replace_value):
     def level_to_args(level):
         level = (level / MAX_LEVEL) * 0.3
-        if np.random.random() > 0.5: level = -level
+        if np.random.random() > 0.5:
+            level = -level
         return (level, replace_value)
 
     return level_to_args
@@ -237,7 +233,8 @@ def shear_level_to_args(MAX_LEVEL, replace_value):
 def translate_level_to_args(translate_const, MAX_LEVEL, replace_value):
     def level_to_args(level):
         level = (level / MAX_LEVEL) * float(translate_const)
-        if np.random.random() > 0.5: level = -level
+        if np.random.random() > 0.5:
+            level = -level
         return (level, replace_value)
 
     return level_to_args
@@ -254,7 +251,8 @@ def cutout_level_to_args(cutout_const, MAX_LEVEL, replace_value):
 def solarize_level_to_args(MAX_LEVEL):
     def level_to_args(level):
         level = int((level / MAX_LEVEL) * 256)
-        return (level, )
+        return (level,)
+
     return level_to_args
 
 
@@ -265,7 +263,8 @@ def none_level_to_args(level):
 def posterize_level_to_args(MAX_LEVEL):
     def level_to_args(level):
         level = int((level / MAX_LEVEL) * 4)
-        return (level, )
+        return (level,)
+
     return level_to_args
 
 
@@ -310,19 +309,14 @@ arg_dict = {
     'Brightness': enhance_level_to_args(MAX_LEVEL),
     'Sharpness': enhance_level_to_args(MAX_LEVEL),
     'ShearX': shear_level_to_args(MAX_LEVEL, replace_value),
-    'TranslateX': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
-    'TranslateY': translate_level_to_args(
-        translate_const, MAX_LEVEL, replace_value
-    ),
+    'TranslateX': translate_level_to_args(translate_const, MAX_LEVEL, replace_value),
+    'TranslateY': translate_level_to_args(translate_const, MAX_LEVEL, replace_value),
     'Posterize': posterize_level_to_args(MAX_LEVEL),
     'ShearY': shear_level_to_args(MAX_LEVEL, replace_value),
 }
 
 
 class RandomAugment(object):
-
     def __init__(self, N=2, M=10, isPIL=False, augs=[]):
         self.N = N
         self.M = M

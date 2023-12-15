@@ -15,45 +15,38 @@
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
-import torch
-import torch.nn as nn
 import copy
-from torchscale.architecture.encoder import Encoder
-from torchscale.component.embedding import (
-    PositionalEmbedding,
-    TextEmbedding,
-    VisionEmbedding,
-)
-from torchscale.component.multiway_network import MutliwayEmbedding
-
-
-# Copyright (c) 2022 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-
 import math
 
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from fairscale.nn import checkpoint_wrapper, wrap
-#try:
-#    from apex.normalization import FusedLayerNorm as LayerNorm
-#except ModuleNotFoundError:
-from torch.nn import LayerNorm
+from timm.models.layers import trunc_normal_ as __call_trunc_normal_
 
+# try:
+#    from apex.normalization import FusedLayerNorm as LayerNorm
+# except ModuleNotFoundError:
+from torch.nn import LayerNorm
+from torchscale.architecture.encoder import Encoder
 from torchscale.architecture.utils import init_bert_params
 from torchscale.component.droppath import DropPath
-#from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
-#from torchscale.component.multihead_attention import MultiheadAttention
-#rom torchscale.component.multiway_network import MultiwayWrapper, set_split_position
+from torchscale.component.embedding import PositionalEmbedding, TextEmbedding, VisionEmbedding
+from torchscale.component.multiway_network import MutliwayEmbedding
+
+# from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
+# from torchscale.component.multihead_attention import MultiheadAttention
+# rom torchscale.component.multiway_network import MultiwayWrapper, set_split_position
 from torchscale.component.relative_position_bias import RelativePositionBias
 from torchscale.component.xmoe.moe_layer import MOELayer
-from torchscale.component.xpos_relative_position import XPOS
-import torch.nn.functional as F
-
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
-from .modules_supernetwork import LinearSuper,LayerNormSuper
-from timm.models.layers import trunc_normal_ as __call_trunc_normal_
+from torchscale.component.xpos_relative_position import XPOS
+
+from .modules_supernetwork import LayerNormSuper, LinearSuper
+
+# Copyright (c) 2022 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
 
 
 def MultiwayWrapper(args, module, dim=1):
@@ -93,16 +86,16 @@ class MultiwayNetwork(nn.Module):
         y1, y2 = self.A(x1, **kwargs), self.B(x2, **kwargs)
         return torch.cat([y1, y2], dim=self.dim)
 
-    def set_sample_config(self,sample_embed_size, sample_all_head_size):
+    def set_sample_config(self, sample_embed_size, sample_all_head_size):
         self.A.set_sample_config(sample_embed_size, sample_all_head_size)
         self.B.set_sample_config(sample_embed_size, sample_all_head_size)
 
-    def set_sample_config_layernorm(self,sample_all_head_size):
-         self.A.set_sample_config(sample_all_head_size)
-         self.B.set_sample_config(sample_all_head_size)
+    def set_sample_config_layernorm(self, sample_all_head_size):
+        self.A.set_sample_config(sample_all_head_size)
+        self.B.set_sample_config(sample_all_head_size)
 
 
-def trunc_normal_(tensor, mean=0., std=1.):
+def trunc_normal_(tensor, mean=0.0, std=1.0):
     __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
 
 
@@ -134,19 +127,13 @@ class set_torch_seed(object):
 
 
 def make_experts(args, embed_dim, expert_ffn_dim):
-    world_size = (
-        1
-        if not torch.distributed.is_initialized()
-        else torch.distributed.get_world_size()
-    )
+    world_size = 1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size()
     expert_list = []
     ddp_rank = args.ddp_rank
     start_seed = torch.randint(1000000, (1,)).item()
     # at least as many experts than gpus
     if args.moe_expert_count >= world_size:
-        assert (
-            args.moe_expert_count % world_size == 0
-        ), f"{args.moe_expert_count}, {world_size}"
+        assert args.moe_expert_count % world_size == 0, f"{args.moe_expert_count}, {world_size}"
         local_moe_expert_count = args.moe_expert_count // world_size
         for i in range(local_moe_expert_count):
             with set_torch_seed(start_seed + ddp_rank * local_moe_expert_count + i):
@@ -162,9 +149,7 @@ def make_experts(args, embed_dim, expert_ffn_dim):
                     )
                 )
     else:
-        assert (
-            world_size % args.moe_expert_count == 0
-        ), f"{world_size}, {args.moe_expert_count}"
+        assert world_size % args.moe_expert_count == 0, f"{world_size}, {args.moe_expert_count}"
 
         with set_torch_seed(start_seed + ddp_rank % args.moe_expert_count):
             expert_list.append(
@@ -189,6 +174,7 @@ def get_activation_fn(activation):
         return F.gelu
     else:
         raise NotImplementedError
+
 
 class FeedForwardNetwork(nn.Module):
     def __init__(
@@ -229,10 +215,11 @@ class FeedForwardNetwork(nn.Module):
         x = self.dropout_module(x)
         return x
 
-    def set_sample_config(self,sample_embed_size,sample_ffn_size):
-        self.fc1.set_sample_config(sample_embed_size,sample_ffn_size)
-        self.fc2.set_sample_config(sample_ffn_size,sample_embed_size)
+    def set_sample_config(self, sample_embed_size, sample_ffn_size):
+        self.fc1.set_sample_config(sample_embed_size, sample_ffn_size)
+        self.fc2.set_sample_config(sample_ffn_size, sample_embed_size)
         self.ffn_layernorm.set_sample_config(sample_ffn_size)
+
 
 class MultiheadAttention(nn.Module):
     def __init__(
@@ -259,20 +246,14 @@ class MultiheadAttention(nn.Module):
         self.k_proj = MultiwayWrapper(args, LinearSuper(embed_dim, embed_dim, bias=True))
         self.v_proj = MultiwayWrapper(args, LinearSuper(embed_dim, embed_dim, bias=True))
         self.q_proj = MultiwayWrapper(args, LinearSuper(embed_dim, embed_dim, bias=True))
-        self.out_proj = MultiwayWrapper(
-            args,LinearSuper(embed_dim, embed_dim, bias=True)
-        )
+        self.out_proj = MultiwayWrapper(args, LinearSuper(embed_dim, embed_dim, bias=True))
         self.inner_attn_ln = (
             MultiwayWrapper(args, LayerNormSuper(self.embed_dim, eps=args.layernorm_eps))
             if subln and self.self_attention
             else None
         )
         self.dropout_module = torch.nn.Dropout(dropout)
-        self.xpos = (
-            XPOS(self.head_dim, args.xpos_scale_base)
-            if args.xpos_rel_pos and self.self_attention
-            else None
-        )
+        self.xpos = XPOS(self.head_dim, args.xpos_scale_base) if args.xpos_rel_pos and self.self_attention else None
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.k_proj.weight, gain=1 / math.sqrt(2))
@@ -307,27 +288,19 @@ class MultiheadAttention(nn.Module):
 
         q = q.view(bsz, tgt_len, self.sample_head_num, self.head_dim).transpose(1, 2)
         k = k.view(bsz, src_len, self.sample_head_num, self.head_dim).transpose(1, 2)
-        v = v.view(bsz, src_len,self.sample_head_num, self.head_dim).transpose(1, 2)
+        v = v.view(bsz, src_len, self.sample_head_num, self.head_dim).transpose(1, 2)
         q = q.reshape(bsz * self.sample_head_num, tgt_len, self.head_dim)
         k = k.reshape(bsz * self.sample_head_num, src_len, self.head_dim)
         v = v.reshape(bsz * self.sample_head_num, src_len, self.head_dim)
 
         if incremental_state is not None:
             if "prev_key" in incremental_state:
-                prev_key = incremental_state["prev_key"].view(
-                    bsz * self.sample_head_num, -1, self.head_dim
-                )
-                prev_value = incremental_state["prev_value"].view(
-                    bsz * self.sample_head_num, -1, self.head_dim
-                )
+                prev_key = incremental_state["prev_key"].view(bsz * self.sample_head_num, -1, self.head_dim)
+                prev_value = incremental_state["prev_value"].view(bsz * self.sample_head_num, -1, self.head_dim)
                 k = torch.cat([prev_key, k], dim=1)
                 v = torch.cat([prev_value, v], dim=1)
-            incremental_state["prev_key"] = k.view(
-                bsz, self.sample_head_num, -1, self.head_dim
-            )
-            incremental_state["prev_value"] = v.view(
-                bsz, self.sample_head_num, -1, self.head_dim
-            )
+            incremental_state["prev_key"] = k.view(bsz, self.sample_head_num, -1, self.head_dim)
+            incremental_state["prev_value"] = v.view(bsz, self.sample_head_num, -1, self.head_dim)
             src_len = k.size(1)
 
         if self.xpos is not None:
@@ -357,21 +330,17 @@ class MultiheadAttention(nn.Module):
             rel_pos = rel_pos.view(attn_weights.size())
             attn_weights = attn_weights + rel_pos
 
-        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(
-            attn_weights
-        )
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).type_as(attn_weights)
         attn_probs = self.dropout_module(attn_weights)
 
         attn = torch.bmm(attn_probs, v)
-        attn = attn.transpose(0, 1).reshape(tgt_len, bsz,  self.sample_all_head_size).transpose(0, 1)
+        attn = attn.transpose(0, 1).reshape(tgt_len, bsz, self.sample_all_head_size).transpose(0, 1)
 
         if self.inner_attn_ln is not None:
             attn = self.inner_attn_ln(attn)
 
         attn = self.out_proj(attn)
-        attn_weights = attn_weights.view(
-            bsz,  self.sample_head_num, tgt_len, src_len
-        ).transpose(1, 0)
+        attn_weights = attn_weights.view(bsz, self.sample_head_num, tgt_len, src_len).transpose(1, 0)
 
         return attn, attn_weights
 
@@ -384,10 +353,7 @@ class MultiheadAttention(nn.Module):
         self.k_proj.set_sample_config(sample_embed_size, self.sample_all_head_size)
         self.v_proj.set_sample_config(sample_embed_size, self.sample_all_head_size)
         self.inner_attn_ln.set_sample_config_layernorm(self.sample_all_head_size)
-        self.out_proj.set_sample_config(self.sample_all_head_size,sample_embed_size)
-
-
-
+        self.out_proj.set_sample_config(self.sample_all_head_size, sample_embed_size)
 
 
 class EncoderLayer(nn.Module):
@@ -400,9 +366,7 @@ class EncoderLayer(nn.Module):
         self.dropout_module = torch.nn.Dropout(args.dropout)
 
         if args.drop_path_rate > 0:
-            drop_path_prob = np.linspace(0, args.drop_path_rate, args.encoder_layers)[
-                depth
-            ]
+            drop_path_prob = np.linspace(0, args.drop_path_rate, args.encoder_layers)[depth]
             self.drop_path = DropPath(drop_path_prob)
         else:
             self.drop_path = None
@@ -445,12 +409,7 @@ class EncoderLayer(nn.Module):
 
         if args.deepnorm:
             if is_encoder_decoder:
-                self.alpha = (
-                    math.pow(
-                        math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625
-                    )
-                    * 0.81
-                )
+                self.alpha = math.pow(math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625) * 0.81
             else:
                 self.alpha = math.pow(2.0 * args.encoder_layers, 0.25)
         else:
@@ -481,7 +440,15 @@ class EncoderLayer(nn.Module):
     def residual_connection(self, x, residual):
         return residual * self.alpha + x
 
-    def forward(self, x, encoder_padding_mask, attn_mask=None, rel_pos=None, multiway_split_position=None, incremental_state=None):
+    def forward(
+        self,
+        x,
+        encoder_padding_mask,
+        attn_mask=None,
+        rel_pos=None,
+        multiway_split_position=None,
+        incremental_state=None,
+    ):
         if multiway_split_position is not None:
             assert self.args.multiway
             self.apply(set_split_position(multiway_split_position))
@@ -529,20 +496,14 @@ class EncoderLayer(nn.Module):
             x = self.final_layer_norm(x)
         return x, l_aux
 
-    def set_sample_config(self,sample_embed_size, sample_ffn_size, sample_head_num):
+    def set_sample_config(self, sample_embed_size, sample_ffn_size, sample_head_num):
         self.self_attn.set_sample_config(sample_embed_size, sample_head_num)
-        self.ffn.set_sample_config(sample_embed_size,sample_ffn_size)
+        self.ffn.set_sample_config(sample_embed_size, sample_ffn_size)
 
 
 class Encoder(nn.Module):
     def __init__(
-        self,
-        args,
-        embed_tokens=None,
-        embed_positions=None,
-        output_projection=None,
-        is_encoder_decoder=False,
-        **kwargs
+        self, args, embed_tokens=None, embed_positions=None, output_projection=None, is_encoder_decoder=False, **kwargs
     ):
         self.args = args
         super().__init__(**kwargs)
@@ -555,20 +516,13 @@ class Encoder(nn.Module):
         self.embed_tokens = embed_tokens
         self.embed_positions = embed_positions
 
-        if (
-            output_projection is None
-            and not is_encoder_decoder
-            and not args.no_output_layer
-            and args.vocab_size > 0
-        ):
+        if output_projection is None and not is_encoder_decoder and not args.no_output_layer and args.vocab_size > 0:
             self.output_projection = self.build_output_projection(args)
         else:
             self.output_projection = output_projection
 
         if args.layernorm_embedding:
-            self.layernorm_embedding = MultiwayWrapper(
-                args, LayerNorm(embed_dim, eps=args.layernorm_eps), dim=1
-            )
+            self.layernorm_embedding = MultiwayWrapper(args, LayerNorm(embed_dim, eps=args.layernorm_eps), dim=1)
         else:
             self.layernorm_embedding = None
 
@@ -606,39 +560,20 @@ class Encoder(nn.Module):
 
         if args.deepnorm:
             if is_encoder_decoder:
-                init_scale = (
-                    math.pow(
-                        math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625
-                    )
-                    / 1.15
-                )
+                init_scale = math.pow(math.pow(args.encoder_layers, 4) * args.decoder_layers, 0.0625) / 1.15
             else:
                 init_scale = math.pow(8.0 * args.encoder_layers, 0.25)
             for name, p in self.named_parameters():
-                if (
-                    "fc1" in name
-                    or "fc2" in name
-                    or "out_proj" in name
-                    or "v_proj" in name
-                ):
+                if "fc1" in name or "fc2" in name or "out_proj" in name or "v_proj" in name:
                     p.data.div_(init_scale)
 
         if args.subln:
             if is_encoder_decoder:
-                init_scale = math.sqrt(
-                    math.log(3 * args.decoder_layers)
-                    * math.log(2 * args.encoder_layers)
-                    / 3
-                )
+                init_scale = math.sqrt(math.log(3 * args.decoder_layers) * math.log(2 * args.encoder_layers) / 3)
             else:
                 init_scale = math.sqrt(math.log(args.encoder_layers * 2))
             for name, p in self.named_parameters():
-                if (
-                    "fc1" in name
-                    or "fc2" in name
-                    or "out_proj" in name
-                    or "v_proj" in name
-                ):
+                if "fc1" in name or "fc2" in name or "out_proj" in name or "v_proj" in name:
                     p.data.mul_(init_scale)
 
     def build_output_projection(
@@ -654,17 +589,11 @@ class Encoder(nn.Module):
             )
             output_projection.weight = self.embed_tokens.weight
         else:
-            output_projection = torch.nn.Linear(
-                args.encoder_embed_dim, args.vocab_size, bias=False
-            )
-            torch.nn.init.normal_(
-                output_projection.weight, mean=0, std=args.encoder_embed_dim**-0.5
-            )
+            output_projection = torch.nn.Linear(args.encoder_embed_dim, args.vocab_size, bias=False)
+            torch.nn.init.normal_(output_projection.weight, mean=0, std=args.encoder_embed_dim**-0.5)
         return output_projection
 
-    def build_encoder_layer(
-        self, args, depth, is_moe_layer=False, is_encoder_decoder=False
-    ):
+    def build_encoder_layer(self, args, depth, is_moe_layer=False, is_encoder_decoder=False):
         layer = EncoderLayer(
             args,
             depth,
@@ -707,15 +636,13 @@ class Encoder(nn.Module):
         features_only=False,
         incremental_state=None,
         positions=None,
-        **kwargs
+        **kwargs,
     ):
         assert src_tokens is not None or token_embeddings is not None
 
         if encoder_padding_mask is None:
             if src_tokens is not None:
-                encoder_padding_mask = torch.zeros_like(
-                    src_tokens, device=src_tokens.device
-                ).bool()
+                encoder_padding_mask = torch.zeros_like(src_tokens, device=src_tokens.device).bool()
             else:
                 encoder_padding_mask = torch.zeros(
                     [token_embeddings.size(0), token_embeddings.size(1)],
@@ -736,15 +663,13 @@ class Encoder(nn.Module):
 
         rel_pos_bias = None
         if self.relative_position is not None:
-            rel_pos_bias = self.relative_position(
-                batch_size=x.size(0), qlen=x.size(1), klen=x.size(1)
-            )
+            rel_pos_bias = self.relative_position(batch_size=x.size(0), qlen=x.size(1), klen=x.size(1))
 
         # incremental_state is not None during inference if we use the bidirectional encoder as a generator as in s2s-ft (https://arxiv.org/abs/2110.13640)
         l_aux = []
         for idx, layer in enumerate(self.layers):
             if idx >= self.sample_num_layer:
-                break;
+                break
             else:
                 x, l_aux_i = layer(
                     x,
@@ -773,14 +698,14 @@ class Encoder(nn.Module):
             "l_aux": l_aux,
         }
 
-    def set_sample_config(self,sample_config):
+    def set_sample_config(self, sample_config):
         self.sample_config = sample_config
         self.sample_num_layer = sample_config["num_layers"]
         self.sample_embed_size = sample_config["embed_size"]
 
-        for i,layer in enumerate(self.layers):
-            if i>=self.sample_num_layer:
-                break;
+        for i, layer in enumerate(self.layers):
+            if i >= self.sample_num_layer:
+                break
             else:
                 tmp_layer = layer
 
@@ -788,9 +713,6 @@ class Encoder(nn.Module):
                 sample_head_num = sample_config['head_num'][i]
 
                 tmp_layer.set_sample_config(self.sample_embed_size, sample_ffn_size, sample_head_num)
-
-
-
 
 
 class BEiT3(nn.Module):
@@ -875,10 +797,8 @@ class BEiT3(nn.Module):
 
         return encoder_out
 
-    def set_sample_config(self,sample_config):
+    def set_sample_config(self, sample_config):
         self.encoder.set_sample_config(sample_config)
-
-
 
 
 class BEiT3Wrapper(nn.Module):
@@ -901,11 +821,17 @@ class BEiT3Wrapper(nn.Module):
 
     @torch.jit.ignore
     def no_weight_decay(self):
-        return {'pos_embed', 'cls_token', 'beit3.encoder.embed_positions.A.weight', 'beit3.vision_embed.cls_token', 'logit_scale'}
+        return {
+            'pos_embed',
+            'cls_token',
+            'beit3.encoder.embed_positions.A.weight',
+            'beit3.vision_embed.cls_token',
+            'logit_scale',
+        }
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=.02)
+            trunc_normal_(m.weight, std=0.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, nn.LayerNorm):
@@ -913,15 +839,8 @@ class BEiT3Wrapper(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
 
-
 class BEiT3ForImageClassification(BEiT3Wrapper):
-    def __init__(
-            self,
-            args,
-            num_classes,
-            norm_layer=nn.LayerNorm,
-            **kwargs
-    ):
+    def __init__(self, args, num_classes, norm_layer=nn.LayerNorm, **kwargs):
         super(BEiT3ForImageClassification, self).__init__(args=args)
         embed_dim = args.encoder_embed_dim
         self.fc_norm = norm_layer(embed_dim)
@@ -940,8 +859,5 @@ class BEiT3ForImageClassification(BEiT3Wrapper):
         cls_x = self.fc_norm(t.mean(1))
         return self.head(cls_x)
 
-
-    def set_sample_config(self,sample_config):
+    def set_sample_config(self, sample_config):
         self.beit3.set_sample_config(sample_config)
-
-

@@ -19,26 +19,27 @@
 # Licensed under The MIT License [see LICENSE for details]
 # --------------------------------------------------------'
 
+import argparse
 import datetime
 import io
-import os
-import math
-import time
 import json
-import argparse
-import numpy as np
-from pathlib import Path
+import math
+import os
+import time
 from collections import defaultdict, deque
-from timm.utils import get_state_dict
+from pathlib import Path
 
+import numpy as np
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-#from torch._six import inf
+from tensorboardX import SummaryWriter
+from timm.utils import get_state_dict
+
+# from torch._six import inf
 from torch import inf
 from torchmetrics import Metric
-from tensorboardX import SummaryWriter
 
 
 def bool_flag(s):
@@ -79,7 +80,9 @@ class SmoothedValue(object):
         """
         if not is_dist_avail_and_initialized():
             return
-        t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda' if torch.cuda.is_available() else 'cpu')
+        t = torch.tensor(
+            [self.count, self.total], dtype=torch.float64, device='cuda' if torch.cuda.is_available() else 'cpu'
+        )
         dist.barrier()
         dist.all_reduce(t)
         t = t.tolist()
@@ -110,11 +113,8 @@ class SmoothedValue(object):
 
     def __str__(self):
         return self.fmt.format(
-            median=self.median,
-            avg=self.avg,
-            global_avg=self.global_avg,
-            max=self.max,
-            value=self.value)
+            median=self.median, avg=self.avg, global_avg=self.global_avg, max=self.max, value=self.value
+        )
 
 
 class MetricLogger(object):
@@ -136,15 +136,12 @@ class MetricLogger(object):
             return self.meters[attr]
         if attr in self.__dict__:
             return self.__dict__[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, attr))
 
     def __str__(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {}".format(name, str(meter))
-            )
+            loss_str.append("{}: {}".format(name, str(meter)))
         return self.delimiter.join(loss_str)
 
     def synchronize_between_processes(self):
@@ -163,14 +160,7 @@ class MetricLogger(object):
         iter_time = SmoothedValue(fmt='{avg:.4f}')
         data_time = SmoothedValue(fmt='{avg:.4f}')
         space_fmt = ':' + str(len(str(len(iterable)))) + 'd'
-        log_msg = [
-            header,
-            '[{0' + space_fmt + '}/{1}]',
-            'eta: {eta}',
-            '{meters}',
-            'time: {time}',
-            'data: {data}'
-        ]
+        log_msg = [header, '[{0' + space_fmt + '}/{1}]', 'eta: {eta}', '{meters}', 'time: {time}', 'data: {data}']
         if torch.cuda.is_available():
             log_msg.append('max mem: {memory:.0f}')
         log_msg = self.delimiter.join(log_msg)
@@ -183,22 +173,28 @@ class MetricLogger(object):
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time),
-                        memory=torch.cuda.max_memory_allocated() / MB))
+                    print(
+                        log_msg.format(
+                            i,
+                            len(iterable),
+                            eta=eta_string,
+                            meters=str(self),
+                            time=str(iter_time),
+                            data=str(data_time),
+                            memory=torch.cuda.max_memory_allocated() / MB,
+                        )
+                    )
                 else:
-                    print(log_msg.format(
-                        i, len(iterable), eta=eta_string,
-                        meters=str(self),
-                        time=str(iter_time), data=str(data_time)))
+                    print(
+                        log_msg.format(
+                            i, len(iterable), eta=eta_string, meters=str(self), time=str(iter_time), data=str(data_time)
+                        )
+                    )
             i += 1
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('{} Total time: {} ({:.4f} s / it)'.format(
-            header, total_time_str, total_time / len(iterable)))
+        print('{} Total time: {} ({:.4f} s / it)'.format(header, total_time_str, total_time / len(iterable)))
 
 
 class TensorboardLogger(object):
@@ -240,6 +236,7 @@ def setup_for_distributed(is_master):
     This function disables printing when not in master process
     """
     import builtins as __builtin__
+
     builtin_print = __builtin__.print
 
     def print(*args, **kwargs):
@@ -327,12 +324,13 @@ def init_distributed_mode(args):
 
     torch.cuda.set_device(args.gpu)
     args.dist_backend = 'nccl'
-    print('| distributed init (rank {}): {}, gpu {}'.format(
-        args.rank, args.dist_url, args.gpu), flush=True)
+    print('| distributed init (rank {}): {}, gpu {}'.format(args.rank, args.dist_url, args.gpu), flush=True)
     torch.distributed.init_process_group(
-        backend=args.dist_backend, init_method=args.dist_url,
-        world_size=args.world_size, rank=args.rank,
-        timeout=datetime.timedelta(0, 7200)
+        backend=args.dist_backend,
+        init_method=args.dist_url,
+        world_size=args.world_size,
+        rank=args.rank,
+        timeout=datetime.timedelta(0, 7200),
     )
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
@@ -349,10 +347,10 @@ def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_posit
         state_dict._metadata = metadata
 
     def load(module, prefix=''):
-        local_metadata = {} if metadata is None else metadata.get(
-            prefix[:-1], {})
+        local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
         module._load_from_state_dict(
-            state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs)
+            state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs
+        )
         for name, child in module._modules.items():
             if child is not None:
                 load(child, prefix + name + '.')
@@ -375,14 +373,15 @@ def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_posit
     missing_keys = warn_missing_keys
 
     if len(missing_keys) > 0:
-        print("Weights of {} not initialized from pretrained model: {}".format(
-            model.__class__.__name__, missing_keys))
+        print("Weights of {} not initialized from pretrained model: {}".format(model.__class__.__name__, missing_keys))
     if len(unexpected_keys) > 0:
-        print("Weights from pretrained model not used in {}: {}".format(
-            model.__class__.__name__, unexpected_keys))
+        print("Weights from pretrained model not used in {}: {}".format(model.__class__.__name__, unexpected_keys))
     if len(ignore_missing_keys) > 0:
-        print("Ignored weights of {} not initialized from pretrained model: {}".format(
-            model.__class__.__name__, ignore_missing_keys))
+        print(
+            "Ignored weights of {} not initialized from pretrained model: {}".format(
+                model.__class__.__name__, ignore_missing_keys
+            )
+        )
     if len(error_msgs) > 0:
         print('\n'.join(error_msgs))
 
@@ -422,17 +421,27 @@ def get_grad_norm_(parameters, norm_type: float = 2.0) -> torch.Tensor:
     parameters = [p for p in parameters if p.grad is not None]
     norm_type = float(norm_type)
     if len(parameters) == 0:
-        return torch.tensor(0.)
+        return torch.tensor(0.0)
     device = parameters[0].grad.device
     if norm_type == inf:
         total_norm = max(p.grad.detach().abs().max().to(device) for p in parameters)
     else:
-        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type)
+        total_norm = torch.norm(
+            torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), norm_type
+        )
     return total_norm
 
 
-def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epochs=0,
-                     start_warmup_value=0, warmup_steps=-1, sched_type="cos"):
+def cosine_scheduler(
+    base_value,
+    final_value,
+    epochs,
+    niter_per_ep,
+    warmup_epochs=0,
+    start_warmup_value=0,
+    warmup_steps=-1,
+    sched_type="cos",
+):
     warmup_schedule = np.array([])
     warmup_iters = warmup_epochs * niter_per_ep
     if warmup_steps > 0:
@@ -443,8 +452,9 @@ def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epoch
 
     if sched_type == "cos":
         iters = np.arange(epochs * niter_per_ep - warmup_iters)
-        schedule = np.array([
-            final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters])
+        schedule = np.array(
+            [final_value + 0.5 * (base_value - final_value) * (1 + math.cos(math.pi * i / (len(iters)))) for i in iters]
+        )
     elif sched_type == "linear":
         schedule = np.linspace(base_value, final_value, epochs * niter_per_ep - warmup_iters)
     else:
@@ -486,6 +496,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
         # torch.amp
         if args.auto_resume and len(args.resume) == 0:
             import glob
+
             all_checkpoints = glob.glob(os.path.join(output_dir, 'checkpoint-*.pth'))
             latest_ckpt = -1
             for ckpt in all_checkpoints:
@@ -498,8 +509,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
 
         if args.resume:
             if args.resume.startswith('https'):
-                checkpoint = torch.hub.load_state_dict_from_url(
-                    args.resume, map_location='cpu', check_hash=True)
+                checkpoint = torch.hub.load_state_dict_from_url(args.resume, map_location='cpu', check_hash=True)
             else:
                 checkpoint = torch.load(args.resume, map_location='cpu')
             model_without_ddp.load_state_dict(checkpoint['model'])
@@ -516,6 +526,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
         # deepspeed, only support '--auto_resume'.
         if args.auto_resume:
             import glob
+
             all_checkpoints = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
             latest_ckpt = -1
             for ckpt in all_checkpoints:
@@ -535,8 +546,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
 # The implementation code is modified from DeiT (https://github.com/facebookresearch/deit.git)
 def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
     if ckpt_path.startswith('https'):
-        checkpoint = torch.hub.load_state_dict_from_url(
-            ckpt_path, map_location='cpu', check_hash=True)
+        checkpoint = torch.hub.load_state_dict_from_url(ckpt_path, map_location='cpu', check_hash=True)
     else:
         checkpoint = torch.load(ckpt_path, map_location='cpu')
 
@@ -574,7 +584,7 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
             # height (== width) for the checkpoint position embedding
             orig_size = int((pos_embed_checkpoint.shape[-2] - num_extra_tokens) ** 0.5)
             # height (== width) for the new position embedding
-            new_size = int(num_patches ** 0.5)
+            new_size = int(num_patches**0.5)
             # class_token and dist_token are kept unchanged
             if orig_size != new_size:
                 print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
@@ -588,7 +598,8 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
                     pos_tokens = pos_embed_checkpoint[:, num_extra_tokens:]
                 pos_tokens = pos_tokens.reshape(-1, orig_size, orig_size, embedding_size).permute(0, 3, 1, 2)
                 pos_tokens = torch.nn.functional.interpolate(
-                    pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False)
+                    pos_tokens, size=(new_size, new_size), mode='bicubic', align_corners=False
+                )
                 pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
                 new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
                 if torchscale_model:
@@ -612,12 +623,9 @@ def create_ds_config(args):
                     "lr": args.lr,
                     "weight_decay": args.weight_decay,
                     "bias_correction": True,
-                    "betas": [
-                        args.opt_betas[0],
-                        args.opt_betas[1]
-                    ],
-                    "eps": args.opt_eps
-                }
+                    "betas": [args.opt_betas[0], args.opt_betas[1]],
+                    "eps": args.opt_eps,
+                },
             },
             "fp16": {
                 "enabled": True,
@@ -625,12 +633,9 @@ def create_ds_config(args):
                 "initial_scale_power": getattr(args, "initial_scale_power", 12),
                 "loss_scale_window": 1000,
                 "hysteresis": 2,
-                "min_loss_scale": 1
+                "min_loss_scale": 1,
             },
-            "amp": {
-                "enabled": False,
-                "opt_level": "O2"
-            }
+            "amp": {"enabled": False, "opt_level": "O2"},
         }
 
         if args.clip_grad is not None:
@@ -669,11 +674,13 @@ class GatherLayer(torch.autograd.Function):
     Gather tensors from all workers with support for backward propagation:
     This implementation does not cut the gradients as torch.distributed.all_gather does.
     """
+
     @staticmethod
     def forward(ctx, x):
         output = [torch.zeros_like(x) for _ in range(dist.get_world_size())]
         dist.all_gather(output, x)
         return tuple(output)
+
     @staticmethod
     def backward(ctx, *grads):
         all_gradients = torch.stack(grads)
@@ -682,8 +689,8 @@ class GatherLayer(torch.autograd.Function):
 
 
 def gather_features(
-        image_features,
-        text_features,
+    image_features,
+    text_features,
 ):
     gathered_image_features = GatherLayer.apply(image_features)
     gathered_text_features = GatherLayer.apply(text_features)
@@ -695,12 +702,11 @@ def gather_features(
 
 # The implementation code is modified from open_clip (https://github.com/mlfoundations/open_clip.git)
 class ClipLoss(nn.Module):
-
     def __init__(
-            self,
-            cache_labels=False,
-            rank=0,
-            world_size=1,
+        self,
+        cache_labels=False,
+        rank=0,
+        world_size=1,
     ):
         super().__init__()
         self.cache_labels = cache_labels
@@ -714,9 +720,7 @@ class ClipLoss(nn.Module):
     def forward(self, image_features, text_features, logit_scale):
         device = image_features.device
         if self.world_size > 1:
-            all_image_features, all_text_features = gather_features(
-                image_features, text_features
-            )
+            all_image_features, all_text_features = gather_features(image_features, text_features)
 
             logits_per_image = logit_scale * image_features @ all_text_features.T
             logits_per_text = logit_scale * text_features @ all_image_features.T
@@ -736,10 +740,7 @@ class ClipLoss(nn.Module):
         else:
             labels = self.labels[device]
 
-        total_loss = (
-            F.cross_entropy(logits_per_image, labels) +
-            F.cross_entropy(logits_per_text, labels)
-            ) / 2
+        total_loss = (F.cross_entropy(logits_per_image, labels) + F.cross_entropy(logits_per_text, labels)) / 2
         return total_loss, logits_per_image, logits_per_text
 
 
@@ -796,9 +797,7 @@ class BertCaptioningLoss(nn.Module):
         loss = self.kl(log_prb, one_hot).sum(1)
 
         if self.drop_worst_ratio > 0 and iter > self.drop_worst_after:
-            loss, _ = torch.topk(loss,
-                    k=int(loss.shape[0] * (1-self.drop_worst_ratio)),
-                    largest=False)
+            loss, _ = torch.topk(loss, k=int(loss.shape[0] * (1 - self.drop_worst_ratio)), largest=False)
         loss = loss.mean()
 
         return loss
@@ -846,7 +845,7 @@ class BeamHypotheses(object):
         elif self.early_stopping:
             return True
         else:
-            return self.worst_score >= best_sum_logprobs / self.max_length ** self.length_penalty
+            return self.worst_score >= best_sum_logprobs / self.max_length**self.length_penalty
 
 
 def dump_predictions(args, result, file_suffix):
@@ -896,16 +895,20 @@ def dump_predictions(args, result, file_suffix):
 # The evaluation code is from BLIP (https://github.com/salesforce/BLIP)
 # For nocaps, please submit the prediction file to the evaluate server (https://eval.ai/web/challenges/challenge-page/355/overview) to obtain the final results
 def coco_caption_eval(gt_dir, results_file, split):
-    from pycocotools.coco import COCO
     from pycocoevalcap.eval import COCOEvalCap
+    from pycocotools.coco import COCO
     from torchvision.datasets.utils import download_url
 
-    urls = {'coco_captioning_val': 'https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val_gt.json',
-            'coco_captioning_test': 'https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_test_gt.json',
-            'nocaps_val': 'https://conversationhub.blob.core.windows.net/beit-share-public/beit3/nocaps/nocaps_val_gt.json'}
-    filenames = {'coco_captioning_val':'coco_karpathy_val_gt.json',
-                 'coco_captioning_test':'coco_karpathy_test_gt.json',
-                 'nocaps_val':'nocaps_val_gt.json'}
+    urls = {
+        'coco_captioning_val': 'https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_val_gt.json',
+        'coco_captioning_test': 'https://storage.googleapis.com/sfr-vision-language-research/datasets/coco_karpathy_test_gt.json',
+        'nocaps_val': 'https://conversationhub.blob.core.windows.net/beit-share-public/beit3/nocaps/nocaps_val_gt.json',
+    }
+    filenames = {
+        'coco_captioning_val': 'coco_karpathy_val_gt.json',
+        'coco_captioning_test': 'coco_karpathy_test_gt.json',
+        'nocaps_val': 'nocaps_val_gt.json',
+    }
 
     download_url(urls[split], gt_dir)
     annotation_file = os.path.join(gt_dir, filenames[split])

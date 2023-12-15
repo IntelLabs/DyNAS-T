@@ -32,9 +32,9 @@ from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interfac
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
+from dynast.supernetwork.multi_domain_networks.beit_interface import Beit3ImageNetRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
-from dynast.supernetwork.multi_domain_networks.beit_interface import Beit3ImageNetRunner
 from dynast.utils import LazyImport, log, split_list
 from dynast.utils.distributed import get_distributed_vars, get_worker_results_path, is_main_process
 from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetException
@@ -631,7 +631,7 @@ class LINAS(NASBaseConfig):
                     macs_predictor=self.predictor_dict['macs'],
                     params_predictor=self.predictor_dict['params'],
                     acc_predictor=self.predictor_dict['accuracy_top1'],
-                    model_size_predictor = self.predictor_dict['model_size'],
+                    model_size_predictor=self.predictor_dict['model_size'],
                     dataset_path=self.dataset_path,
                     checkpoint_path=self.supernet_ckpt_path,
                     device=self.device,
@@ -1018,7 +1018,7 @@ class LINASDistributed(LINAS):
                         macs_predictor=self.predictor_dict['macs'],
                         params_predictor=self.predictor_dict['params'],
                         acc_predictor=self.predictor_dict['accuracy_top1'],
-                        model_size_predictor = self.predictor_dict['model_size'],
+                        model_size_predictor=self.predictor_dict['model_size'],
                         dataset_path=self.dataset_path,
                         checkpoint_path=self.supernet_ckpt_path,
                         device=self.device,

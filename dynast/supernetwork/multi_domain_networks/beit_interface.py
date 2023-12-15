@@ -16,30 +16,33 @@
 import copy
 import csv
 import logging
+import random
+import shutil
 import string
 import time
 import warnings
-import random
+from datetime import datetime
 
 import numpy as np
 import torch
 import torchprofile
-from transformers import BertConfig
 from fvcore.nn import FlopCountAnalysis
+from neural_compressor import set_workspace
+from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
+from neural_compressor.quantization import fit
+from transformers import BertConfig
+
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
-from neural_compressor import set_workspace
-from neural_compressor.quantization import fit
-from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
-from dynast.utils.nn import measure_latency
-from .beit3_supernetwork import BEiT3ForImageClassification
-from .simplify_beit3_eval import get_args, create_downstream_dataset
-from .modeling_utils import _get_base_config
-from .utils import *
-from .engine_for_elastic_finetuning import train_one_epoch, get_handler, evaluate
-from datetime import datetime
-import shutil
 from dynast.utils.distributed import get_distributed_vars
+from dynast.utils.nn import measure_latency
+
+from .beit3_supernetwork import BEiT3ForImageClassification
+from .engine_for_elastic_finetuning import evaluate, get_handler, train_one_epoch
+from .modeling_utils import _get_base_config
+from .simplify_beit3_eval import create_downstream_dataset, get_args
+from .utils import *
+
 warnings.filterwarnings("ignore")
 
 
@@ -47,8 +50,8 @@ def get_regex_names(model):
     module_names = []
     regex_module_names = []
     for name, module in model.named_modules():
-            #print(name)
-        if name.endswith('.layer') : # and name!="bert.encoder.layer": #type(module) in (nn.modules.conv.Conv2d,) and
+        # print(name)
+        if name.endswith('.layer'):  # and name!="bert.encoder.layer": #type(module) in (nn.modules.conv.Conv2d,) and
             module_names.append(name)
     for name in module_names:
         if 'A' in name.split('.'):
@@ -56,18 +59,18 @@ def get_regex_names(model):
 
     return regex_module_names
 
-def validate_accuracy_top1(model,data_loader_test,task_handler,device,sample_config):
 
-
-    ext_test_stats, task_key = evaluate(data_loader_test, model, device, task_handler)#,search_space_choices,supernet_config)
-    print(f"Accuracy of the network on the {len(data_loader_test.dataset)} test images: {ext_test_stats[task_key]:.3f}%")
+def validate_accuracy_top1(model, data_loader_test, task_handler, device, sample_config):
+    ext_test_stats, task_key = evaluate(
+        data_loader_test, model, device, task_handler
+    )  # ,search_space_choices,supernet_config)
+    print(
+        f"Accuracy of the network on the {len(data_loader_test.dataset)} test images: {ext_test_stats[task_key]:.3f}%"
+    )
     return ext_test_stats[task_key]
 
 
-
-def compute_macs(model,sample_config,device):
-
-
+def compute_macs(model, sample_config, device):
     model.set_sample_config(sample_config)
     numels = []
     for module_name, module in model.named_modules():
@@ -81,7 +84,7 @@ def compute_macs(model,sample_config,device):
             numels.append(module.calc_sampled_param_num())
     params = sum(numels)
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    input_image = torch.randn((1,3,224,224),device=device)
+    input_image = torch.randn((1, 3, 224, 224), device=device)
     for module in model.modules():
         if hasattr(module, 'profile') and model != module:
             module.profile(True)
@@ -94,8 +97,8 @@ def compute_macs(model,sample_config,device):
             module.profile(False)
     return macs, params
 
-def create_model_dataset(checkpoint_path,num_layers=12):
 
+def create_model_dataset(checkpoint_path, num_layers=12):
     args_new, ds_init = get_args()
     args_new.data_path = '/datasets/imagenet-ilsvrc2012/'
 
@@ -104,40 +107,38 @@ def create_model_dataset(checkpoint_path,num_layers=12):
     args_new.task = 'imagenet'
     args_new.sentencepiece_model = 'dynast/supernetwork/multi_domain_networks/beit3.spm'
     args_new.batch_size = 128
-    #args_new.batch_size = 128
+    # args_new.batch_size = 128
     args_new.eval_batch_size = 32
     args_new.eval = True
-    device = 'cpu' #torch.device(args_new.device)
+    device = 'cpu'  # torch.device(args_new.device)
 
     data_loader_test = create_downstream_dataset(args_new, is_eval=True)
     args_model = _get_base_config(drop_path_rate=args_new.drop_path)
     args_model.normalize_output = False
-    args_model.encoder_layers=num_layers
+    args_model.encoder_layers = num_layers
 
     model = BEiT3ForImageClassification(args_model, num_classes=1000)
 
     if args_new.finetune:
         load_model_and_may_interpolate(args_new.finetune, model, args_new.model_key, args_new.model_prefix)
 
-    #torch.distributed.barrier()
+    # torch.distributed.barrier()
     model_ema = None
     if args_new.model_ema:
         # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
         model_ema = ModelEma(
-            model,
-            decay=args_new.model_ema_decay,
-            device='cpu' if args_new.model_ema_force_cpu else '',
-            resume='')
+            model, decay=args_new.model_ema_decay, device='cpu' if args_new.model_ema_force_cpu else '', resume=''
+        )
         print("Using EMA with decay = %.8f" % args_new.model_ema_decay)
-    #orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
-    #model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
+    # orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
+    # model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
     task_handler = get_handler(args_new)
 
     model.to(device)
-    supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num":12*[12],"ffn_size":[3072]*12}
+    supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num": 12 * [12], "ffn_size": [3072] * 12}
 
     model.set_sample_config(supernet_config)
-    return model, data_loader_test, task_handler,device
+    return model, data_loader_test, task_handler, device
 
 
 class Beit3ImageNetRunner:
@@ -159,7 +160,6 @@ class Beit3ImageNetRunner:
         checkpoint_path=None,
         device: str = 'cpu',
     ):
-
         self.supernet = supernet
         self.acc_predictor = acc_predictor
         self.macs_predictor = macs_predictor
@@ -171,9 +171,12 @@ class Beit3ImageNetRunner:
         self.checkpoint_path = checkpoint_path
         self.device = device
 
-        self.supernet_model,self.eval_dataloader,self.task_handler,self.device = create_model_dataset(self.checkpoint_path)
-       # self.eval_dataloader = prepare_data_loader(self.dataset_path)
-       # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
+        self.supernet_model, self.eval_dataloader, self.task_handler, self.device = create_model_dataset(
+            self.checkpoint_path
+        )
+
+    # self.eval_dataloader = prepare_data_loader(self.dataset_path)
+    # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
 
     def estimate_accuracy_top1(
         self,
@@ -209,13 +212,15 @@ class Beit3ImageNetRunner:
         qbit_list,
     ) -> float:  # pragma: no cover
         regex_module_names = get_regex_names(self.supernet_model)
-        model_fp32,_,_,_= create_model_dataset(self.checkpoint_path)
+        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path)
         model_fp32.set_sample_config(subnet_cfg)
 
-        quantized_model = self.quantize_subnet(model_fp32, qbit_list,regex_module_names)
+        quantized_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
 
-        accuracy_top1 = validate_accuracy_top1(quantized_model, self.eval_dataloader,self.task_handler,self.device,subnet_cfg)
-        del quantized_model,model_fp32
+        accuracy_top1 = validate_accuracy_top1(
+            quantized_model, self.eval_dataloader, self.task_handler, self.device, subnet_cfg
+        )
+        del quantized_model, model_fp32
 
         return accuracy_top1
 
@@ -229,7 +234,7 @@ class Beit3ImageNetRunner:
         Returns:
             `macs`
         """
-        macs,params = compute_macs(self.supernet_model, subnet_cfg,self.device)
+        macs, params = compute_macs(self.supernet_model, subnet_cfg, self.device)
         logging.info('Model\'s params: {}'.format(params))
         return macs, params
 
@@ -253,17 +258,17 @@ class Beit3ImageNetRunner:
         )
 
         regex_module_names = get_regex_names(self.supernet_model)
-        config_new ={'embed_size': 768,
+        config_new = {
+            'embed_size': 768,
             'num_layers': subnet_sample['num_layers'],
-            'head_num': subnet_sample['head_num'][:subnet_sample['num_layers']],
-            'ffn_size': subnet_sample["ffn_size"][:subnet_sample['num_layers']],
+            'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
+            'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32,_,_,_ = create_model_dataset(self.checkpoint_path,num_layers=subnet_sample['num_layers'])
-
+        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
-        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list,regex_module_names)
+        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list, regex_module_names)
 
         lat_mean, lat_std = measure_latency(
             q_model,
@@ -274,102 +279,102 @@ class Beit3ImageNetRunner:
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
         return lat_mean
 
-
     def quantize_subnet(
         self,
         model,
         qbit_list,
         regex_module_names,
-       # calib_dataloader,
+        # calib_dataloader,
     ):
-
-        default_config={'weight': {'dtype':['fp32']},'activation': {'dtype':['fp32']}}
-        q_config_dict={}
-        count=0
-        #model_fp32 = copy.deepcopy(model)
+        default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
+        q_config_dict = {}
+        count = 0
+        # model_fp32 = copy.deepcopy(model)
         for mod_name in regex_module_names:
             q_config_dict[mod_name] = copy.deepcopy(default_config)
-            #import ipdb;db.set_trace()
-            if qbit_list[count]==32:
-
+            # import ipdb;db.set_trace()
+            if qbit_list[count] == 32:
                 dtype = ['fp32']
             else:
                 dtype = ['int8']
 
-            q_config_dict[mod_name]['weight']['dtype']= dtype
-            q_config_dict[mod_name]['activation']['dtype']= dtype
-            count = count +1
+            q_config_dict[mod_name]['weight']['dtype'] = dtype
+            q_config_dict[mod_name]['activation']['dtype'] = dtype
+            count = count + 1
         tuning_criterion = TuningCriterion(max_trials=1)
 
-        conf = PostTrainingQuantConfig(approach="static",tuning_criterion=tuning_criterion, calibration_sampling_size=100,
-                                   op_name_dict=q_config_dict)
+        conf = PostTrainingQuantConfig(
+            approach="static",
+            tuning_criterion=tuning_criterion,
+            calibration_sampling_size=100,
+            op_name_dict=q_config_dict,
+        )
 
-        q_model = fit(model, conf=conf,calib_dataloader=self.eval_dataloader)#, eval_func=eval_func),
-        del q_config_dict, conf,model
+        q_model = fit(model, conf=conf, calib_dataloader=self.eval_dataloader)  # , eval_func=eval_func),
+        del q_config_dict, conf, model
         return q_model
-
 
     def quantize_subnet_modelsize(
         self,
         model,
         qbit_list,
         regex_module_names,
-       # calib_dataloader,
+        # calib_dataloader,
     ):
-
-        default_config={'weight': {'dtype':['fp32']},'activation': {'dtype':['fp32']}}
-        q_config_dict={}
-        count=0
-        #model_fp32 = copy.deepcopy(model)
+        default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
+        q_config_dict = {}
+        count = 0
+        # model_fp32 = copy.deepcopy(model)
         for mod_name in regex_module_names:
             q_config_dict[mod_name] = copy.deepcopy(default_config)
-            #import ipdb;db.set_trace()
-            if qbit_list[count]==32:
-
+            # import ipdb;db.set_trace()
+            if qbit_list[count] == 32:
                 dtype = ['fp32']
             else:
                 dtype = ['int8']
 
-            q_config_dict[mod_name]['weight']['dtype']= dtype
-            q_config_dict[mod_name]['activation']['dtype']= dtype
-            count = count +1
+            q_config_dict[mod_name]['weight']['dtype'] = dtype
+            q_config_dict[mod_name]['activation']['dtype'] = dtype
+            count = count + 1
         tuning_criterion = TuningCriterion(max_trials=1)
 
-        conf = PostTrainingQuantConfig(approach="dynamic",tuning_criterion=tuning_criterion, calibration_sampling_size=100,
-                                   op_name_dict=q_config_dict)
+        conf = PostTrainingQuantConfig(
+            approach="dynamic",
+            tuning_criterion=tuning_criterion,
+            calibration_sampling_size=100,
+            op_name_dict=q_config_dict,
+        )
 
         q_model = fit(model, conf=conf)
-        del q_config_dict, conf,model
+        del q_config_dict, conf, model
         return q_model
 
-    def validate_modelsize(self,subnet_sample,qbit_list):
-
+    def validate_modelsize(self, subnet_sample, qbit_list):
         LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
         WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
         tmp_name = f"/tmp/dynast_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
-        #supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12,
+        # supernet_config =  {'subnet_hidden_sizes': 768,'num_layers': 12, 'num_attention_heads': [12]*12,
         #               'subnet_intermediate_sizes': [3072]*12}
         regex_module_names = get_regex_names(self.supernet_model)
-        config_new ={'embed_size': 768,
+        config_new = {
+            'embed_size': 768,
             'num_layers': subnet_sample['num_layers'],
-            'head_num': subnet_sample['head_num'][:subnet_sample['num_layers']],
-            'ffn_size': subnet_sample["ffn_size"][:subnet_sample['num_layers']],
+            'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
+            'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32,_,_,_ = create_model_dataset(self.checkpoint_path,num_layers=subnet_sample['num_layers'])
-
+        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
-        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list,regex_module_names)
+        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list, regex_module_names)
         q_model.save(tmp_name)
-        model_size = os.path.getsize(f'{tmp_name}/best_model.pt')/(1048576)
+        model_size = os.path.getsize(f'{tmp_name}/best_model.pt') / (1048576)
         print('Size (MB):', model_size)
 
         shutil.rmtree(tmp_name)
         del q_model, model_fp32
 
         return model_size
-
 
 
 class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
@@ -399,7 +404,7 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
             'embed_size': 768,
             'num_layers': param_dict['num_layers'][0],
             'head_num': param_dict['head_num'],
-            'ffn_size': [3072]*12
+            'ffn_size': [3072] * 12,
         }
 
         subnet_sample = copy.deepcopy(sample)
