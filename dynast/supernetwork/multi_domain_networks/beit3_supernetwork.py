@@ -1,3 +1,17 @@
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Copyright (c) 2022 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 
@@ -78,11 +92,11 @@ class MultiwayNetwork(nn.Module):
         # x1, x2 = x[:self.split_position], x[self.split_position:]
         y1, y2 = self.A(x1, **kwargs), self.B(x2, **kwargs)
         return torch.cat([y1, y2], dim=self.dim)
-    
+
     def set_sample_config(self,sample_embed_size, sample_all_head_size):
         self.A.set_sample_config(sample_embed_size, sample_all_head_size)
         self.B.set_sample_config(sample_embed_size, sample_all_head_size)
-    
+
     def set_sample_config_layernorm(self,sample_all_head_size):
          self.A.set_sample_config(sample_all_head_size)
          self.B.set_sample_config(sample_all_head_size)
@@ -214,7 +228,7 @@ class FeedForwardNetwork(nn.Module):
         x = x.view(x_shape)
         x = self.dropout_module(x)
         return x
-    
+
     def set_sample_config(self,sample_embed_size,sample_ffn_size):
         self.fc1.set_sample_config(sample_embed_size,sample_ffn_size)
         self.fc2.set_sample_config(sample_ffn_size,sample_embed_size)
@@ -325,7 +339,7 @@ class MultiheadAttention(nn.Module):
             q = self.xpos(q, offset=offset, downscale=False)
 
         attn_weights = torch.bmm(q, k.transpose(1, 2))
-       
+
         if attn_mask is not None:
             attn_weights = torch.nan_to_num(attn_weights)
             attn_mask = attn_mask.unsqueeze(0)
@@ -360,11 +374,11 @@ class MultiheadAttention(nn.Module):
         ).transpose(1, 0)
 
         return attn, attn_weights
-    
+
     def set_sample_config(self, sample_embed_size, sample_head_num):
         self.sample_head_num = sample_head_num
         self.sample_embed_size = sample_embed_size
-        
+
         self.sample_all_head_size = sample_head_num * self.head_dim
         self.q_proj.set_sample_config(sample_embed_size, self.sample_all_head_size)
         self.k_proj.set_sample_config(sample_embed_size, self.sample_all_head_size)
@@ -514,7 +528,7 @@ class EncoderLayer(nn.Module):
         if not self.normalize_before:
             x = self.final_layer_norm(x)
         return x, l_aux
-    
+
     def set_sample_config(self,sample_embed_size, sample_ffn_size, sample_head_num):
         self.self_attn.set_sample_config(sample_embed_size, sample_head_num)
         self.ffn.set_sample_config(sample_embed_size,sample_ffn_size)
@@ -860,7 +874,7 @@ class BEiT3(nn.Module):
         encoder_out["multiway_split_position"] = multiway_split_position
 
         return encoder_out
-    
+
     def set_sample_config(self,sample_config):
         self.encoder.set_sample_config(sample_config)
 
@@ -897,15 +911,15 @@ class BEiT3Wrapper(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
-    
+
 
 
 class BEiT3ForImageClassification(BEiT3Wrapper):
     def __init__(
-            self, 
-            args, 
-            num_classes, 
-            norm_layer=nn.LayerNorm, 
+            self,
+            args,
+            num_classes,
+            norm_layer=nn.LayerNorm,
             **kwargs
     ):
         super(BEiT3ForImageClassification, self).__init__(args=args)
@@ -925,7 +939,7 @@ class BEiT3ForImageClassification(BEiT3Wrapper):
         t = x[:, 1:, :]
         cls_x = self.fc_norm(t.mean(1))
         return self.head(cls_x)
-    
+
 
     def set_sample_config(self,sample_config):
         self.beit3.set_sample_config(sample_config)

@@ -1,3 +1,17 @@
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # --------------------------------------------------------
 # Image as a Foreign Language: BEiT Pretraining for Vision and Vision-Language Tasks (https://arxiv.org/abs/2208.10442)
 # Github source: https://github.com/microsoft/unilm/tree/master/beit3
@@ -19,28 +33,28 @@ def trunc_normal_(tensor, mean=0., std=1.):
 
 
 def _get_base_config(
-        img_size=224, patch_size=16, drop_path_rate=0, 
+        img_size=224, patch_size=16, drop_path_rate=0,
         checkpoint_activations=None, mlp_ratio=4, vocab_size=64010, **kwargs
 ):
     return EncoderConfig(
-        img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=True, 
-        layernorm_embedding=False, normalize_output=True, no_output_layer=True, 
-        drop_path_rate=drop_path_rate, encoder_embed_dim=768, encoder_attention_heads=12, 
-        encoder_ffn_embed_dim=int(768 * mlp_ratio), encoder_layers=12, 
-        checkpoint_activations=checkpoint_activations, 
+        img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=True,
+        layernorm_embedding=False, normalize_output=True, no_output_layer=True,
+        drop_path_rate=drop_path_rate, encoder_embed_dim=768, encoder_attention_heads=12,
+        encoder_ffn_embed_dim=int(768 * mlp_ratio), encoder_layers=12,
+        checkpoint_activations=checkpoint_activations,
     )
 
 
 def _get_large_config(
-        img_size=224, patch_size=16, drop_path_rate=0, 
+        img_size=224, patch_size=16, drop_path_rate=0,
         checkpoint_activations=None, mlp_ratio=4, vocab_size=64010, **kwargs
 ):
     return EncoderConfig(
-        img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=True, 
-        layernorm_embedding=False, normalize_output=True, no_output_layer=True, 
-        drop_path_rate=drop_path_rate, encoder_embed_dim=1024, encoder_attention_heads=16, 
-        encoder_ffn_embed_dim=int(1024 * mlp_ratio), encoder_layers=24, 
-        checkpoint_activations=checkpoint_activations, 
+        img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=True,
+        layernorm_embedding=False, normalize_output=True, no_output_layer=True,
+        drop_path_rate=drop_path_rate, encoder_embed_dim=1024, encoder_attention_heads=16,
+        encoder_ffn_embed_dim=int(1024 * mlp_ratio), encoder_layers=24,
+        checkpoint_activations=checkpoint_activations,
     )
 
 

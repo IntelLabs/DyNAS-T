@@ -1,3 +1,17 @@
+# Copyright (c) 2022 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # --------------------------------------------------------
 # Image as a Foreign Language: BEiT Pretraining for Vision and Vision-Language Tasks (https://arxiv.org/abs/2208.10442)
 # Github source: https://github.com/microsoft/unilm/tree/master/beit3
@@ -70,28 +84,28 @@ class NLVR2Handler(TaskHandler):
 
     def train_batch(self, model, image, image2, language_tokens, padding_mask, label):
         logits = model(
-            image_a=image, image_b=image2, 
-            text_description=language_tokens, 
+            image_a=image, image_b=image2,
+            text_description=language_tokens,
             padding_mask=padding_mask)
         acc = (logits.max(-1)[-1] == label).float().mean()
         return {
-            "loss": self.criterion(input=logits, target=label), 
-            "acc": acc, 
+            "loss": self.criterion(input=logits, target=label),
+            "acc": acc,
         }
 
     def eval_batch(self, model, image, image2, language_tokens, padding_mask, label):
         logits = model(
-            image_a=image, image_b=image2, 
-            text_description=language_tokens, 
+            image_a=image, image_b=image2,
+            text_description=language_tokens,
             padding_mask=padding_mask)
         batch_size = language_tokens.shape[0]
         acc = (logits.max(-1)[-1] == label).float().sum(0) * 100.0 / batch_size
         self.metric_logger.meters['acc'].update(acc.item(), n=batch_size)
-    
+
     def after_eval(self, **kwargs):
         print('* Acc {acc.global_avg:.3f}'.format(acc=self.metric_logger.acc))
         return {k: meter.global_avg for k, meter in self.metric_logger.meters.items()}, "acc"
-    
+
 
 class ImageNetHandler(TaskHandler):
     def __init__(self, args) -> None:
@@ -111,7 +125,7 @@ class ImageNetHandler(TaskHandler):
             return  {"loss": self.criterion(logits, label)}, logits
         else:
             return {
-                "loss": self.criterion(logits, label), 
+                "loss": self.criterion(logits, label),
             }
 
     def eval_batch(self, model, image, label):
@@ -123,7 +137,7 @@ class ImageNetHandler(TaskHandler):
         acc1, acc5 = accuracy(logits, label, topk=(1, 5))
         self.metric_logger.meters['subnet_acc1'].update(acc1.item(), n=batch_size)
         self.metric_logger.meters['subnet_acc5'].update(acc5.item(), n=batch_size)
-        
+
         #Medium SubNet Accuracy
         medium_subnet_config = {"embed_size":768,"num_layers": 10, "head_num": [10]*12,
                         "ffn_size": [3072]*12}#[2048]
@@ -141,7 +155,7 @@ class ImageNetHandler(TaskHandler):
         acc1, acc5 = accuracy(logits, label, topk=(1, 5))
         self.metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
         self.metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
-    
+
     def after_eval(self, **kwargs):
         print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f}'
             .format(top1=self.metric_logger.acc1, top5=self.metric_logger.acc5))
@@ -160,7 +174,7 @@ class RetrievalHandler(TaskHandler):
         loss, vision_cls, language_cls = model(
             image=image, text_description=language_tokens, padding_mask=padding_mask)
         return {
-            "loss": loss, 
+            "loss": loss,
         }
 
     def before_eval(self, metric_logger, **kwargs):
@@ -177,7 +191,7 @@ class RetrievalHandler(TaskHandler):
         self.image_feats.append(vision_cls.clone())
         self.text_feats.append(language_cls.clone())
         self.image_ids.append(image_id.clone())
-    
+
     def after_eval(self, **kwargs):
         image_feats = {}
         for feats, ids in zip(self.image_feats, self.image_ids):
@@ -185,7 +199,7 @@ class RetrievalHandler(TaskHandler):
                 idx = _idx.item()
                 if idx not in image_feats:
                     image_feats[idx] = feats[i]
-        
+
         tiids = torch.cat(self.image_ids, dim=0)
         iids = []
         sorted_tensors = []
@@ -206,7 +220,7 @@ class RetrievalHandler(TaskHandler):
         topk10 = scores.topk(10, dim=1)
         topk5 = scores.topk(5, dim=1)
         topk1 = scores.topk(1, dim=1)
-        
+
         topk10_iids = tiids[topk10.indices]
         topk5_iids = tiids[topk5.indices]
         topk1_iids = tiids[topk1.indices]
@@ -227,13 +241,13 @@ class RetrievalHandler(TaskHandler):
         ir_r1 = (tiids.unsqueeze(0) == topk1_iids).float().max(dim=0)[0].mean()
 
         eval_result = {
-            "tr_r10": tr_r10.item() * 100.0, 
-            "tr_r5": tr_r5.item() * 100.0, 
-            "tr_r1": tr_r1.item() * 100.0, 
-            "ir_r10": ir_r10.item() * 100.0, 
-            "ir_r5": ir_r5.item() * 100.0, 
-            "ir_r1": ir_r1.item() * 100.0, 
-            "average_score": 100.0 * (tr_r1 + tr_r5 + tr_r10 + ir_r1 + ir_r5 + ir_r10).item() / 6.0, 
+            "tr_r10": tr_r10.item() * 100.0,
+            "tr_r5": tr_r5.item() * 100.0,
+            "tr_r1": tr_r1.item() * 100.0,
+            "ir_r10": ir_r10.item() * 100.0,
+            "ir_r5": ir_r5.item() * 100.0,
+            "ir_r1": ir_r1.item() * 100.0,
+            "average_score": 100.0 * (tr_r1 + tr_r5 + tr_r10 + ir_r1 + ir_r5 + ir_r10).item() / 6.0,
         }
 
         print('* Eval result = %s' % json.dumps(eval_result))
@@ -249,10 +263,10 @@ class VQAHandler(TaskHandler):
 
     def train_batch(self, model, image, language_tokens, padding_mask, labels):
         logits = model(
-            image=image, question=language_tokens, 
+            image=image, question=language_tokens,
             padding_mask=padding_mask)
         return {
-            "loss": self.criterion(input=logits.float(), target=labels.float()) * labels.shape[1], 
+            "loss": self.criterion(input=logits.float(), target=labels.float()) * labels.shape[1],
         }
 
     def before_eval(self, metric_logger, data_loader, **kwargs):
@@ -262,7 +276,7 @@ class VQAHandler(TaskHandler):
 
     def eval_batch(self, model, image, language_tokens, padding_mask, labels=None, qid=None):
         logits = model(
-            image=image, question=language_tokens, 
+            image=image, question=language_tokens,
             padding_mask=padding_mask)
         batch_size = language_tokens.shape[0]
         if labels is not None:
@@ -272,8 +286,8 @@ class VQAHandler(TaskHandler):
             _, preds = logits.max(-1)
             for image_id, pred in zip(qid, preds):
                 self.predictions.append({
-                    "question_id": image_id.item(), 
-                    "answer": self.label2ans[pred.item()], 
+                    "question_id": image_id.item(),
+                    "answer": self.label2ans[pred.item()],
                 })
 
     def after_eval(self, **kwargs):
@@ -333,7 +347,7 @@ class CaptioningHandler(TaskHandler):
             (batch_size, self.max_len-1), mask_id, dtype=torch.long, device=image.device
         )
         decoding_results = torch.cat([cls_ids, tmp_ids], dim=1)
-        
+
         # Expand input to num beams
         cur_input_ids = cur_input_ids.unsqueeze(1).expand(batch_size, self.num_beams, cur_len)
         cur_input_ids = cur_input_ids.contiguous().view(batch_size * self.num_beams, cur_len)  # (batch_size * num_beams, cur_len)
@@ -420,7 +434,7 @@ class CaptioningHandler(TaskHandler):
                     next_sent_beam = [(0, pad_id, 0)] * self.num_beams  # pad the batch
                 next_batch_beam.extend(next_sent_beam)
                 assert len(next_batch_beam) == self.num_beams * (batch_ex + 1)
-            
+
             # sanity check / prepare next batch
             assert len(next_batch_beam) == batch_size * self.num_beams
             beam_scores = beam_scores.new([x[0] for x in next_batch_beam])
@@ -434,7 +448,7 @@ class CaptioningHandler(TaskHandler):
                 for key in incremental_state[module]:
                     result = incremental_state[module][key].index_select(0, beam_idx)
                     incremental_state[module][key] = result[:,:,:-1,:]
-            
+
             next_ids = torch.full(
                 (batch_size * self.num_beams, 1), mask_id, dtype=torch.long, device=image.device
             )
@@ -445,7 +459,7 @@ class CaptioningHandler(TaskHandler):
             # stop when we are done with each sentence
             if all(done):
                 break
-        
+
         # select the best hypotheses
         tgt_len = torch.ones(batch_size, num_keep_best, dtype=torch.long)
         logprobs = torch.zeros(batch_size, num_keep_best,
@@ -463,19 +477,19 @@ class CaptioningHandler(TaskHandler):
                     logprobs[i, best_idx] = conf
                     tgt_len[i, best_idx] = len(best_hyp) + 1  # +1 for the <EOS> symbol
                 all_best.append(best)
-        
+
         # generate target batch, pad to the same length
         decoded = cur_input_ids.new(batch_size, num_keep_best, self.max_len).fill_(pad_id)
         for batch_idx, best in enumerate(all_best):
             for best_idx, hypo in enumerate(best):
                 decoded[batch_idx, best_idx, : tgt_len[batch_idx, best_idx] - 1] = hypo
                 decoded[batch_idx, best_idx, tgt_len[batch_idx, best_idx] - 1] = eos_token_ids[0]
-        
+
         captions = self.tokenizer.batch_decode(decoded.squeeze(1), skip_special_tokens=True)
         for qid, pred in zip(image_id, captions):
             self.predictions.append({
-                "image_id": qid.item(), 
-                "caption": pred, 
+                "image_id": qid.item(),
+                "caption": pred,
             })
 
     def after_eval(self, **kwargs):
@@ -498,12 +512,12 @@ def get_handler(args):
 
 
 def train_one_epoch(
-        model: torch.nn.Module, data_loader: Iterable, 
-        optimizer: torch.optim.Optimizer, device: torch.device, 
-        handler: TaskHandler, epoch: int, start_steps: int, 
-        lr_schedule_values: list, loss_scaler, max_norm: float = 0, 
-        update_freq: int = 1, model_ema: Optional[ModelEma] = None, 
-        log_writer: Optional[TensorboardLogger] = None, 
+        model: torch.nn.Module, data_loader: Iterable,
+        optimizer: torch.optim.Optimizer, device: torch.device,
+        handler: TaskHandler, epoch: int, start_steps: int,
+        lr_schedule_values: list, loss_scaler, max_norm: float = 0,
+        update_freq: int = 1, model_ema: Optional[ModelEma] = None,
+        log_writer: Optional[TensorboardLogger] = None,
         task = None, mixup_fn=None, search_space_choices=None,supernet_config=None
 ):
     model.train(True)
@@ -537,10 +551,10 @@ def train_one_epoch(
         # mixup for imagenet finetuning
         if mixup_fn is not None:
             data["image"], data["label"] = mixup_fn(data["image"], data["label"])
-        
+
         if task in ["coco_captioning", "nocaps"]:
             data["global_step"] = global_step
-        
+
 
         #Random SubNet Loss
         sample_config = sample_configs(search_space_choices,False)
@@ -552,7 +566,7 @@ def train_one_epoch(
                 results,subnet_logits = handler.train_batch(model, **data,return_logits=True)
         loss_1 = results.pop("loss")
 
-        
+
         #Supernet Loss
         model.module.set_sample_config(supernet_config)
         if loss_scaler is None:
@@ -560,13 +574,13 @@ def train_one_epoch(
         else:
             with torch.cuda.amp.autocast():
                 results, supernet_logits = handler.train_batch(model, **data,return_logits=True)
- 
+
         loss_2= results.pop("loss")
-        
+
         loss = (loss_1+loss_2)/2
 
         #Distillation Loss:
-        
+
         temp = 5
         soft_targets = torch.nn.functional.softmax(supernet_logits/temp, dim=-1)
         log_probs = torch.nn.functional.log_softmax(subnet_logits / temp, dim=-1)
@@ -625,22 +639,22 @@ def train_one_epoch(
 
         if log_writer is not None:
             kwargs = {
-                "loss": loss_value, 
+                "loss": loss_value,
             }
             for key in results:
                 kwargs[key] = results[key]
             log_writer.update(head="train", **kwargs)
 
             kwargs = {
-                "loss_scale": loss_scale_value, 
-                "lr": max_lr, 
-                "min_lr": min_lr, 
-                "weight_decay": weight_decay_value, 
-                "grad_norm": grad_norm, 
+                "loss_scale": loss_scale_value,
+                "lr": max_lr,
+                "min_lr": min_lr,
+                "weight_decay": weight_decay_value,
+                "grad_norm": grad_norm,
             }
             log_writer.update(head="opt", **kwargs)
             log_writer.set_step()
-    
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
@@ -664,7 +678,7 @@ def evaluate(data_loader, model, device, handler):#"",search_space_choices,super
             handler.eval_batch(model, **data)
         #if count >=300:
         #    break;
-        count = count + 1 
+        count = count + 1
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
 
