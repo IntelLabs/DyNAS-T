@@ -125,6 +125,8 @@ coverity_tmp/
 data/
 runs/
 *.png
+logs.txt
+log.txt
 
 # Neural Compressor
 nc_workspace/

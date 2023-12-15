@@ -24,11 +24,13 @@ from typing import List
 import pandas as pd
 import requests
 
+from dynast.utils.distributed import get_distributed_vars
+
 
 def set_logger(
     level: int = logging.INFO,
     auxiliary_log_level: int = logging.ERROR,
-):
+) -> None:
     """Create logger object and set the logging level to `level`."""
     global log
     log = logging.getLogger()
@@ -37,20 +39,38 @@ def set_logger(
     console_handler = logging.StreamHandler()
     console_handler.setLevel(level)
 
+    LOCAL_RANK, _, _, _ = get_distributed_vars()
+    if LOCAL_RANK is not None:
+        log_str = f"[%(asctime)s worker-{LOCAL_RANK}] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s"
+    else:
+        log_str = "[%(asctime)s] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s"
+
     formatter = logging.Formatter(
-        "[%(asctime)s %(processName)s #%(process)d] %(levelname)-5s %(filename)s:%(lineno)d - %(message)s",
+        log_str,
         "%m-%d %H:%M:%S",
     )
     console_handler.setFormatter(formatter)
     log.addHandler(console_handler)
 
-    # Disable PIL polluting logs with it's debug logs: https://github.com/camptocamp/pytest-odoo/issues/15
-    logging.getLogger('PIL').setLevel(auxiliary_log_level)
-    logging.getLogger('fvcore.nn.jit_analysis').setLevel(auxiliary_log_level)
+    # PIL pollutes logs with debug by default: https://github.com/camptocamp/pytest-odoo/issues/15
+    loggers_3rd_party = ['PIL', 'fvcore.nn.jit_analysis', 'neural_compressor']
+    for logger_3rd_party in loggers_3rd_party:
+        logging.getLogger(logger_3rd_party).setLevel(auxiliary_log_level)
 
 
 log = None
+
 set_logger()
+
+
+def reset_logger() -> None:
+    """Resets logger settings. Useful when 3rd party logger is created after DyNAS-T logger and overwrites it's settings."""
+    global log
+    if not log:
+        # To avoid crashes if logger hasn't been initialized yet, initialize it with default settings
+        set_logger()
+        return
+    set_logger(level=log.level)
 
 
 def measure_time(func):
