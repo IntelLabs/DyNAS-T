@@ -17,6 +17,7 @@ import os
 
 import pandas as pd
 import torch.distributed as dist
+from pymoo.core.problem import Problem
 
 from dynast.predictors.predictor_manager import PredictorManager
 from dynast.search.evolutionary import (
@@ -271,6 +272,154 @@ class NASBaseConfig:
         if 'bootstrapnas' in self.supernet:
             df['Sub-network'] = df['Sub-network'].apply(BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas)
         return df
+
+
+class Evolutionary(NASBaseConfig):
+    search_manager: EvolutionaryManager = None
+    problem: Problem = None
+
+    def __init__(
+        self,
+        supernet: str,
+        optimization_metrics: list,
+        measurements: list,
+        num_evals: int,
+        results_path: str,
+        dataset_path: str = None,
+        verbose: bool = False,
+        search_algo: str = 'nsga2',
+        population: int = 50,
+        seed: int = 42,
+        batch_size: int = 128,
+        eval_batch_size: int = 128,
+        supernet_ckpt_path: str = None,
+        device: str = 'cpu',
+        test_fraction: float = 1.0,
+        mp_calibration_samples: int = 100,
+        dataloader_workers: int = 4,
+        metric_eval_fns: dict = None,
+        **kwargs,
+    ):
+        super().__init__(
+            dataset_path=dataset_path,
+            supernet=supernet,
+            optimization_metrics=optimization_metrics,
+            measurements=measurements,
+            num_evals=num_evals,
+            results_path=results_path,
+            seed=seed,
+            population=population,
+            batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
+            verbose=verbose,
+            search_algo=search_algo,
+            supernet_ckpt_path=supernet_ckpt_path,
+            device=device,
+            test_fraction=test_fraction,
+            mp_calibration_samples=mp_calibration_samples,
+            dataloader_workers=dataloader_workers,
+            metric_eval_fns=metric_eval_fns,
+            **kwargs,
+        )
+
+    def _init_evolutionary_manager(self):
+        # Following sets up the algorithm based on number of objectives
+        # Could be refractored at the expense of readability
+        if self.num_objectives == 1:
+            self.problem = EvolutionarySingleObjective(
+                evaluation_interface=self.validation_interface,
+                param_count=self.supernet_manager.param_count,
+                param_upperbound=self.supernet_manager.param_upperbound,
+            )
+            if self.search_algo == 'cmaes':
+                self.search_manager = EvolutionaryManager(
+                    algorithm='cmaes',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_cmaes(num_evals=self.num_evals)
+            else:
+                self.search_manager = EvolutionaryManager(
+                    algorithm='ga',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
+        elif self.num_objectives == 2:
+            self.problem = EvolutionaryMultiObjective(
+                evaluation_interface=self.validation_interface,
+                param_count=self.supernet_manager.param_count,
+                param_upperbound=self.supernet_manager.param_upperbound,
+            )
+            if self.search_algo == 'age':
+                self.search_manager = EvolutionaryManager(
+                    algorithm='age',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_age(population=self.population, num_evals=self.num_evals)
+            else:
+                self.search_manager = EvolutionaryManager(
+                    algorithm='nsga2',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
+        elif self.num_objectives == 3:
+            self.problem = EvolutionaryManyObjective(
+                evaluation_interface=self.validation_interface,
+                param_count=self.supernet_manager.param_count,
+                param_upperbound=self.supernet_manager.param_upperbound,
+            )
+            if self.search_algo == 'ctaea':
+                self.search_manager = EvolutionaryManager(
+                    algorithm='ctaea',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_ctaea(num_evals=self.num_evals)
+            elif self.search_algo == 'moead':
+                self.search_manager = EvolutionaryManager(
+                    algorithm='moead',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_moead(num_evals=self.num_evals)
+            else:
+                self.search_manager = EvolutionaryManager(
+                    algorithm='unsga3',
+                    seed=self.seed,
+                    n_obj=self.num_objectives,
+                    verbose=self.verbose,
+                )
+                self.search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
+        else:
+            log.error('Number of objectives not supported. Update optimization_metrics!')
+
+    def search(self):
+        self._init_search()
+        self._init_evolutionary_manager()
+
+        results = self.search_manager.run_search(self.problem)
+
+        latest_population = results.pop.get('X')
+
+        log.info("Validated model architectures in file: {}".format(self.results_path))
+
+        output = list()
+        for individual in latest_population:
+            param_individual = self.supernet_manager.translate2param(individual)
+            if 'bootstrapnas' in self.supernet:
+                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
+            output.append(param_individual)
+
+        return output
 
 
 class LINAS(NASBaseConfig):
@@ -589,147 +738,6 @@ class LINAS(NASBaseConfig):
             results = search_manager.run_search(problem)
 
             latest_population = results.pop.get('X')
-
-        log.info("Validated model architectures in file: {}".format(self.results_path))
-
-        output = list()
-        for individual in latest_population:
-            param_individual = self.supernet_manager.translate2param(individual)
-            if 'bootstrapnas' in self.supernet:
-                param_individual = BootstrapNASEncoding.convert_subnet_config_to_bootstrapnas(param_individual)
-            output.append(param_individual)
-
-        return output
-
-
-class Evolutionary(NASBaseConfig):
-    def __init__(
-        self,
-        supernet,
-        optimization_metrics,
-        measurements,
-        num_evals,
-        results_path,
-        dataset_path: str = None,
-        seed=42,
-        population=50,
-        batch_size: int = 128,
-        eval_batch_size: int = 128,
-        verbose=False,
-        search_algo='nsga2',
-        supernet_ckpt_path=None,
-        test_fraction: float = 1.0,
-        mp_calibration_samples: int = 100,
-        dataloader_workers: int = 4,
-        device: str = 'cpu',
-        **kwargs,
-    ):
-        super().__init__(
-            dataset_path=dataset_path,
-            supernet=supernet,
-            optimization_metrics=optimization_metrics,
-            measurements=measurements,
-            num_evals=num_evals,
-            results_path=results_path,
-            seed=seed,
-            population=population,
-            batch_size=batch_size,
-            eval_batch_size=eval_batch_size,
-            verbose=verbose,
-            search_algo=search_algo,
-            supernet_ckpt_path=supernet_ckpt_path,
-            device=device,
-            test_fraction=test_fraction,
-            mp_calibration_samples=mp_calibration_samples,
-            dataloader_workers=dataloader_workers,
-            **kwargs,
-        )
-
-    def search(self):
-        self._init_search()
-
-        # Following sets up the algorithm based on number of objectives
-        # Could be refractored at the expense of readability
-        if self.num_objectives == 1:
-            problem = EvolutionarySingleObjective(
-                evaluation_interface=self.validation_interface,
-                param_count=self.supernet_manager.param_count,
-                param_upperbound=self.supernet_manager.param_upperbound,
-            )
-            if self.search_algo == 'cmaes':
-                search_manager = EvolutionaryManager(
-                    algorithm='cmaes',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_cmaes(num_evals=self.num_evals)
-            else:
-                search_manager = EvolutionaryManager(
-                    algorithm='ga',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_ga(population=self.population, num_evals=self.num_evals)
-        elif self.num_objectives == 2:
-            problem = EvolutionaryMultiObjective(
-                evaluation_interface=self.validation_interface,
-                param_count=self.supernet_manager.param_count,
-                param_upperbound=self.supernet_manager.param_upperbound,
-            )
-            if self.search_algo == 'age':
-                search_manager = EvolutionaryManager(
-                    algorithm='age',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_age(population=self.population, num_evals=self.num_evals)
-            else:
-                search_manager = EvolutionaryManager(
-                    algorithm='nsga2',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_nsga2(population=self.population, num_evals=self.num_evals)
-        elif self.num_objectives == 3:
-            problem = EvolutionaryManyObjective(
-                evaluation_interface=self.validation_interface,
-                param_count=self.supernet_manager.param_count,
-                param_upperbound=self.supernet_manager.param_upperbound,
-            )
-            if self.search_algo == 'ctaea':
-                search_manager = EvolutionaryManager(
-                    algorithm='ctaea',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_ctaea(num_evals=self.num_evals)
-            elif self.search_algo == 'moead':
-                search_manager = EvolutionaryManager(
-                    algorithm='moead',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_moead(num_evals=self.num_evals)
-            else:
-                search_manager = EvolutionaryManager(
-                    algorithm='unsga3',
-                    seed=self.seed,
-                    n_obj=self.num_objectives,
-                    verbose=self.verbose,
-                )
-                search_manager.configure_unsga3(population=self.population, num_evals=self.num_evals)
-        else:
-            log.error('Number of objectives not supported. Update optimization_metrics!')
-
-        results = search_manager.run_search(problem)
-
-        latest_population = results.pop.get('X')
 
         log.info("Validated model architectures in file: {}".format(self.results_path))
 
