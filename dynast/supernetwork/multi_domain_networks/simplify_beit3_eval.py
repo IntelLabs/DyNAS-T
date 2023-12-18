@@ -315,6 +315,12 @@ def get_args():
     )
 
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
+    parser.add_argument(
+        '--mixed_precision',
+        '--mp',
+        action='store_true',
+        help='If set, search will be performed over both architecture and mixed precision configurations.',
+    )
 
     # known_args, _ = parser.parse_known_args()
 

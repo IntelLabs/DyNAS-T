@@ -24,7 +24,6 @@ from datetime import datetime
 
 import torch
 from fvcore.nn import FlopCountAnalysis
-from neural_compressor import set_workspace
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 
@@ -55,7 +54,7 @@ def get_regex_names(model):
     return regex_module_names
 
 
-def validate_accuracy_top1(model, data_loader_test, task_handler, device, sample_config):
+def validate_accuracy_top1(model, data_loader_test, task_handler, device):
     ext_test_stats, task_key = evaluate(
         data_loader_test, model, device, task_handler
     )  # ,search_space_choices,supernet_config)
@@ -108,8 +107,10 @@ class Beit3ImageNetRunner:
         params_predictor=None,
         model_size_predictor=None,
         batch_size: int = 16,
+        eval_batch_size: int = 16,
         checkpoint_path=None,
         device: str = 'cpu',
+        mixed_precision: bool = False,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -118,16 +119,16 @@ class Beit3ImageNetRunner:
         self.params_predictor = params_predictor
         self.model_size_predictor = model_size_predictor
         self.batch_size = batch_size
+        self.eval_batch_size = eval_batch_size
         self.dataset_path = dataset_path
         self.checkpoint_path = checkpoint_path
         self.device = device
+        self.mixed_precision = mixed_precision
 
-        self.supernet_model, self.eval_dataloader, self.task_handler, self.device = self.create_model_dataset(
-            self.checkpoint_path
-        )
+        if self.mixed_precision and 'cpu' not in self.device:
+            log.warning(f'Mixed precision is not supported on "{self.device}". Setting to "cpu".')
 
-    # self.eval_dataloader = prepare_data_loader(self.dataset_path)
-    # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
+        self.supernet_model, self.eval_dataloader, self.task_handler = self.create_model_dataset(self.checkpoint_path)
 
     def create_model_dataset(
         self,
@@ -135,16 +136,15 @@ class Beit3ImageNetRunner:
         num_layers: int = 12,
     ):
         args_new, ds_init = get_args()
-        args_new.data_path = self.dataset_path  # TODO(macsz) Fix
+        args_new.data_path = self.dataset_path
 
         args_new.finetune = checkpoint_path
         args_new.model = 'beit3_base_patch16_224'
         args_new.task = 'imagenet'
         args_new.sentencepiece_model = 'dynast/supernetwork/multi_domain_networks/beit3.spm'  # TODO(macsz) Fix
-        args_new.batch_size = 128  # TODO(macsz) Fix
-        args_new.eval_batch_size = 32  # TODO(macsz) Fix
+        args_new.batch_size = self.batch_size
+        args_new.eval_batch_size = self.eval_batch_size
         args_new.eval = True
-        device = 'cpu'  # torch.device(args_new.device)  # TODO(macsz) Fix
 
         data_loader_test = create_downstream_dataset(args_new, is_eval=True)
         args_model = _get_base_config(drop_path_rate=args_new.drop_path)
@@ -160,19 +160,19 @@ class Beit3ImageNetRunner:
         model_ema = None
         if args_new.model_ema:
             # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-            model_ema = ModelEma(
-                model, decay=args_new.model_ema_decay, device='cpu' if args_new.model_ema_force_cpu else '', resume=''
-            )
+            if args_new.model_ema_force_cpu:
+                self.device = 'cpu'
+            model_ema = ModelEma(model, decay=args_new.model_ema_decay, device=self.device, resume='')
             log.debug("Using EMA with decay = %.8f" % args_new.model_ema_decay)
         # orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
         # model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
         task_handler = get_handler(args_new)
 
-        model.to(device)
+        model.to(self.device)
         supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num": 12 * [12], "ffn_size": [3072] * 12}
 
         model.set_sample_config(supernet_config)
-        return model, data_loader_test, task_handler, device
+        return model, data_loader_test, task_handler
 
     def estimate_accuracy_top1(
         self,
@@ -207,16 +207,21 @@ class Beit3ImageNetRunner:
         subnet_cfg: dict,
         qbit_list,
     ) -> float:  # pragma: no cover
-        regex_module_names = get_regex_names(self.supernet_model)
-        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path)
+        model_fp32, _, _ = self.create_model_dataset(self.checkpoint_path)
         model_fp32.set_sample_config(subnet_cfg)
 
-        quantized_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
+        if self.mixed_precision:
+            regex_module_names = get_regex_names(self.supernet_model)
+            quantized_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
+            model_to_eval = quantized_model
+        else:
+            model_to_eval = model_fp32
+            model_to_eval.to(self.device)
 
-        accuracy_top1 = validate_accuracy_top1(
-            quantized_model, self.eval_dataloader, self.task_handler, self.device, subnet_cfg
-        )
-        del quantized_model, model_fp32
+        accuracy_top1 = validate_accuracy_top1(model_to_eval, self.eval_dataloader, self.task_handler, self.device)
+        del model_fp32
+        if self.mixed_precision:
+            del quantized_model
 
         return accuracy_top1
 
@@ -253,25 +258,33 @@ class Beit3ImageNetRunner:
             f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}, Batch size = {self.batch_size}'
         )
 
-        regex_module_names = get_regex_names(self.supernet_model)
         config_new = {
             'embed_size': 768,
             'num_layers': subnet_sample['num_layers'],
             'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
             'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
+        model_fp32, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
-        q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list, regex_module_names)
+        if self.mixed_precision:
+            regex_module_names = get_regex_names(self.supernet_model)
+            q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list, regex_module_names)
+            model_to_eval = q_model
+        else:
+            model_to_eval = model_fp32
+            model_to_eval.to(self.device)
 
         lat_mean, lat_std = measure_latency(
-            q_model,
+            model_to_eval,
             input_size=(self.batch_size, 3, 224, 224),
             device=self.device,
         )
-        del q_model, model_fp32
+        del model_fp32
+        if self.mixed_precision:
+            del q_model
+
         logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
         return lat_mean
 
@@ -358,7 +371,7 @@ class Beit3ImageNetRunner:
             'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
             'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
+        model_fp32, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
@@ -382,20 +395,22 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
         measurements: list = ['accuracy_top1', 'latency'],
         csv_path=None,
         predictor_mode: bool = False,
+        mixed_precision: bool = False,
     ):
-        super().__init__(evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode)
-
-    def _set_workspace(self):
-        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
-        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
-        workspace_name = f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
-        set_workspace(workspace_name)
-        log.debug(f'Neural Compressor workspace: {workspace_name}')
+        super().__init__(
+            evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode, mixed_precision
+        )
 
     def eval_subnet(self, x):
         # PyMoo vector to Elastic Parameter Mapping
         param_dict = self.manager.translate2param(x)
-        qbit_list = param_dict['q_bits']
+
+        if self.mixed_precision:
+            qbit_list = param_dict['q_bits']
+            self._set_workspace()
+        else:
+            qbit_list = None
+
         sample = {
             'embed_size': 768,
             'num_layers': param_dict['num_layers'][0],
@@ -404,8 +419,6 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
         }
 
         subnet_sample = copy.deepcopy(sample)
-
-        self._set_workspace()
 
         individual_results = dict()
         for metric in ['params', 'latency', 'macs', 'model_size', 'accuracy_top1']:

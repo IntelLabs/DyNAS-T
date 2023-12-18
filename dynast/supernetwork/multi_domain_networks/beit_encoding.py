@@ -24,8 +24,8 @@ from dynast.utils import log
 
 
 class BeitImageNetEncoding(EncodingBase):
-    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
-        super().__init__(param_dict, verbose, seed)
+    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0, mixed_precision: bool = False):
+        super().__init__(param_dict, verbose, seed, mixed_precision)
 
     def onehot_custom(self, subnet_cfg, provide_onehot=True, max_layers=12):
         features = []
@@ -35,8 +35,10 @@ class BeitImageNetEncoding(EncodingBase):
         # Change for full search space
         intermediate_size_list = subnet_cfg['ffn_size'][:num_layers] + [0] * (max_layers - num_layers)
         features = [num_layers] + attn_head_list + intermediate_size_list
-        qbit_list = subnet_cfg['q_bits'][: 6 * num_layers] + [0] * (max_layers - num_layers) * 6
-        features = features + qbit_list
+        if self.mixed_precision:
+            log.debug('Extending one-hot encoded architecture w/ mixed precision')
+            qbit_list = subnet_cfg['q_bits'][: 6 * num_layers] + [0] * (max_layers - num_layers) * 6
+            features = features + qbit_list
         if provide_onehot == True:
             examples = np.array([features])
             one_hot_count = 0
