@@ -238,7 +238,7 @@ class Beit3ImageNetRunner:
             `macs`
         """
         macs, params = compute_macs(self.supernet_model, subnet_cfg, self.device)
-        logging.info('Model\'s params: {}'.format(params))
+        logging.debug('Model\'s params: {}'.format(params))
         return macs, params
 
     @torch.no_grad()
