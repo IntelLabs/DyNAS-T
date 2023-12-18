@@ -13,30 +13,11 @@
 # limitations under the License.
 
 import argparse
-import datetime
-import json
-import os
-import random
-import time
 import warnings
-from pathlib import Path
 
-import numpy as np
-import torch
-import torch.backends.cudnn as cudnn
-import yaml
-from timm.data.mixup import Mixup
-from timm.models import create_model
-from timm.utils import ModelEma
-
-from .beit3_supernetwork import BEiT3ForImageClassification
-from .dataset import create_downstream_dataset
-from .engine_for_elastic_finetuning import evaluate, get_handler, train_one_epoch
-from .modeling_utils import _get_base_config
 from .utils import *
 
 warnings.filterwarnings("ignore")
-from .engine_for_elastic_finetuning import evaluate, get_handler, train_one_epoch
 
 
 def get_args():
@@ -322,106 +303,6 @@ def get_args():
         help='If set, search will be performed over both architecture and mixed precision configurations.',
     )
 
-    # known_args, _ = parser.parse_known_args()
-
-    # if known_args.enable_deepspeed:
-    #    try:
-    #        import deepspeed
-    #         from deepspeed import DeepSpeedConfig
-    #         parser = deepspeed.add_config_arguments(parser)
-    #        ds_init = deepspeed.initialize
-    #    except:
-    #         print("Please 'pip install deepspeed==0.4.0'")
-    #        exit(0)
-    # else:
     ds_init = None
 
     return parser.parse_args(), ds_init
-
-
-def config_parser(filename):
-    with open(filename, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def get_accuracy_beit3(sample_config=None):
-    args, ds_init = get_args()
-    args.data_path = '/datasets/imagenet-ilsvrc2012/'
-    args.finetune = '/workdisk/nosnap/reducedsearchspace_70epochs/checkpoint-best.pth'
-    args.model = 'beit3_base_patch16_224'
-    args.task = 'imagenet'
-    args.sentencepiece_model = 'beit3.spm'
-    args.batch_size = 128
-    args.eval = True
-    device = torch.device(args.device)
-
-    data_loader_test = create_downstream_dataset(args, is_eval=True)
-    args_new = _get_base_config(drop_path_rate=args.drop_path)
-    args_new.normalize_output = False
-    model = BEiT3ForImageClassification(args_new, num_classes=1000)
-
-    if args.finetune:
-        load_model_and_may_interpolate(args.finetune, model, args.model_key, args.model_prefix)
-
-    # torch.distributed.barrier()
-    model_ema = None
-    if args.model_ema:
-        # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-        model_ema = ModelEma(
-            model, decay=args.model_ema_decay, device='cpu' if args.model_ema_force_cpu else '', resume=''
-        )
-        print("Using EMA with decay = %.8f" % args.model_ema_decay)
-    # orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
-    # model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
-    task_handler = get_handler(args)
-
-    search_space_choices = config_parser("configs/search_space_config.yml")
-    supernet_config = config_parser("configs/supernet_config.yml")
-
-    model.to(device)
-
-    model.set_sample_config(supernet_config)
-
-    ext_test_stats, task_key = evaluate(
-        data_loader_test, model, device, task_handler, search_space_choices, supernet_config
-    )
-    print(
-        f"Accuracy of the network on the {len(data_loader_test.dataset)} test images: {ext_test_stats[task_key]:.3f}%"
-    )
-
-
-def get_macs():
-    args, ds_init = get_args()
-    numels = []
-    args.data_path = '/datasets/imagenet-ilsvrc2012/'
-    args.finetune = '/workdisk/nosnap/reducedsearchspace_70epochs/checkpoint-best.pth'
-    args.model = 'beit3_base_patch16_224'
-    args.task = 'imagenet'
-    args.sentencepiece_model = 'beit3.spm'
-    args.batch_size = 128
-    args.eval = True
-
-    args_new = _get_base_config(drop_path_rate=args.drop_path)
-    args_new.normalize_output = False
-    model = BEiT3ForImageClassification(args_new, num_classes=1000)
-    supernet_config = config_parser("configs/supernet_config.yml")
-    model.set_sample_config(supernet_config)
-    for module_name, module in model.named_modules():
-        if hasattr(module, 'calc_sampled_param_num'):
-            if module_name == 'classifier':
-                continue
-            if module_name.split('.')[1] == 'encoder':
-                if int(module_name.split('.')[3]) > (supernet_config['num_layers'] - 1):
-                    continue
-
-            numels.append(module.calc_sampled_param_num())
-    params = sum(numels)
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    print(n_parameters)
-    return macs()
-
-
-# et_macs()
-# get_accuracy_beit3()

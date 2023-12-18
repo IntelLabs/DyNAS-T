@@ -24,20 +24,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from fairscale.nn import checkpoint_wrapper, wrap
 from timm.models.layers import trunc_normal_ as __call_trunc_normal_
-
-# try:
-#    from apex.normalization import FusedLayerNorm as LayerNorm
-# except ModuleNotFoundError:
 from torch.nn import LayerNorm
 from torchscale.architecture.encoder import Encoder
 from torchscale.architecture.utils import init_bert_params
 from torchscale.component.droppath import DropPath
 from torchscale.component.embedding import PositionalEmbedding, TextEmbedding, VisionEmbedding
 from torchscale.component.multiway_network import MutliwayEmbedding
-
-# from torchscale.component.feedforward_network import FeedForwardNetwork, make_experts
-# from torchscale.component.multihead_attention import MultiheadAttention
-# rom torchscale.component.multiway_network import MultiwayWrapper, set_split_position
 from torchscale.component.relative_position_bias import RelativePositionBias
 from torchscale.component.xmoe.moe_layer import MOELayer
 from torchscale.component.xmoe.routing import Top1Gate, Top2Gate
@@ -839,9 +831,9 @@ class BEiT3Wrapper(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
 
-class BEiT3ForImageClassification(BEiT3Wrapper):
+class SuperBEiT3ForImageClassification(BEiT3Wrapper):
     def __init__(self, args, num_classes, norm_layer=nn.LayerNorm, **kwargs):
-        super(BEiT3ForImageClassification, self).__init__(args=args)
+        super(SuperBEiT3ForImageClassification, self).__init__(args=args)
         embed_dim = args.encoder_embed_dim
         self.fc_norm = norm_layer(embed_dim)
         self.head = nn.Linear(embed_dim, num_classes) if num_classes > 0 else nn.Identity()

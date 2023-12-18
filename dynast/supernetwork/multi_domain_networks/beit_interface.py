@@ -28,15 +28,15 @@ from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
 
 from dynast.search.evaluation_interface import EvaluationInterface
+from dynast.supernetwork.multi_domain_networks.beit3_supernetwork import SuperBEiT3ForImageClassification
+from dynast.supernetwork.multi_domain_networks.dataset import create_downstream_dataset
+from dynast.supernetwork.multi_domain_networks.engine_for_elastic_finetuning import evaluate, get_handler
+from dynast.supernetwork.multi_domain_networks.modeling_utils import _get_base_config
+from dynast.supernetwork.multi_domain_networks.simplify_beit3_eval import get_args
+from dynast.supernetwork.multi_domain_networks.utils import *
 from dynast.utils import log
 from dynast.utils.distributed import get_distributed_vars
 from dynast.utils.nn import measure_latency
-
-from .beit3_supernetwork import BEiT3ForImageClassification
-from .engine_for_elastic_finetuning import evaluate, get_handler
-from .modeling_utils import _get_base_config
-from .simplify_beit3_eval import create_downstream_dataset, get_args
-from .utils import *
 
 warnings.filterwarnings("ignore")
 
@@ -153,7 +153,7 @@ class Beit3ImageNetRunner:
         args_model.normalize_output = False
         args_model.encoder_layers = num_layers
 
-        model = BEiT3ForImageClassification(args_model, num_classes=1000)
+        model = SuperBEiT3ForImageClassification(args_model, num_classes=1000)
 
         if args_new.finetune:
             load_model_and_may_interpolate(args_new.finetune, model, args_new.model_key, args_new.model_prefix)
