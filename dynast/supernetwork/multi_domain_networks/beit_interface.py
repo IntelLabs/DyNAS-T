@@ -92,49 +92,6 @@ def compute_macs(model, sample_config, device):
     return macs, params
 
 
-def create_model_dataset(checkpoint_path, num_layers=12):
-    args_new, ds_init = get_args()
-    args_new.data_path = '/datasets/imagenet-ilsvrc2012/'
-
-    args_new.finetune = checkpoint_path
-    args_new.model = 'beit3_base_patch16_224'
-    args_new.task = 'imagenet'
-    args_new.sentencepiece_model = 'dynast/supernetwork/multi_domain_networks/beit3.spm'
-    args_new.batch_size = 128
-    # args_new.batch_size = 128
-    args_new.eval_batch_size = 32
-    args_new.eval = True
-    device = 'cpu'  # torch.device(args_new.device)
-
-    data_loader_test = create_downstream_dataset(args_new, is_eval=True)
-    args_model = _get_base_config(drop_path_rate=args_new.drop_path)
-    args_model.normalize_output = False
-    args_model.encoder_layers = num_layers
-
-    model = BEiT3ForImageClassification(args_model, num_classes=1000)
-
-    if args_new.finetune:
-        load_model_and_may_interpolate(args_new.finetune, model, args_new.model_key, args_new.model_prefix)
-
-    # torch.distributed.barrier()
-    model_ema = None
-    if args_new.model_ema:
-        # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-        model_ema = ModelEma(
-            model, decay=args_new.model_ema_decay, device='cpu' if args_new.model_ema_force_cpu else '', resume=''
-        )
-        print("Using EMA with decay = %.8f" % args_new.model_ema_decay)
-    # orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
-    # model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
-    task_handler = get_handler(args_new)
-
-    model.to(device)
-    supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num": 12 * [12], "ffn_size": [3072] * 12}
-
-    model.set_sample_config(supernet_config)
-    return model, data_loader_test, task_handler, device
-
-
 class Beit3ImageNetRunner:
     """The BertSST2Runner class manages the sub-network selection from the BERT super-network and
     the validation measurements of the sub-networks. Bert-Base network finetuned on SST-2 dataset is
@@ -165,12 +122,57 @@ class Beit3ImageNetRunner:
         self.checkpoint_path = checkpoint_path
         self.device = device
 
-        self.supernet_model, self.eval_dataloader, self.task_handler, self.device = create_model_dataset(
+        self.supernet_model, self.eval_dataloader, self.task_handler, self.device = self.create_model_dataset(
             self.checkpoint_path
         )
 
     # self.eval_dataloader = prepare_data_loader(self.dataset_path)
     # self.supernet_model, self.base_config = load_supernet(self.checkpoint_path)
+
+    def create_model_dataset(
+        self,
+        checkpoint_path: str,
+        num_layers: int = 12,
+    ):
+        args_new, ds_init = get_args()
+        args_new.data_path = self.dataset_path  # TODO(macsz) Fix
+
+        args_new.finetune = checkpoint_path
+        args_new.model = 'beit3_base_patch16_224'
+        args_new.task = 'imagenet'
+        args_new.sentencepiece_model = 'dynast/supernetwork/multi_domain_networks/beit3.spm'  # TODO(macsz) Fix
+        args_new.batch_size = 128  # TODO(macsz) Fix
+        args_new.eval_batch_size = 32  # TODO(macsz) Fix
+        args_new.eval = True
+        device = 'cpu'  # torch.device(args_new.device)  # TODO(macsz) Fix
+
+        data_loader_test = create_downstream_dataset(args_new, is_eval=True)
+        args_model = _get_base_config(drop_path_rate=args_new.drop_path)
+        args_model.normalize_output = False
+        args_model.encoder_layers = num_layers
+
+        model = BEiT3ForImageClassification(args_model, num_classes=1000)
+
+        if args_new.finetune:
+            load_model_and_may_interpolate(args_new.finetune, model, args_new.model_key, args_new.model_prefix)
+
+        # torch.distributed.barrier()
+        model_ema = None
+        if args_new.model_ema:
+            # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
+            model_ema = ModelEma(
+                model, decay=args_new.model_ema_decay, device='cpu' if args_new.model_ema_force_cpu else '', resume=''
+            )
+            log.debug("Using EMA with decay = %.8f" % args_new.model_ema_decay)
+        # orch.distributed.init_process_group(backend='nccl',world_size=8,rank=0)
+        # model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
+        task_handler = get_handler(args_new)
+
+        model.to(device)
+        supernet_config = {"embed_size": 768, "num_layers": num_layers, "head_num": 12 * [12], "ffn_size": [3072] * 12}
+
+        model.set_sample_config(supernet_config)
+        return model, data_loader_test, task_handler, device
 
     def estimate_accuracy_top1(
         self,
@@ -206,7 +208,7 @@ class Beit3ImageNetRunner:
         qbit_list,
     ) -> float:  # pragma: no cover
         regex_module_names = get_regex_names(self.supernet_model)
-        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path)
+        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path)
         model_fp32.set_sample_config(subnet_cfg)
 
         quantized_model = self.quantize_subnet(model_fp32, qbit_list, regex_module_names)
@@ -258,7 +260,7 @@ class Beit3ImageNetRunner:
             'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
             'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
+        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
@@ -356,7 +358,7 @@ class Beit3ImageNetRunner:
             'head_num': subnet_sample['head_num'][: subnet_sample['num_layers']],
             'ffn_size': subnet_sample["ffn_size"][: subnet_sample['num_layers']],
         }
-        model_fp32, _, _, _ = create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
+        model_fp32, _, _, _ = self.create_model_dataset(self.checkpoint_path, num_layers=subnet_sample['num_layers'])
 
         model_fp32.set_sample_config(config_new)
 
