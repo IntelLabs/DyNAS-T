@@ -30,16 +30,15 @@ from dynast.supernetwork.image_classification.vit.vit_interface import Evaluatio
 from dynast.supernetwork.machine_translation.transformer_encoding import TransformerLTEncoding
 from dynast.supernetwork.machine_translation.transformer_interface import EvaluationInterfaceTransformerLT
 from dynast.supernetwork.multi_domain_networks.beit_encoding import BeitImageNetEncoding
-from dynast.supernetwork.multi_domain_networks.beit_interface import (
-    Beit3ImageNetRunner,
-    EvaluationInterfaceBeit3ImageNet,
-)
 from dynast.supernetwork.text_classification.bert_encoding import BertSST2Encoding
 from dynast.supernetwork.text_classification.bert_interface import EvaluationInterfaceBertSST2
 from dynast.utils import LazyImport
 
 EvaluationInterfaceQuantizedOFAResNet50 = LazyImport(
     'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.EvaluationInterfaceQuantizedOFAResNet50'
+)
+EvaluationInterfaceBeit3ImageNet = LazyImport(
+    'dynast.supernetwork.multi_domain_networks.beit_interface.EvaluationInterfaceBeit3ImageNet'
 )
 
 SUPERNET_ENCODING = {

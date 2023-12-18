@@ -32,7 +32,6 @@ from dynast.supernetwork.image_classification.bootstrapnas.bootstrapnas_interfac
 from dynast.supernetwork.image_classification.ofa.ofa_interface import OFARunner
 from dynast.supernetwork.image_classification.vit.vit_interface import ViTRunner
 from dynast.supernetwork.machine_translation.transformer_interface import TransformerLTRunner
-from dynast.supernetwork.multi_domain_networks.beit_interface import Beit3ImageNetRunner
 from dynast.supernetwork.supernetwork_registry import *
 from dynast.supernetwork.text_classification.bert_interface import BertSST2Runner
 from dynast.utils import LazyImport, log, split_list
@@ -42,6 +41,7 @@ from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetExce
 QuantizedOFARunner = LazyImport(
     'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
 )
+Beit3ImageNetRunner = LazyImport('dynast.supernetwork.multi_domain_networks.beit_interface.Beit3ImageNetRunner')
 
 
 class NASBaseConfig:
