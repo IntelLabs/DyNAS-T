@@ -31,13 +31,23 @@ class EvaluationInterface:
             (Optional) The csv file that get written to during the subnetwork search
     """
 
-    def __init__(self, evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode):
+    def __init__(
+        self,
+        evaluator,
+        manager,
+        optimization_metrics,
+        measurements,
+        csv_path,
+        predictor_mode,
+        mixed_precision: bool = False,
+    ):
         self.evaluator = evaluator
         self.manager = manager
         self.optimization_metrics = optimization_metrics
         self.measurements = measurements
         self.predictor_mode = predictor_mode
         self.csv_path = csv_path
+        self.mixed_precision = mixed_precision
 
     def format_csv(self, csv_header):
         if self.csv_path:

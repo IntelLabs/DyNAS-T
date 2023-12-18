@@ -39,6 +39,7 @@ def _main(args):
         dataloader_workers=args.dataloader_workers,
         distributed=args.distributed,
         dist_timeout=args.dist_timeout,
+        mixed_precision=args.mixed_precision,
     )
 
     results = agent.search()
@@ -109,6 +110,12 @@ def main():
 
     mp_parser = parser.add_argument_group('Mixed Precision search options')
     mp_parser.add_argument(
+        '--mixed_precision',
+        '--mp',
+        action='store_true',
+        help='If set, search will be performed over both architecture and mixed precision configurations.',
+    )
+    mp_parser.add_argument(
         '--mp_calibration_samples',
         default=100,
         type=int,
@@ -137,7 +144,6 @@ def main():
     dist_parser.add_argument("--backend", type=str, default="gloo", choices=['gloo'])
 
     args = parser.parse_args()
-
     _main(args)
 
 
