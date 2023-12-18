@@ -19,18 +19,14 @@ import logging
 import random
 import shutil
 import string
-import time
 import warnings
 from datetime import datetime
 
-import numpy as np
 import torch
-import torchprofile
 from fvcore.nn import FlopCountAnalysis
 from neural_compressor import set_workspace
 from neural_compressor.config import PostTrainingQuantConfig, TuningCriterion
 from neural_compressor.quantization import fit
-from transformers import BertConfig
 
 from dynast.search.evaluation_interface import EvaluationInterface
 from dynast.utils import log
@@ -38,7 +34,7 @@ from dynast.utils.distributed import get_distributed_vars
 from dynast.utils.nn import measure_latency
 
 from .beit3_supernetwork import BEiT3ForImageClassification
-from .engine_for_elastic_finetuning import evaluate, get_handler, train_one_epoch
+from .engine_for_elastic_finetuning import evaluate, get_handler
 from .modeling_utils import _get_base_config
 from .simplify_beit3_eval import create_downstream_dataset, get_args
 from .utils import *
@@ -50,7 +46,6 @@ def get_regex_names(model):
     module_names = []
     regex_module_names = []
     for name, module in model.named_modules():
-        # print(name)
         if name.endswith('.layer'):  # and name!="bert.encoder.layer": #type(module) in (nn.modules.conv.Conv2d,) and
             module_names.append(name)
     for name in module_names:
@@ -64,7 +59,7 @@ def validate_accuracy_top1(model, data_loader_test, task_handler, device, sample
     ext_test_stats, task_key = evaluate(
         data_loader_test, model, device, task_handler
     )  # ,search_space_choices,supernet_config)
-    print(
+    log.debug(
         f"Accuracy of the network on the {len(data_loader_test.dataset)} test images: {ext_test_stats[task_key]:.3f}%"
     )
     return ext_test_stats[task_key]
@@ -83,12 +78,11 @@ def compute_macs(model, sample_config, device):
 
             numels.append(module.calc_sampled_param_num())
     params = sum(numels)
-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
     input_image = torch.randn((1, 3, 224, 224), device=device)
     for module in model.modules():
         if hasattr(module, 'profile') and model != module:
             module.profile(True)
-    print(n_parameters)
     flops = FlopCountAnalysis(model, input_image)
     macs = flops.total()
 
@@ -369,7 +363,7 @@ class Beit3ImageNetRunner:
         q_model = self.quantize_subnet_modelsize(model_fp32, qbit_list, regex_module_names)
         q_model.save(tmp_name)
         model_size = os.path.getsize(f'{tmp_name}/best_model.pt') / (1048576)
-        print('Size (MB):', model_size)
+        log.debug('Size (MB):', model_size)
 
         shutil.rmtree(tmp_name)
         del q_model, model_fp32
