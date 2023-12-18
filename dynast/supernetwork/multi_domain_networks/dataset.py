@@ -37,6 +37,8 @@ from timm.data.transforms import RandomResizedCropAndInterpolation
 from torchvision import transforms
 from torchvision.datasets.folder import default_loader
 
+from dynast.utils import log
+
 from .glossary import normalize_word
 from .randaug import RandomAugment
 from .utils import *
@@ -67,7 +69,7 @@ class BaseDataset(torch.utils.data.Dataset):
                 for line in reader:
                     data = json.loads(line)
                     items.append(data)
-                print("Load %d image-text pairs from %s. " % (len(items) - offset, index_file))
+                log.debug("Load %d image-text pairs from %s. " % (len(items) - offset, index_file))
                 offset = len(items)
         self.items = items
         self.bos_token_id = tokenizer.bos_token_id
@@ -144,7 +146,7 @@ def _write_data_into_jsonl(items, jsonl_file):
         for data in items:
             writer.write(json.dumps(data, indent=None))
             writer.write('\n')
-    print("Write %s with %d items !" % (jsonl_file, len(items)))
+    log.debug("Write %s with %d items !" % (jsonl_file, len(items)))
 
 
 def _make_retrieval_coco_karpathy_dataset_index(
@@ -156,7 +158,7 @@ def _make_retrieval_coco_karpathy_dataset_index(
     coco_karpathy_split_json_file = os.path.join(data_path, "dataset_coco.json")
     items = []
     image_counter = set()
-    print("read %s" % coco_karpathy_split_json_file)
+    log.debug("read %s" % coco_karpathy_split_json_file)
     with open(coco_karpathy_split_json_file, mode="r", encoding="utf-8") as reader:
         data = json.loads(reader.read())
         for item in data["images"]:
@@ -174,7 +176,7 @@ def _make_retrieval_coco_karpathy_dataset_index(
                     )
                 if image_path not in image_counter:
                     image_counter.add(image_path)
-    print(
+    log.debug(
         "Find %d images and %d image-text pairs for karpathy dataset %s split !"
         % (len(image_counter), len(items), split_name)
     )
@@ -192,7 +194,7 @@ def _make_captioning_coco_karpathy_dataset_index(
     coco_karpathy_split_json_file = os.path.join(data_path, "dataset_coco.json")
     items = []
     image_counter = set()
-    print("read %s" % coco_karpathy_split_json_file)
+    log.debug("read %s" % coco_karpathy_split_json_file)
     with open(coco_karpathy_split_json_file, mode="r", encoding="utf-8") as reader:
         data = json.loads(reader.read())
         for item in data["images"]:
@@ -219,7 +221,7 @@ def _make_captioning_coco_karpathy_dataset_index(
                     )
                 if image_path not in image_counter:
                     image_counter.add(image_path)
-    print(
+    log.debug(
         "Find %d images and %d image-text pairs for karpathy dataset %s split !"
         % (len(image_counter), len(items), split_name)
     )
@@ -239,7 +241,7 @@ def _make_nocaps_dataset_index(
     nocaps_split_json_file = os.path.join(data_path, json_file)
     items = []
     image_counter = set()
-    print("read %s" % nocaps_split_json_file)
+    log.debug("read %s" % nocaps_split_json_file)
     with open(nocaps_split_json_file, mode="r", encoding="utf-8") as reader:
         data = json.loads(reader.read())
         for item in data["images"]:
@@ -255,7 +257,7 @@ def _make_nocaps_dataset_index(
             if image_path not in image_counter:
                 image_counter.add(image_path)
 
-    print(
+    log.debug(
         "Find %d images and %d image-text pairs for nocaps dataset %s split !" % (len(image_counter), len(items), split)
     )
     index_file = os.path.join(data_path, "nocaps.%s.jsonl" % split)
@@ -565,10 +567,11 @@ class VQAv2Dataset(BaseDataset):
             annot_paths = [path for path in paths if int(path.split("/")[-1].split("_")[-1][:-4]) in annot]
 
             if len(paths) == len(annot_paths):
-                print("all images have caption annotations")
+                log.debug("all images have caption annotations")
             else:
-                print("not all images have caption annotations")
-            print(len(paths), len(annot_paths), len(annot))
+                log.debug(
+                    f"not all images have caption annotations ({len(paths)=}, {len(annot_paths)=}, {len(annot)=})"
+                )
 
             items = []
             for path in annot_paths:
@@ -600,7 +603,7 @@ class VQAv2Dataset(BaseDataset):
         for item in split2items["val"]:
             val_image2items[item["image_path"]].append(item)
 
-        print("Contains %d image and %d pairs for val set!" % (len(val_image2items), len(split2items["val"])))
+        log.debug("Contains %d image and %d pairs for val set!" % (len(val_image2items), len(split2items["val"])))
 
         val_images = list(val_image2items.keys())
         random.shuffle(val_images)
@@ -667,7 +670,7 @@ class RetrievalDataset(BaseDataset):
             split2images[split].add(each_item["filename"])
 
         for split in split2items:
-            print("%d images and %d image-text pairs!" % (len(split2images[split]), len(split2items[split])))
+            log.debug("%d images and %d image-text pairs!" % (len(split2images[split]), len(split2items[split])))
             _write_data_into_jsonl(split2items[split], os.path.join(data_path, "flickr30k.%s.jsonl" % split))
 
     @staticmethod
@@ -777,8 +780,8 @@ def create_dataloader(dataset, is_train, batch_size, num_workers, pin_mem, dist_
         global_rank = get_rank()
 
         if not is_train and dist_eval and len(dataset) % num_tasks != 0:
-            print(
-                'Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
+            log.warning(
+                'Enabling distributed evaluation with an eval dataset not divisible by process number. '
                 'This will slightly alter validation results as extra duplicate entries are added to achieve '
                 'equal num of samples per-process.'
             )

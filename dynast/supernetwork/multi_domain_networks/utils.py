@@ -41,6 +41,8 @@ from timm.utils import get_state_dict
 from torch import inf
 from torchmetrics import Metric
 
+from dynast.utils import log
+
 
 def bool_flag(s):
     """
@@ -173,7 +175,7 @@ class MetricLogger(object):
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
                 if torch.cuda.is_available():
-                    print(
+                    log.debug(
                         log_msg.format(
                             i,
                             len(iterable),
@@ -185,7 +187,7 @@ class MetricLogger(object):
                         )
                     )
                 else:
-                    print(
+                    log.debug(
                         log_msg.format(
                             i, len(iterable), eta=eta_string, meters=str(self), time=str(iter_time), data=str(data_time)
                         )
@@ -194,7 +196,7 @@ class MetricLogger(object):
             end = time.time()
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-        print('{} Total time: {} ({:.4f} s / it)'.format(header, total_time_str, total_time / len(iterable)))
+        log.debug('{} Total time: {} ({:.4f} s / it)'.format(header, total_time_str, total_time / len(iterable)))
 
 
 class TensorboardLogger(object):
@@ -316,7 +318,7 @@ def init_distributed_mode(args):
         args.rank = int(os.environ['SLURM_PROCID'])
         args.gpu = args.rank % torch.cuda.device_count()
     else:
-        print('Not using distributed mode')
+        log.debug('Not using distributed mode')
         args.distributed = False
         return
 
@@ -324,7 +326,7 @@ def init_distributed_mode(args):
 
     torch.cuda.set_device(args.gpu)
     args.dist_backend = 'nccl'
-    print('| distributed init (rank {}): {}, gpu {}'.format(args.rank, args.dist_url, args.gpu), flush=True)
+    log.debug('| distributed init (rank {}): {}, gpu {}'.format(args.rank, args.dist_url, args.gpu), flush=True)
     torch.distributed.init_process_group(
         backend=args.dist_backend,
         init_method=args.dist_url,
@@ -373,17 +375,19 @@ def load_state_dict(model, state_dict, prefix='', ignore_missing="relative_posit
     missing_keys = warn_missing_keys
 
     if len(missing_keys) > 0:
-        print("Weights of {} not initialized from pretrained model: {}".format(model.__class__.__name__, missing_keys))
+        log.debug(
+            "Weights of {} not initialized from pretrained model: {}".format(model.__class__.__name__, missing_keys)
+        )
     if len(unexpected_keys) > 0:
-        print("Weights from pretrained model not used in {}: {}".format(model.__class__.__name__, unexpected_keys))
+        log.debug("Weights from pretrained model not used in {}: {}".format(model.__class__.__name__, unexpected_keys))
     if len(ignore_missing_keys) > 0:
-        print(
+        log.debug(
             "Ignored weights of {} not initialized from pretrained model: {}".format(
                 model.__class__.__name__, ignore_missing_keys
             )
         )
     if len(error_msgs) > 0:
-        print('\n'.join(error_msgs))
+        log.debug('\n'.join(error_msgs))
 
 
 class NativeScalerWithGradNormCount:
@@ -446,7 +450,7 @@ def cosine_scheduler(
     warmup_iters = warmup_epochs * niter_per_ep
     if warmup_steps > 0:
         warmup_iters = warmup_steps
-    print("Set warmup steps = %d" % warmup_iters)
+    log.debug("Set warmup steps = %d" % warmup_iters)
     if warmup_epochs > 0:
         warmup_schedule = np.linspace(start_warmup_value, base_value, warmup_iters)
 
@@ -505,7 +509,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
                     latest_ckpt = max(int(t), latest_ckpt)
             if latest_ckpt >= 0:
                 args.resume = os.path.join(output_dir, 'checkpoint-%d.pth' % latest_ckpt)
-            print("Auto resume checkpoint: %s" % args.resume)
+            log.debug("Auto resume checkpoint: %s" % args.resume)
 
         if args.resume:
             if args.resume.startswith('https'):
@@ -513,7 +517,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             else:
                 checkpoint = torch.load(args.resume, map_location='cpu')
             model_without_ddp.load_state_dict(checkpoint['model'])
-            print("Resume checkpoint %s" % args.resume)
+            log.debug("Resume checkpoint %s" % args.resume)
             if 'optimizer' in checkpoint and 'epoch' in checkpoint:
                 optimizer.load_state_dict(checkpoint['optimizer'])
                 args.start_epoch = checkpoint['epoch'] + 1
@@ -521,7 +525,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
                     _load_checkpoint_for_ema(model_ema, checkpoint['model_ema'])
                 if 'scaler' in checkpoint:
                     loss_scaler.load_state_dict(checkpoint['scaler'])
-                print("With optim & sched!")
+                log.debug("With optim & sched!")
     else:
         # deepspeed, only support '--auto_resume'.
         if args.auto_resume:
@@ -535,7 +539,7 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
                     latest_ckpt = max(int(t), latest_ckpt)
             if latest_ckpt >= 0:
                 args.resume = os.path.join(output_dir, 'checkpoint-%d' % latest_ckpt)
-                print("Auto resume checkpoint: %d" % latest_ckpt)
+                log.debug("Auto resume checkpoint: %d" % latest_ckpt)
                 _, client_states = model.load_checkpoint(args.output_dir, tag='checkpoint-%d' % latest_ckpt)
                 args.start_epoch = client_states['epoch'] + 1
                 if model_ema is not None:
@@ -550,12 +554,12 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
     else:
         checkpoint = torch.load(ckpt_path, map_location='cpu')
 
-    print("Load ckpt from %s" % ckpt_path)
+    log.debug("Load ckpt from %s" % ckpt_path)
     checkpoint_model = None
     for model_key in model_key.split('|'):
         if model_key in checkpoint:
             checkpoint_model = checkpoint[model_key]
-            print("Load state_dict by model_key = %s" % model_key)
+            log.debug("Load state_dict by model_key = %s" % model_key)
             break
 
     if checkpoint_model is None:
@@ -564,7 +568,7 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
     state_dict = model.state_dict()
     for k in ['head.weight', 'head.bias']:
         if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
-            print(f"Removing key {k} from pretrained checkpoint")
+            log.debug(f"Removing key {k} from pretrained checkpoint")
             del checkpoint_model[k]
 
     # interpolate position embedding
@@ -587,7 +591,7 @@ def load_model_and_may_interpolate(ckpt_path, model, model_key, model_prefix):
             new_size = int(num_patches**0.5)
             # class_token and dist_token are kept unchanged
             if orig_size != new_size:
-                print("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
+                log.debug("Position interpolate from %dx%d to %dx%d" % (orig_size, orig_size, new_size, new_size))
                 if torchscale_model:
                     extra_tokens = pos_embed_checkpoint[:num_extra_tokens].unsqueeze(0)
                     # only the position tokens are interpolated
@@ -888,7 +892,7 @@ def dump_predictions(args, result, file_suffix):
     if jsons is not None:
         with open(result_file, "w") as fp:
             json.dump(jsons, fp, indent=2)
-        print("Infer %d examples into %s" % (len(jsons), result_file))
+        log.debug("Infer %d examples into %s" % (len(jsons), result_file))
     return result_file
 
 
