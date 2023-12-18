@@ -222,6 +222,7 @@ class NASBaseConfig:
                 checkpoint_path=self.supernet_ckpt_path,
                 device=self.device,
                 mixed_precision=self.mixed_precision,
+                mp_calibration_samples=self.mp_calibration_samples,
             )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(

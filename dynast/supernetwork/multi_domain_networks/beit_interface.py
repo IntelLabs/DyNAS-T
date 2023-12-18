@@ -111,6 +111,7 @@ class Beit3ImageNetRunner:
         checkpoint_path=None,
         device: str = 'cpu',
         mixed_precision: bool = False,
+        mp_calibration_samples: int = 100,
     ):
         self.supernet = supernet
         self.acc_predictor = acc_predictor
@@ -124,6 +125,7 @@ class Beit3ImageNetRunner:
         self.checkpoint_path = checkpoint_path
         self.device = device
         self.mixed_precision = mixed_precision
+        self.mp_calibration_samples = mp_calibration_samples
 
         if self.mixed_precision and 'cpu' not in self.device:
             log.warning(f'Mixed precision is not supported on "{self.device}". Setting to "cpu".')
@@ -293,7 +295,6 @@ class Beit3ImageNetRunner:
         model,
         qbit_list,
         regex_module_names,
-        # calib_dataloader,
     ):
         default_config = {'weight': {'dtype': ['fp32']}, 'activation': {'dtype': ['fp32']}}
         q_config_dict = {}
@@ -315,7 +316,7 @@ class Beit3ImageNetRunner:
         conf = PostTrainingQuantConfig(
             approach="static",
             tuning_criterion=tuning_criterion,
-            calibration_sampling_size=100,
+            calibration_sampling_size=self.self.mp_calibration_samples,
             op_name_dict=q_config_dict,
         )
 
@@ -350,7 +351,7 @@ class Beit3ImageNetRunner:
         conf = PostTrainingQuantConfig(
             approach="dynamic",
             tuning_criterion=tuning_criterion,
-            calibration_sampling_size=100,
+            calibration_sampling_size=self.self.mp_calibration_samples,
             op_name_dict=q_config_dict,
         )
 
