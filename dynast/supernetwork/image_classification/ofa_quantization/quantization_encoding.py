@@ -26,8 +26,8 @@ from .depth_parser import DepthParser
 
 
 class OFAQuantizedResNet50Encoding(EncodingBase):
-    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
-        super().__init__(param_dict, verbose, seed)
+    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0, mixed_precision: bool = False):
+        super().__init__(param_dict, verbose, seed, mixed_precision)
         self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2] * 5, base_blocks=[2, 2, 4, 2])
 
     def onehot_custom(self, subnet_cfg, provide_onehot=True):
