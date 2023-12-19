@@ -117,6 +117,7 @@ class OFARunner:
             self.run_config,
             init=False,
             verbose=self.verbose,
+            no_gpu=False if 'cuda' in self.device else True,
         )
         run_manager.reset_running_statistics(net=subnet)
 
