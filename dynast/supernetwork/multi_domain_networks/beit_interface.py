@@ -190,6 +190,12 @@ class Beit3ImageNetRunner:
         macs = self.macs_predictor.predict(subnet_cfg)
         return macs
 
+    def estimate_parameters(
+        self,
+        subnet_cfg: dict,
+    ) -> int:
+        return self.params_predictor.predict(subnet_cfg)
+
     def estimate_model_size(
         self,
         subnet_cfg: dict,
