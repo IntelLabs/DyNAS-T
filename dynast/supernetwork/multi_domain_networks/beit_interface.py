@@ -20,7 +20,7 @@ import random
 import shutil
 import string
 import warnings
-from datetime import datetime
+import datetime
 
 import torch
 from fvcore.nn import FlopCountAnalysis
@@ -465,7 +465,7 @@ class EvaluationInterfaceBeit3ImageNet(EvaluationInterface):
         if self.csv_path:
             with open(self.csv_path, 'a') as f:
                 writer = csv.writer(f)
-                date = str(datetime.now())
+                date = str(datetime.datetime.now())
                 result = [
                     subnet_sample,
                     date,
