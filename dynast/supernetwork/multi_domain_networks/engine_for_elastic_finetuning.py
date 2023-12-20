@@ -152,7 +152,7 @@ class ImageNetHandler(TaskHandler):
         self.metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
 
     def after_eval(self, **kwargs):
-        print(
+        log.debug(
             '* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f}'.format(
                 top1=self.metric_logger.acc1, top5=self.metric_logger.acc5
             )
@@ -209,9 +209,9 @@ class RetrievalHandler(TaskHandler):
         scores = image_cls_feats @ text_cls_feats.t()
         iids = torch.LongTensor(iids).to(scores.device)
 
-        print("scores: {}".format(scores.size()))
-        print("iids: {}".format(iids.size()))
-        print("tiids: {}".format(tiids.size()))
+        log.debug("scores: {}".format(scores.size()))
+        log.debug("iids: {}".format(iids.size()))
+        log.debug("tiids: {}".format(tiids.size()))
 
         topk10 = scores.topk(10, dim=1)
         topk5 = scores.topk(5, dim=1)
@@ -246,7 +246,7 @@ class RetrievalHandler(TaskHandler):
             "average_score": 100.0 * (tr_r1 + tr_r5 + tr_r10 + ir_r1 + ir_r5 + ir_r10).item() / 6.0,
         }
 
-        print('* Eval result = %s' % json.dumps(eval_result))
+        log.debug('* Eval result = %s' % json.dumps(eval_result))
         return eval_result, "average_score"
 
 
@@ -286,7 +286,7 @@ class VQAHandler(TaskHandler):
 
     def after_eval(self, **kwargs):
         if len(self.predictions) == 0:
-            print('* Score {score.global_avg:.3f}'.format(score=self.metric_logger.score))
+            log.debug('* Score {score.global_avg:.3f}'.format(score=self.metric_logger.score))
             return {k: meter.global_avg for k, meter in self.metric_logger.meters.items()}, "score"
         else:
             return self.predictions, "prediction"
@@ -598,7 +598,7 @@ def train_one_epoch(
 
         loss_value = loss.item()
         if not math.isfinite(loss_value):
-            print("Loss is {}, stopping training".format(loss_value))
+            log.debug("Loss is {}, stopping training".format(loss_value))
             sys.exit(1)
 
         if loss_scaler is None:
