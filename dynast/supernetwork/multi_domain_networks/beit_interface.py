@@ -321,7 +321,7 @@ class Beit3ImageNetRunner:
         conf = PostTrainingQuantConfig(
             approach="static",
             tuning_criterion=tuning_criterion,
-            calibration_sampling_size=self.self.mp_calibration_samples,
+            calibration_sampling_size=self.mp_calibration_samples,
             op_name_dict=q_config_dict,
         )
 
@@ -356,7 +356,7 @@ class Beit3ImageNetRunner:
         conf = PostTrainingQuantConfig(
             approach="dynamic",
             tuning_criterion=tuning_criterion,
-            calibration_sampling_size=self.self.mp_calibration_samples,
+            calibration_sampling_size=self.mp_calibration_samples,
             op_name_dict=q_config_dict,
         )
 
