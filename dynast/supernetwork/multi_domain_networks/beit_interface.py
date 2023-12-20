@@ -15,7 +15,6 @@
 
 import copy
 import csv
-import logging
 import random
 import shutil
 import string
@@ -244,7 +243,7 @@ class Beit3ImageNetRunner:
             `macs`
         """
         macs, params = compute_macs(self.supernet_model, subnet_cfg, self.device)
-        logging.debug('Model\'s params: {}'.format(params))
+        log.debug('Model\'s params: {}'.format(params))
         return macs, params
 
     @torch.no_grad()
@@ -262,7 +261,7 @@ class Beit3ImageNetRunner:
             mean latency; std latency
         """
 
-        logging.info(
+        log.debug(
             f'Performing Latency measurements. Warmup = {warmup_steps}, Measure steps = {measure_steps}, Batch size = {self.batch_size}'
         )
 
@@ -293,7 +292,7 @@ class Beit3ImageNetRunner:
         if self.mixed_precision:
             del q_model
 
-        logging.info('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
+        log.debug('Model\'s latency: {} +/- {}'.format(lat_mean, lat_std))
         return lat_mean
 
     def quantize_subnet(
