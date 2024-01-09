@@ -315,7 +315,7 @@ def plot_search_progression(
 
     ax.set_xlabel(x_label, fontsize=13)
     ax.set_ylabel(y_label, fontsize=13)
-    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
+    ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, )#loc='lower right')
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=0.3)
@@ -971,6 +971,14 @@ if __name__ == '__main__':
             ],
         )
 
+    if True:
+        plot_search_progression(
+            title='BERT\nLatency & MACs as proxy',
+            results_path='data/bert_linas_titanv_lat_macs.csv',
+            target_metrics=['latency', 'macs'],
+            columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
+            # xlim=[50, 150],
+        )
 
 
 
