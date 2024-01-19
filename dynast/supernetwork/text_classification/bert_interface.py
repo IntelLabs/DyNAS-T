@@ -289,8 +289,17 @@ class EvaluationInterfaceBertSST2(EvaluationInterface):
         measurements: list = ['accuracy_sst2', 'latency'],
         csv_path=None,
         predictor_mode: bool = False,
+        mixed_precision: bool = False,
     ):
-        super().__init__(evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode)
+        super().__init__(
+            evaluator,
+            manager,
+            optimization_metrics,
+            measurements,
+            csv_path,
+            predictor_mode,
+            mixed_precision,
+        )
 
     def eval_subnet(self, x):
         # PyMoo vector to Elastic Parameter Mapping

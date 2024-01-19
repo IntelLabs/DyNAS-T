@@ -130,3 +130,5 @@ log.txt
 
 # Neural Compressor
 nc_workspace/
+*.spm
+*jsonl

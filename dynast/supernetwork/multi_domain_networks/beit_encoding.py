@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import ast
-from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -22,31 +22,28 @@ from sklearn.model_selection import train_test_split
 from dynast.search.encoding import EncodingBase
 from dynast.utils import log
 
-from .depth_parser import DepthParser
 
-
-class OFAQuantizedResNet50Encoding(EncodingBase):
+class BeitImageNetEncoding(EncodingBase):
     def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0, mixed_precision: bool = False):
         super().__init__(param_dict, verbose, seed, mixed_precision)
-        self.depth_parser = DepthParser(supernet='ofa_resnet50', supernet_depth=[2] * 5, base_blocks=[2, 2, 4, 2])
 
-    def onehot_custom(self, subnet_cfg, provide_onehot=True):
-        depth = subnet_cfg['d']
-        q_weights_mode = subnet_cfg['q_weights_mode']
+    def onehot_custom(self, subnet_cfg, provide_onehot=True, max_layers=12):
         features = []
-        features.extend(subnet_cfg['d'])
-        features.extend(subnet_cfg['e'])
-        features.extend(subnet_cfg['w'])
-        masks = np.array(self.depth_parser.layerwise_masks(subnet_depth=depth))
-        q_weights_mode = list(map(lambda x: 100 if x == 'asymmetric' else x, q_weights_mode))
-        q_weights_mode = list(map(lambda x: 200 if x == 'symmetric' else x, q_weights_mode))
+        num_layers = subnet_cfg['num_layers'][0]
 
-        features.extend((np.array(subnet_cfg['q_bits']) * masks).tolist())
-        features.extend((np.array(q_weights_mode) * masks).tolist())
-
+        attn_head_list = subnet_cfg['head_num'][:num_layers] + [0] * (max_layers - num_layers)
+        # Change for full search space
+        intermediate_size_list = subnet_cfg['ffn_size'][:num_layers] + [0] * (max_layers - num_layers)
+        features = [num_layers] + attn_head_list + intermediate_size_list
+        if self.mixed_precision:
+            log.debug('Extending one-hot encoded architecture w/ mixed precision')
+            qbit_list = subnet_cfg['q_bits'][: 6 * num_layers] + [0] * (max_layers - num_layers) * 6
+            features = features + qbit_list
         if provide_onehot == True:
             examples = np.array([features])
             one_hot_count = 0
+            # TODO(macsz,sharathns93) `self.unique_values` might be uninitialized
+            # if `create_training_set` hasn't been called prior to this
             unique_values = self.unique_values
 
             for unique in unique_values:
@@ -106,10 +103,8 @@ class OFAQuantizedResNet50Encoding(EncodingBase):
         df[config] = convert_to_dict
         df['config_pymoo'] = convert_to_pymoo
         df['config_onehot'] = convert_to_onehot
-
         return df
 
-    # @staticmethod
     def create_training_set(self, dataframe, config='subnet', train_with_all=True, split=0.33, seed=None):
         '''
         Create a sklearn compatible test/train set from an imported results csv

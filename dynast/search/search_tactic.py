@@ -41,6 +41,7 @@ from dynast.utils.exceptions import InvalidMetricsException, InvalidSupernetExce
 QuantizedOFARunner = LazyImport(
     'dynast.supernetwork.image_classification.ofa_quantization.quantization_interface.QuantizedOFARunner'
 )
+Beit3ImageNetRunner = LazyImport('dynast.supernetwork.multi_domain_networks.beit_interface.Beit3ImageNetRunner')
 
 
 class NASBaseConfig:
@@ -66,6 +67,7 @@ class NASBaseConfig:
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         """Params:
@@ -101,6 +103,7 @@ class NASBaseConfig:
         self.dataloader_workers = dataloader_workers
         self.test_fraction = test_fraction
         self.metric_eval_fns = metric_eval_fns
+        self.mixed_precision = mixed_precision
 
         self.bootstrapnas_supernetwork = kwargs.get('bootstrapnas_supernetwork', None)
 
@@ -149,7 +152,9 @@ class NASBaseConfig:
             param_dict = self.bootstrapnas_supernetwork.get_search_space()
         else:
             param_dict = SUPERNET_PARAMETERS[self.supernet]
-        self.supernet_manager = SUPERNET_ENCODING[self.supernet](param_dict=param_dict, seed=self.seed)
+        self.supernet_manager = SUPERNET_ENCODING[self.supernet](
+            param_dict=param_dict, seed=self.seed, mixed_precision=self.mixed_precision
+        )
 
     def _init_search(self):
         if self.supernet in [
@@ -208,6 +213,17 @@ class NASBaseConfig:
                 device=self.device,
                 test_fraction=self.test_fraction,
             )
+        elif self.supernet == 'beit3_imagenet':
+            self.runner_validate = Beit3ImageNetRunner(
+                supernet=self.supernet,
+                dataset_path=self.dataset_path,
+                batch_size=self.batch_size,
+                eval_batch_size=self.eval_batch_size,
+                checkpoint_path=self.supernet_ckpt_path,
+                device=self.device,
+                mixed_precision=self.mixed_precision,
+                mp_calibration_samples=self.mp_calibration_samples,
+            )
         elif 'bootstrapnas' in self.supernet:
             self.runner_validate = BootstrapNASRunner(
                 bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
@@ -240,6 +256,7 @@ class NASBaseConfig:
             optimization_metrics=self.optimization_metrics,
             measurements=self.measurements,
             csv_path=self.results_path,
+            mixed_precision=self.mixed_precision,
         )
 
         # Clear csv file if one exists
@@ -289,6 +306,7 @@ class Evolutionary(NASBaseConfig):
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -310,6 +328,7 @@ class Evolutionary(NASBaseConfig):
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
+            mixed_precision=mixed_precision,
             **kwargs,
         )
 
@@ -439,6 +458,7 @@ class LINAS(NASBaseConfig):
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         """Params:
@@ -473,6 +493,7 @@ class LINAS(NASBaseConfig):
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
+            mixed_precision=mixed_precision,
             **kwargs,
         )
 
@@ -614,6 +635,20 @@ class LINAS(NASBaseConfig):
                     batch_size=self.batch_size,
                     device=self.device,
                 )
+
+            elif self.supernet == 'beit3_imagenet':
+                runner_predict = Beit3ImageNetRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+
             else:
                 raise NotImplementedError
             # Setup validation interface
@@ -624,6 +659,7 @@ class LINAS(NASBaseConfig):
                 measurements=self.measurements,
                 csv_path=None,
                 predictor_mode=True,
+                mixed_precision=self.mixed_precision,
             )
 
             if self.num_objectives == 1:
@@ -749,6 +785,7 @@ class RandomSearch(NASBaseConfig):
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
         metric_eval_fns: dict = None,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         super().__init__(
@@ -770,6 +807,7 @@ class RandomSearch(NASBaseConfig):
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
             metric_eval_fns=metric_eval_fns,
+            mixed_precision=mixed_precision,
             **kwargs,
         )
 
@@ -814,6 +852,7 @@ class LINASDistributed(LINAS):
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         self.main_results_path = results_path
@@ -845,6 +884,7 @@ class LINASDistributed(LINAS):
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            mixed_precision=mixed_precision,
             **kwargs,
         )
 
@@ -988,6 +1028,18 @@ class LINASDistributed(LINAS):
                         batch_size=self.batch_size,
                         device=self.device,
                     )
+                elif self.supernet == 'beit3_imagenet':
+                    runner_predict = Beit3ImageNetRunner(
+                        supernet=self.supernet,
+                        latency_predictor=self.predictor_dict['latency'],
+                        macs_predictor=self.predictor_dict['macs'],
+                        params_predictor=self.predictor_dict['params'],
+                        acc_predictor=self.predictor_dict['accuracy_top1'],
+                        model_size_predictor=self.predictor_dict['model_size'],
+                        dataset_path=self.dataset_path,
+                        checkpoint_path=self.supernet_ckpt_path,
+                        device=self.device,
+                    )
                 else:
                     raise NotImplementedError
 
@@ -999,6 +1051,7 @@ class LINASDistributed(LINAS):
                     measurements=self.measurements,
                     csv_path=None,
                     predictor_mode=True,
+                    mixed_precision=self.mixed_precision,
                 )
 
                 if self.num_objectives == 1:
@@ -1128,6 +1181,7 @@ class RandomSearchDistributed(RandomSearch):
         test_fraction: float = 1.0,
         mp_calibration_samples: int = 100,
         dataloader_workers: int = 4,
+        mixed_precision: bool = False,
         **kwargs,
     ):
         self.main_results_path = results_path
@@ -1160,6 +1214,7 @@ class RandomSearchDistributed(RandomSearch):
             test_fraction=test_fraction,
             mp_calibration_samples=mp_calibration_samples,
             dataloader_workers=dataloader_workers,
+            mixed_precision=mixed_precision,
             **kwargs,
         )
 

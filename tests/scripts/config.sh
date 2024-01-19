@@ -8,9 +8,10 @@ DATASET_CIFAR10_PATH="/tmp/cifar10/"
 DATASET_SST2_PATH="/nfs/site/home/mszankin/store/nosnap/datasets/SST-2"
 BATCH_SIZE=128
 TEST_FRACTION=1.0
+DEVICE="cpu"
 
 CHECKPOINT_VIT_BASE_IMAGENET_PATH="/tmp/vit/checkpoint.pth.tar"
-
+CHECKPOINT_BEIT_IMAGENET_PATH="/nfs/site/home/mszankin/store/nosnap/checkpoints/beit3/beit3_checkpoints_data/supernet_checkpoint.pth"
 CHECKPOINT_BERT_BASE_SST2_PATH="/nfs/site/home/mszankin/store/nosnap/models/glue_ckpt.pt"
 
 ########################################################################################################

@@ -20,8 +20,14 @@ from dynast.search.encoding import EncodingBase
 
 
 class OFAMobileNetV3Encoding(EncodingBase):
-    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
-        super().__init__(param_dict, verbose, seed)
+    def __init__(
+        self,
+        param_dict: dict,
+        verbose: bool = False,
+        seed: int = 0,
+        mixed_precision: bool = False,
+    ):
+        super().__init__(param_dict, verbose, seed, mixed_precision)
 
     def construct_maps(self, keys: Union[List, Tuple]) -> Dict[int, int]:
         d: Dict[int, int] = dict()
@@ -61,5 +67,11 @@ class OFAMobileNetV3Encoding(EncodingBase):
 
 
 class OFAResNet50Encoding(EncodingBase):
-    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
-        super().__init__(param_dict, verbose, seed)
+    def __init__(
+        self,
+        param_dict: dict,
+        verbose: bool = False,
+        seed: int = 0,
+        mixed_precision: bool = False,
+    ):
+        super().__init__(param_dict, verbose, seed, mixed_precision=mixed_precision)
