@@ -908,82 +908,88 @@ if __name__ == '__main__':
             columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
             normalize=False,
         )
-    plot_search_progression(
-        title='ViT',
-        results_path='../nas-qp-results/search_results/qvit_linas_model_size.csv',
-        target_metrics=['model_size', 'accuracy_top1'],
-        columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-        evals_limit=500,
-        reference_points=[
-            ReferencePoint(
-                    'INT8 ViT',
-                    {'model_size': 89.020363, 'accuracy_top1': 76.47035256410257},
-                    color='tab:red',
-                ),
-            ],
-    )
-    plot_search_progression(
-        title='ViT',
-        results_path='../nas-qp-results/search_results/qvit_linas_latency_k8sclx_bs16.csv',
-        target_metrics=['latency', 'accuracy_top1'],
-        columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-        # normalize=True,
-        reference_points=[
-            ReferencePoint(
-                    'INT8 ViT',
-                    # {'latency': 413.836, 'accuracy_top1': 78.32},
-                    # pretrained_vit_latency=312.5
-                    # vit_pretrained_top1=76.47035256410257
-                    {'latency': 312.5, 'accuracy_top1': 76.47035256410257},
-                    color='tab:red',
-                ),
-            ],
-        evals_limit=500,
-        )
+    # plot_search_progression(
+    #     title='ViT',
+    #     results_path='../nas-qp-results/search_results/qvit_linas_model_size.csv',
+    #     target_metrics=['model_size', 'accuracy_top1'],
+    #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+    #     evals_limit=500,
+    #     reference_points=[
+    #         ReferencePoint(
+    #                 'INT8 ViT',
+    #                 {'model_size': 89.020363, 'accuracy_top1': 76.47035256410257},
+    #                 color='tab:red',
+    #             ),
+    #         ],
+    # )
+    # plot_search_progression(
+    #     title='ViT',
+    #     results_path='../nas-qp-results/search_results/qvit_linas_latency_k8sclx_bs16.csv',
+    #     target_metrics=['latency', 'accuracy_top1'],
+    #     columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+    #     # normalize=True,
+    #     reference_points=[
+    #         ReferencePoint(
+    #                 'INT8 ViT',
+    #                 # {'latency': 413.836, 'accuracy_top1': 78.32},
+    #                 # pretrained_vit_latency=312.5
+    #                 # vit_pretrained_top1=76.47035256410257
+    #                 {'latency': 312.5, 'accuracy_top1': 76.47035256410257},
+    #                 color='tab:red',
+    #             ),
+    #         ],
+    #     evals_limit=500,
+    #     )
 
-    plot_search_progression(
-        title='BERT SST2',
-        results_path='../nas-qp-results/search_results/qbert_linas_latency_icx_bs16.csv',
-        target_metrics=['latency', 'accuracy_sst2'],
-        columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
-        reference_points=[
-            ReferencePoint(
-                'INT8 BERT-SST2',
-                metrics={
-                    'latency': 83.758,
-                    'accuracy_sst2': 0.9128440366972477,
-                    'model_size': 111.715027,
-                },
-                color='tab:red',
-            ),
-        ],
-        normalize=False,
-    )
-    plot_search_progression(
-            title='BERT SST2',
-            results_path='../nas-qp-results/search_results/qbert_linas_model_size.csv',
-            target_metrics=['model_size', 'accuracy_sst2'],
-            columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
-            reference_points=[
-                ReferencePoint(
-                    'INT8 BERT-SST2',
-                    metrics={
-                        'latency': 83.758,
-                        'accuracy_sst2': 0.9128440366972477,
-                        'model_size': 111.715027,
-                    },
-                    color='tab:red',
-                ),
-            ],
-        )
+    # plot_search_progression(
+    #     title='BERT SST2',
+    #     results_path='../nas-qp-results/search_results/qbert_linas_latency_icx_bs16.csv',
+    #     target_metrics=['latency', 'accuracy_sst2'],
+    #     columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+    #     reference_points=[
+    #         ReferencePoint(
+    #             'INT8 BERT-SST2',
+    #             metrics={
+    #                 'latency': 83.758,
+    #                 'accuracy_sst2': 0.9128440366972477,
+    #                 'model_size': 111.715027,
+    #             },
+    #             color='tab:red',
+    #         ),
+    #     ],
+    #     normalize=False,
+    # )
+    # plot_search_progression(
+    #         title='BERT SST2',
+    #         results_path='../nas-qp-results/search_results/qbert_linas_model_size.csv',
+    #         target_metrics=['model_size', 'accuracy_sst2'],
+    #         columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+    #         reference_points=[
+    #             ReferencePoint(
+    #                 'INT8 BERT-SST2',
+    #                 metrics={
+    #                     'latency': 83.758,
+    #                     'accuracy_sst2': 0.9128440366972477,
+    #                     'model_size': 111.715027,
+    #                 },
+    #                 color='tab:red',
+    #             ),
+    #         ],
+    #     )
 
     if True:
         plot_search_progression(
-            title='BERT\nLatency & MACs as proxy',
+            title='BERT\nMACs vs. Accuracy',
             results_path='/tmp/results_bert_base_sst2_linas_long_dist.csv',
             target_metrics=['macs', 'accuracy_sst2'],
             columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
-            # xlim=[50, 150],
+            reference_points=[
+                ReferencePoint(
+                    label='BERT-Base (Published)',
+                    metrics={'macs': 1.13e10, 'accuracy_sst2': 0.924},
+                    color='tab:blue',
+                )
+            ],
         )
 
 
