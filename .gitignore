@@ -130,3 +130,9 @@ log.txt
 
 # Neural Compressor
 nc_workspace/
+
+huggingface/
+scripts/
+logs.txt
+SST-2-cache/
+mod
