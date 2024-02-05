@@ -39,7 +39,7 @@ def load_supernet(checkpoint_path):
     model = BertSupernetForSequenceClassification(bert_config, num_labels=2)
     model.load_state_dict(
         torch.load(checkpoint_path, map_location='cpu')["model"],
-        strict=True,
+        strict=False,
     )
     return model, bert_config
 
