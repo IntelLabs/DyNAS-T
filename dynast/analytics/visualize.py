@@ -284,6 +284,22 @@ def plot_search_progression(
             marker=reference_point.marker,
             label=reference_point.label,
         )
+        ax.axvline(x=reference_point.metrics[target_metrics[0]], color=reference_point.color, alpha=0.5)
+        ax.axhline(y=reference_point.metrics[target_metrics[1]], color=reference_point.color, alpha=0.5)
+
+        y_range = reference_point.metrics[target_metrics[1]]*0.98, reference_point.metrics[target_metrics[1]]*1.02
+        better_x_at_y = df[(df[target_metrics[1]] > y_range[0]) & (df[target_metrics[1]] < y_range[1])].min()[target_metrics[0]]
+        imp = (reference_point.metrics[target_metrics[0]]-better_x_at_y)/reference_point.metrics[target_metrics[0]]*100
+        print(
+            f'Better {target_metrics[0]} ({better_x_at_y} imp% {imp}) at same {target_metrics[1]} ({reference_point.metrics[target_metrics[1]]})'
+        )
+
+        x_range = reference_point.metrics[target_metrics[0]]*0.98, reference_point.metrics[target_metrics[0]]*1.02
+        better_y_at_x = df[(df[target_metrics[0]] > x_range[0]) & (df[target_metrics[0]] < x_range[1])].max()[target_metrics[1]]
+        imp = (reference_point.metrics[target_metrics[1]]-better_y_at_x)/reference_point.metrics[target_metrics[1]]*100
+        print(
+            f'Better {target_metrics[1]} ({better_y_at_x} imp% {imp}) at same {target_metrics[0]} ({reference_point.metrics[target_metrics[0]]})'
+        )
 
     # Eval Count bar
     norm = plt.Normalize(0, len(df))
@@ -309,7 +325,7 @@ def plot_search_progression(
     ax.grid(True, alpha=0.3)
 
     fig.tight_layout(pad=0.3)
-    save_path = '{}.png'.format(results_path.split('.')[0])
+    save_path = results_path.replace('.csv', '.png')
     plt.savefig(save_path)
     log.info(f'Search progression plot saved to {save_path}')
 
@@ -883,14 +899,82 @@ if __name__ == '__main__':
             results_path='results/k8s-quant/qvit_linas_latency_clx.csv',
             target_metrics=['latency', 'accuracy_top1'],
             columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-            normalize=True,
+            normalize=False,
         )
         plot_search_progression(
             title='ViT\nLatency vs. Accuracy (2xCLX k8s TF02)',
             results_path='results/k8s-quant/qvit_linas_latency_clx_k8s_tf02.csv',
             target_metrics=['latency', 'accuracy_top1'],
             columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
-            normalize=True,
+            normalize=False,
+        )
+    plot_search_progression(
+        title='ViT',
+        results_path='../nas-qp-results/search_results/qvit_linas_model_size.csv',
+        target_metrics=['model_size', 'accuracy_top1'],
+        columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+        evals_limit=500,
+        reference_points=[
+            ReferencePoint(
+                    'INT8 ViT',
+                    {'model_size': 89.020363, 'accuracy_top1': 76.47035256410257},
+                    color='tab:red',
+                ),
+            ],
+    )
+    plot_search_progression(
+        title='ViT',
+        results_path='../nas-qp-results/search_results/qvit_linas_latency_k8sclx_bs16.csv',
+        target_metrics=['latency', 'accuracy_top1'],
+        columns=['config', 'date', 'params', 'latency', 'model_size', 'accuracy_top1'],
+        # normalize=True,
+        reference_points=[
+            ReferencePoint(
+                    'INT8 ViT',
+                    # {'latency': 413.836, 'accuracy_top1': 78.32},
+                    # pretrained_vit_latency=312.5
+                    # vit_pretrained_top1=76.47035256410257
+                    {'latency': 312.5, 'accuracy_top1': 76.47035256410257},
+                    color='tab:red',
+                ),
+            ],
+        evals_limit=500,
+        )
+
+    plot_search_progression(
+        title='BERT SST2',
+        results_path='../nas-qp-results/search_results/qbert_linas_latency_icx_bs16.csv',
+        target_metrics=['latency', 'accuracy_sst2'],
+        columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+        reference_points=[
+            ReferencePoint(
+                'INT8 BERT-SST2',
+                metrics={
+                    'latency': 83.758,
+                    'accuracy_sst2': 0.9128440366972477,
+                    'model_size': 111.715027,
+                },
+                color='tab:red',
+            ),
+        ],
+        normalize=False,
+    )
+    plot_search_progression(
+            title='BERT SST2',
+            results_path='../nas-qp-results/search_results/qbert_linas_model_size.csv',
+            target_metrics=['model_size', 'accuracy_sst2'],
+            columns=['config', 'date', 'latency', 'model_size', 'accuracy_sst2'],
+            reference_points=[
+                ReferencePoint(
+                    'INT8 BERT-SST2',
+                    metrics={
+                        'latency': 83.758,
+                        'accuracy_sst2': 0.9128440366972477,
+                        'model_size': 111.715027,
+                    },
+                    color='tab:red',
+                ),
+            ],
         )
 
     if True:
@@ -901,6 +985,9 @@ if __name__ == '__main__':
             columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
             # xlim=[50, 150],
         )
+
+
+
 
 # correlation()
 # results/qbert/qbert_lians_tf10_latency_icx.png results/qbert/qbert_linas_model_size.png results/qbeit/qbeit_linas_tf10.png results/qbeit/qbeit_linas_tf10_latency_icx.png results/qvit/qvit_linas_icx_tf10_s20_bs16_latency_icx.png results/qvit/qvit_linas_spr_tf10_s20_incfix.png dynast_ofaresnet50_quant_linas_sprh9480.png results/ofa/ofaresnet50_linas_tf10_model_size.png
