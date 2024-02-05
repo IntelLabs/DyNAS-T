@@ -115,22 +115,26 @@ def qconfig_parse(
     a_observer, a_dtype, a_scheme, a_granularity = qparam_parse(aobserver_type, abit, amode, agranularity)
 
     qconfig = {
-        'weight': {
-            'algorithm': [w_observer],
-            'dtype': [w_dtype],
-            'scheme': [w_scheme],
-            'granularity': [w_granularity],
-        }
-        if w_dtype != 'fp32'
-        else {'dtype': ['fp32']},
-        'activation': {
-            'algorithm': [a_observer],
-            'dtype': [a_dtype],
-            'scheme': [a_scheme],
-            'granularity': [a_granularity],
-        }
-        if a_dtype != 'fp32'
-        else {'dtype': ['fp32']},
+        'weight': (
+            {
+                'algorithm': [w_observer],
+                'dtype': [w_dtype],
+                'scheme': [w_scheme],
+                'granularity': [w_granularity],
+            }
+            if w_dtype != 'fp32'
+            else {'dtype': ['fp32']}
+        ),
+        'activation': (
+            {
+                'algorithm': [a_observer],
+                'dtype': [a_dtype],
+                'scheme': [a_scheme],
+                'granularity': [a_granularity],
+            }
+            if a_dtype != 'fp32'
+            else {'dtype': ['fp32']}
+        ),
     }
 
     return qconfig
