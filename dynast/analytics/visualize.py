@@ -896,8 +896,8 @@ if __name__ == '__main__':
     if True:
         plot_search_progression(
             title='BERT\nLatency & MACs as proxy',
-            results_path='data/bert_linas_titanv_lat_macs.csv',
-            target_metrics=['latency', 'macs'],
+            results_path='/tmp/results_bert_base_sst2_linas_long_dist.csv',
+            target_metrics=['macs', 'accuracy_sst2'],
             columns=['config', 'date', 'params', 'latency', 'macs', 'accuracy_sst2'],
             # xlim=[50, 150],
         )
