@@ -332,7 +332,7 @@ def plot_search_progression(
 
 def load_csv(
     filepath,
-    col_list=['config', 'date', 'params', 'latency', 'macs', 'accuracy_top1'],
+    col_list=['config', 'date', 'latency', 'model_size', 'accuracy'],
     normalize=False,
     idx_slicer=None,
     fit=False,
@@ -349,23 +349,25 @@ def load_csv(
     df.columns = col_list
 
     if sort:
-        df = df.sort_values(by=['macs']).reset_index(drop=True)
+        df = df.sort_values(by=['model_size']).reset_index(drop=True)
     if verbose:
         print(filepath)
         print('dataset length: {}'.format(len(df)))
-        print('acc max = {}'.format(df['accuracy_top1'].max()))
-        print('lat min = {}'.format(df['accuracy_top1'].min()))
+        print('acc max = {}'.format(df['accuracy'].max()))
+        print('acc min = {}'.format(df['accuracy'].min()))
+        print('model_size max = {}'.format(df['model_size'].max()))
+        print('model_size min = {}'.format(df['model_size'].min()))
 
-    df = df[['macs', 'accuracy_top1']]
+    df = df[['model_size', 'accuracy']]
 
     if normalize:
         if fit == True:
             scaler = MinMaxScaler()
-            scaler.fit(df['macs'].values.reshape(-1, 1))
-            df['macs'] = scaler.transform(df['macs'].values.reshape(-1, 1)).squeeze()
+            scaler.fit(df['model_size'].values.reshape(-1, 1))
+            df['model_size'] = scaler.transform(df['model_size'].values.reshape(-1, 1)).squeeze()
             return df, scaler
         else:
-            df['macs'] = scaler.transform(df['macs'].values.reshape(-1, 1)).squeeze()
+            df['model_size'] = scaler.transform(df['model_size'].values.reshape(-1, 1)).squeeze()
             return df
     else:
         return df
@@ -378,10 +380,10 @@ def collect_hv(hv, supernet):
     hv_list = list()
 
     for evals in tqdm.tqdm(full_interval):
-        front = frontier_builder(supernet.iloc[:evals], optimization_metrics=['macs', 'accuracy_top1'])
-        front['naccuracy_top1'] = -front['accuracy_top1']
+        front = frontier_builder(supernet.iloc[:evals], optimization_metrics=['model_size', 'accuracy'])
+        front['naccuracy'] = -front['accuracy']
 
-        hv_list.append(hv.do(front[['macs', 'naccuracy_top1']].values))
+        hv_list.append(hv.do(front[['model_size', 'naccuracy']].values))
 
     for i in range(0, len(hv_list) - 1):
         if hv_list[i + 1] < hv_list[i]:
@@ -395,23 +397,48 @@ def collect_hv(hv, supernet):
 
 
 def plot_hv():
+
+    source_dir = '/nfs/site/home/mszankin/store/nosnap/results/qbert/hv'
+
+    fs = {}
+    # LINAS
+    fs['linas'] = [os.path.join(source_dir, f'qbert_linas{i}.csv') for i in range(1, 4)]
+
+    # NSGA-2
+    fs['nsga'] = [os.path.join(source_dir, f'qbert_nsga{i}.csv') for i in range(1, 4)]
+
+    # Random Search
+    fs['random'] = [os.path.join(source_dir, f'qbert_random{i}.csv') for i in range(1, 4)]
+
+    min_evals = 9999999
+    for algo in fs:
+        print(algo)
+        for f in fs[algo]:
+            tmp_evals = len(pd.read_csv(f))
+            min_evals = min(min_evals, tmp_evals)
+            print(f, tmp_evals)
     plot_subtitle = 'BERT SST-2 {step} ({samples}/{evaluations})'
-    save_dir = 'output_2/'
+    save_dir = 'output_hv/'
     population = 50
-    EVALUATIONS = 2000
+    EVALUATIONS = 650 #min_evals #300
+    log.info(f'Evals set to {EVALUATIONS}')
     xlim = None
     ylim = None  # (73.0, 77.5)
     avg_time = 5.9
-    ref_x = [6e9]
-    ref_y = [0.90]
 
-    df_linas = load_csv('results/bert_sst2_linas_2000_37.csv', normalize=False, idx_slicer=EVALUATIONS)
-    df_nsga = load_csv('results/bert_sst2_nsga2_0.csv', normalize=False, idx_slicer=EVALUATIONS)
-    df_random = load_csv('results/bert_sst2_random_0.csv', normalize=False, idx_slicer=EVALUATIONS)
-    xlabel = 'MACs'
+    df_linas = load_csv(fs['linas'][0], normalize=False, idx_slicer=EVALUATIONS)
+    df_nsga = load_csv(fs['nsga'][0], normalize=False, idx_slicer=EVALUATIONS)
+    df_random = load_csv(fs['random'][0], normalize=False, idx_slicer=EVALUATIONS)
+    xlabel = 'model_size'
 
-    df_linas_front = frontier_builder(df_linas, optimization_metrics=['macs', 'accuracy_top1'])
-    df_nsga_front = frontier_builder(df_nsga, optimization_metrics=['macs', 'accuracy_top1'])
+    ref_x = [300]
+    ref_y = [0.92]
+    # ref_x = [df_linas['model_size'].max()]
+    # ref_y = [df_linas['accuracy'].max()]
+    print(ref_x, ref_y)
+
+    df_linas_front = frontier_builder(df_linas, optimization_metrics=['model_size', 'accuracy'])
+    df_nsga_front = frontier_builder(df_nsga, optimization_metrics=['model_size', 'accuracy'])
 
     evals_list = np.array(list(range(10, 10000, 10)))
     ref_point = [ref_x[0], -ref_y[0]]  # latency, -top1
@@ -419,11 +446,11 @@ def plot_hv():
     edge_points = []
 
     ## LINAS
-    df_seed1 = load_csv('results/bert_sst2_linas_2000_37.csv', idx_slicer=EVALUATIONS)
+    df_seed1 = load_csv(fs['linas'][0], idx_slicer=EVALUATIONS)
     hv_seed1, interval = collect_hv(hv, df_seed1)
-    df_seed2 = load_csv('results/bert_sst2_linas_2000_47.csv', idx_slicer=EVALUATIONS)
+    df_seed2 = load_csv(fs['linas'][1], idx_slicer=EVALUATIONS)
     hv_seed2, _ = collect_hv(hv, df_seed2)
-    df_seed3 = load_csv('results/bert_sst2_linas_2000_57.csv', idx_slicer=EVALUATIONS)
+    df_seed3 = load_csv(fs['linas'][2], idx_slicer=EVALUATIONS)
     hv_seed3, _ = collect_hv(hv, df_seed3)
 
     df_linas_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)  # Stack all runs from a given search
@@ -433,11 +460,11 @@ def plot_hv():
     edge_points.append(max(df_linas_hv['mean'][population:] + df_linas_hv['std'][population:]))
 
     ## NSGA2-2
-    df_seed1 = load_csv('results/bert_sst2_nsga2_2000_37.csv', idx_slicer=EVALUATIONS)
+    df_seed1 = load_csv(fs['nsga'][0], idx_slicer=EVALUATIONS)
     hv_seed1, interval = collect_hv(hv, df_seed1)
-    df_seed2 = load_csv('results/bert_sst2_nsga2_2000_47.csv', idx_slicer=EVALUATIONS)
+    df_seed2 = load_csv(fs['nsga'][1], idx_slicer=EVALUATIONS)
     hv_seed2, _ = collect_hv(hv, df_seed2)
-    df_seed3 = load_csv('results/bert_sst2_nsga2_2000_57.csv', idx_slicer=EVALUATIONS)
+    df_seed3 = load_csv(fs['nsga'][2], idx_slicer=EVALUATIONS)
     hv_seed3, _ = collect_hv(hv, df_seed3)
 
     df_full_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)
@@ -447,11 +474,11 @@ def plot_hv():
     edge_points.append(max(df_full_hv['mean'][population:] + df_full_hv['std'][population:]))
 
     ## RANDOM
-    df_seed1 = load_csv('results/bert_sst2_random_2000_37.csv', idx_slicer=EVALUATIONS)
+    df_seed1 = load_csv(fs['random'][0], idx_slicer=EVALUATIONS)
     hv_seed1, interval = collect_hv(hv, df_seed1)
-    df_seed2 = load_csv('results/bert_sst2_random_2000_47.csv', idx_slicer=EVALUATIONS)
+    df_seed2 = load_csv(fs['random'][1], idx_slicer=EVALUATIONS)
     hv_seed2, _ = collect_hv(hv, df_seed2)
-    df_seed3 = load_csv('results/bert_sst2_random_2000_57.csv', idx_slicer=EVALUATIONS)
+    df_seed3 = load_csv(fs['random'][2], idx_slicer=EVALUATIONS)
     hv_seed3, _ = collect_hv(hv, df_seed3)
 
     df_rand_hv = pd.DataFrame(np.vstack((hv_seed1, hv_seed2, hv_seed3)).T)
@@ -464,85 +491,90 @@ def plot_hv():
 
     os.makedirs(save_dir, exist_ok=True)
 
-    for samples in tqdm.tqdm(range(0, EVALUATIONS + 1, population * 4)):
+    # for samples in tqdm.tqdm(range(0, EVALUATIONS + 1, population * 4)):
+    if True:
+        samples = EVALUATIONS
         elapsed_total_m = avg_time * samples
         elapsed_h = int(elapsed_total_m // 60)
         elapsed_m = int(elapsed_total_m - (elapsed_h * 60))
-        if PLOT_HYPERVOLUME:
-            fig, ax = plt.subplots(1, 3, figsize=(15, 5), gridspec_kw={'width_ratios': [2.5, 3, 2.5]})
-        else:
-            fig, ax = plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={'width_ratios': [2.5, 3.0]})
-        fig.suptitle(
-            plot_subtitle.format(
-                step=samples // population,
-                samples=samples,
-                evaluations=EVALUATIONS,
-                elapsed_h=elapsed_h,
-                elapsed_m=elapsed_m,
-            ),
-            fontweight="bold",
-        )
-        cm = plt.cm.get_cmap('viridis_r')
+        # if PLOT_HYPERVOLUME:
+        #     fig, ax = plt.subplots(1, 3, figsize=(15, 5), gridspec_kw={'width_ratios': [2.5, 3, 2.5]})
+        # else:
+        #     fig, ax = plt.subplots(1, 2, figsize=(10, 5), gridspec_kw={'width_ratios': [2.5, 3.0]})
+        # fig, ax = plt.subplots(1, 1), #figsize=(10, 5), gridspec_kw={'width_ratios': [2.5, 3.0]})
+        # fig.suptitle(
+        #     plot_subtitle.format(
+        #         step=samples // population,
+        #         samples=samples,
+        #         evaluations=EVALUATIONS,
+        #         elapsed_h=elapsed_h,
+        #         elapsed_m=elapsed_m,
+        #     ),
+        #     fontweight="bold",
+        # )
+        # cm = plt.cm.get_cmap('viridis_r')
 
-        # LINAS plot
-        df_conc = df_linas
-        data = df_conc[:samples][['macs', 'accuracy_top1']]
-        count = [x for x in range(len(data))]
-        x = data['macs']
-        y = data['accuracy_top1']
+        # # LINAS plot
+        # df_conc = df_linas
+        # data = df_conc[:samples][['model_size', 'accuracy']]
+        # count = [x for x in range(len(data))]
+        # x = data['model_size']
+        # y = data['accuracy']
 
-        ax[0].set_title('DyNAS-T')
-        ax[0].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN\nArchitecture', s=6)
-        ax[0].set_ylabel('Accuracy', fontsize=13)
-        ax[0].plot(
-            df_linas_front['macs'],
-            df_linas_front['accuracy_top1'],
-            color='red',
-            linestyle='--',
-            label='DyNAS-T Pareto front',
-        )
-        # ax[0].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
+        # ax[0].set_title('DyNAS-T')
+        # ax[0].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN\nArchitecture', s=6)
+        # ax[0].set_ylabel('Accuracy', fontsize=13)
+        # ax[0].plot(
+        #     df_linas_front['model_size'],
+        #     df_linas_front['accuracy'],
+        #     color='red',
+        #     linestyle='--',
+        #     label='DyNAS-T Pareto front',
+        # )
+        # # ax[0].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
 
-        # NSGA-II plot
-        data1 = df_nsga[:samples][['macs', 'accuracy_top1']]
-        print(len(data1))
-        count = [x for x in range(len(data1))]
-        x = data1['macs']
-        y = data1['accuracy_top1']
+        # # NSGA-II plot
+        # data1 = df_nsga[:samples][['model_size', 'accuracy']]
+        # print(len(data1))
+        # count = [x for x in range(len(data1))]
+        # x = data1['model_size']
+        # y = data1['accuracy']
 
-        ax[1].set_title('NSGA-II')
-        ax[1].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN Architecture', s=6)
+        # ax[1].set_title('NSGA-II')
+        # ax[1].scatter(x, y, marker='D', alpha=0.8, c=count, cmap=cm, label='Unique DNN Architecture', s=6)
 
-        # ax[1].get_yaxis().set_ticklabels([])
-        ax[1].plot(
-            df_nsga_front['macs'],
-            df_nsga_front['accuracy_top1'],
-            color='red',
-            linestyle='--',
-            label='DyNAS-T Pareto front',
-        )
-        # ax[1].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
+        # # ax[1].get_yaxis().set_ticklabels([])
+        # ax[1].plot(
+        #     df_nsga_front['model_size'],
+        #     df_nsga_front['accuracy'],
+        #     color='red',
+        #     linestyle='--',
+        #     label='DyNAS-T Pareto front',
+        # )
+        # # ax[1].scatter(ref_x, ref_y, marker='s', color='#c00', label='Reference ResNset50 OV INT8')
 
-        cloud = list(df_random[['macs', 'accuracy_top1']].to_records(index=False))
-        # alpha_shape = alphashape.alphashape(cloud, 0)
+        # cloud = list(df_random[['model_size', 'accuracy']].to_records(index=False))
+        # # alpha_shape = alphashape.alphashape(cloud, 0)
 
-        for ax in fig.get_axes()[:2]:
-            # ax.add_patch(PolygonPatch(alpha_shape, fill=None, alpha=0.8, linewidth=1.5, label='Random search boundary', linestyle='--'))
+        # for ax in fig.get_axes()[:2]:
+        #     # ax.add_patch(PolygonPatch(alpha_shape, fill=None, alpha=0.8, linewidth=1.5, label='Random search boundary', linestyle='--'))
 
-            ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
-            # if ylim:
-            #     ax.set_ylim(ylim)
-            # if xlim:
-            #     ax.set_xlim(xlim)
-            ax.grid(True, alpha=0.3)
-            ax.set_xlabel(xlabel, fontsize=13)
+        #     ax.legend(fancybox=True, fontsize=10, framealpha=1, borderpad=0.2, loc='lower right')
+        #     # if ylim:
+        #     #     ax.set_ylim(ylim)
+        #     # if xlim:
+        #     #     ax.set_xlim(xlim)
+        #     ax.grid(True, alpha=0.3)
+        #     ax.set_xlabel(xlabel, fontsize=13)
 
-        if PLOT_HYPERVOLUME and samples >= population:
-            fig.get_axes()[2].set_title('Hypervolume')
+        # if PLOT_HYPERVOLUME and samples >= population:
+        if True:
+            # fig.get_axes()[2]
+            # plt.title('Hypervolume')
 
             ########## LINAS
-            fig.get_axes()[2].plot(interval, df_linas_hv['mean'], label='LINAS', color=colors['red'], linewidth=2)
-            fig.get_axes()[2].fill_between(
+            plt.plot(interval, df_linas_hv['mean'], label='LINAS', color=colors['red'], linewidth=2)
+            plt.fill_between(
                 interval,
                 df_linas_hv['mean'] - df_linas_hv['std'],
                 df_linas_hv['mean'] + df_linas_hv['std'],
@@ -550,10 +582,10 @@ def plot_hv():
                 alpha=0.2,
             )
             ########## NSGA / FULL
-            fig.get_axes()[2].plot(
+            plt.plot(
                 interval, df_full_hv['mean'], label='NSGA-II', linestyle='--', color=colors['blue'], linewidth=2
             )
-            fig.get_axes()[2].fill_between(
+            plt.fill_between(
                 interval,
                 df_full_hv['mean'] - df_full_hv['std'],
                 df_full_hv['mean'] + df_full_hv['std'],
@@ -561,10 +593,10 @@ def plot_hv():
                 alpha=0.2,
             )
             ########## RANDOM
-            fig.get_axes()[2].plot(
+            plt.plot(
                 interval, df_rand_hv['mean'], label='Random Search', linestyle='-.', color=colors['orange'], linewidth=2
             )
-            fig.get_axes()[2].fill_between(
+            plt.fill_between(
                 interval,
                 df_rand_hv['mean'] - df_rand_hv['std'],
                 df_rand_hv['mean'] + df_rand_hv['std'],
@@ -573,32 +605,37 @@ def plot_hv():
             )
             ##########
 
-            fig.get_axes()[2].set_xlim(population, samples)
+            plt.xlim(1, samples)
             # if ylim_hv:
             #     fig.get_axes()[2].set_ylim(ylim_hv)
 
-            fig.get_axes()[2].set_xlabel('Evaluation Count', fontsize=13)
-            fig.get_axes()[2].set_ylabel('Hypervolume', fontsize=13)
-            fig.get_axes()[2].legend(fancybox=True, fontsize=12, framealpha=1, borderpad=0.2, loc='best')
+            plt.xlabel('Evaluation Count', fontsize=13)
+            plt.ylabel('Hypervolume', fontsize=13)
+            plt.legend(fancybox=True, fontsize=12, framealpha=1, borderpad=0.2, loc='best')
 
-            fig.get_axes()[2].grid(True, alpha=0.2)
-
-            formatter = ScalarFormatter()
-            formatter.set_scientific(False)
-            fig.get_axes()[2].xaxis.set_major_formatter(formatter)
+            plt.grid(True, alpha=0.2)
+            from matplotlib.ticker import FormatStrFormatter, StrMethodFormatter
+            plt.gca().yaxis.set_major_formatter(StrMethodFormatter('{x:,.2f}'))
+            plt.yticks(np.arange(0.0, 2.2, 0.2), list(map(lambda x: int(x*10)/10, np.arange(0.0, 1.1, 0.1))))
+            # plt.set_yticks(np.arange(0.0, 1.6, 0.2))
+            # plt.tic
+            # plt.yaxis.set_ticklabels(np.arange(0.0, 1.0, 0.125))
+            # formatter = ScalarFormatter()
+            # formatter.set_scientific(False)
+            # fig.get_axes()[2].xaxis.set_major_formatter(formatter)
 
         # Eval Count bar
-        norm = plt.Normalize(0, len(data))
-        sm = ScalarMappable(norm=norm, cmap=cm)
-        cbar = fig.colorbar(sm, ax=ax, shrink=0.85)
-        cbar.ax.set_title("         Evaluation\n  Count", fontsize=8)
+        # norm = plt.Normalize(0, len(data))
+        # sm = ScalarMappable(norm=norm, cmap=cm)
+        # cbar = fig.colorbar(sm, ax=ax, shrink=0.85)
+        # cbar.ax.set_title("         Evaluation\n  Count", fontsize=8)
 
-        fig.tight_layout(pad=1)
+        plt.tight_layout(pad=1)
         plt.subplots_adjust(wspace=0.07, hspace=0)
         plt.show()
-        fn = save_dir + '/pareto_{}.png'.format(samples // population)
-
-        fig.savefig(fn, bbox_inches='tight', pad_inches=0, dpi=150)
+        fn = save_dir + '/pareto.png'.format(samples // population)
+        log.info(f'Saving HV to {fn}')
+        plt.savefig(fn, bbox_inches='tight', pad_inches=0, dpi=150)
 
 
 # def correlation() -> None:
@@ -611,6 +648,10 @@ def plot_hv():
 
 
 if __name__ == '__main__':
+
+    plot_hv()
+    exit()
+
     if False:
         # warm-up test
         plot_search_progression(
