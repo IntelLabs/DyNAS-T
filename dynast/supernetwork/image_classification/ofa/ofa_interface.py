@@ -16,7 +16,7 @@ import copy
 import csv
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Dict, Tuple, Union
 
 import torch
 
@@ -31,12 +31,13 @@ from dynast.supernetwork.image_classification.ofa.ofa.imagenet_classification.ru
     ImagenetRunConfig,
     RunManager,
 )
+from dynast.supernetwork.runner import Runner
 from dynast.utils import log
 from dynast.utils.datasets import ImageNet
 from dynast.utils.nn import get_macs, get_parameters, measure_latency, validate_classification
 
 
-class OFARunner:
+class OFARunner(Runner):
     """The OFARunner class manages the sub-network selection from the OFA super-network and
     the validation measurements of the sub-networks. ResNet50, MobileNetV3 w1.0, and MobileNetV3 w1.2
     are currently supported. Imagenet is required for these super-networks `imagenet-ilsvrc2012`.
@@ -45,30 +46,27 @@ class OFARunner:
     def __init__(
         self,
         supernet: str,
-        dataset_path: str,
-        acc_predictor: Predictor = None,
-        macs_predictor: Predictor = None,
-        latency_predictor: Predictor = None,
-        params_predictor: Predictor = None,
+        dataset_path: Union[None, str] = None,
+        predictors: Dict[str, Predictor] = {},
         batch_size: int = 128,
         eval_batch_size: int = 128,
         dataloader_workers: int = 4,
         device: str = 'cpu',
         test_fraction: float = 1.0,
         verbose: bool = False,
-    ):
-        self.supernet = supernet
-        self.acc_predictor = acc_predictor
-        self.macs_predictor = macs_predictor
-        self.latency_predictor = latency_predictor
-        self.params_predictor = params_predictor
-        self.batch_size = batch_size
-        self.eval_batch_size = eval_batch_size
-        self.device = device
-        self.test_fraction = test_fraction
-        self.dataset_path = dataset_path
-        self.dataloader_workers = dataloader_workers
-        self.verbose = verbose
+    ) -> None:
+        super().__init__(
+            supernet=supernet,
+            dataset_path=dataset_path,
+            predictors=predictors,
+            batch_size=batch_size,
+            eval_batch_size=eval_batch_size,
+            dataloader_workers=dataloader_workers,
+            device=device,
+            test_fraction=test_fraction,
+            verbose=verbose,
+        )
+
         ImagenetDataProvider.DEFAULT_PATH = dataset_path
 
         self.ofa_network = ofa_model_zoo.ofa_net(supernet, pretrained=True)
@@ -89,22 +87,6 @@ class OFARunner:
         else:
             self.dataloader = None
             log.warning('No dataset path provided. Cannot validate sub-networks.')
-
-    def estimate_accuracy_top1(self, subnet_cfg) -> float:
-        top1 = self.acc_predictor.predict(subnet_cfg)
-        return top1
-
-    def estimate_macs(self, subnet_cfg) -> int:
-        macs = self.macs_predictor.predict(subnet_cfg)
-        return macs
-
-    def estimate_latency(self, subnet_cfg) -> float:
-        latency = self.latency_predictor.predict(subnet_cfg)
-        return latency
-
-    def estimate_parameters(self, subnet_cfg) -> int:
-        parameters = self.params_predictor.predict(subnet_cfg)
-        return parameters
 
     def validate_top1(self, subnet_cfg, device=None) -> float:
         device = self.device if not device else device
@@ -233,21 +215,10 @@ class EvaluationInterfaceOFAResNet50(EvaluationInterface):
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'latency' in self.optimization_metrics:
-                individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'accuracy_top1' in self.optimization_metrics:
-                individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_top1(
-                    self.manager.onehot_generic(x).reshape(1, -1)
+            for metric in self.optimization_metrics:
+                # TODO(macsz) Maybe move [0] to the `estimate_metric`.
+                individual_results[metric] = self.evaluator.estimate_metric(
+                    metric, self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
 
         # Validation Mode
@@ -330,21 +301,9 @@ class EvaluationInterfaceOFAMobileNetV3(EvaluationInterface):
 
         # Predictor Mode
         if self.predictor_mode == True:
-            if 'params' in self.optimization_metrics:
-                individual_results['params'] = self.evaluator.estimate_parameters(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'latency' in self.optimization_metrics:
-                individual_results['latency'] = self.evaluator.estimate_latency(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'macs' in self.optimization_metrics:
-                individual_results['macs'] = self.evaluator.estimate_macs(
-                    self.manager.onehot_generic(x).reshape(1, -1)
-                )[0]
-            if 'accuracy_top1' in self.optimization_metrics:
-                individual_results['accuracy_top1'] = self.evaluator.estimate_accuracy_top1(
-                    self.manager.onehot_generic(x).reshape(1, -1)
+            for metric in self.optimization_metrics:
+                individual_results[metric] = self.evaluator.estimate_metric(
+                    metric, self.manager.onehot_generic(x).reshape(1, -1)
                 )[0]
 
         # Validation Mode
