@@ -13,8 +13,13 @@
 # limitations under the License.
 
 import csv
+import random
+import string
 
-from dynast.utils import log
+from dynast.utils import LazyImport, log
+from dynast.utils.distributed import get_distributed_vars
+
+set_workspace = LazyImport("neural_compressor.set_workspace")
 
 
 class EvaluationInterface:
@@ -31,13 +36,23 @@ class EvaluationInterface:
             (Optional) The csv file that get written to during the subnetwork search
     """
 
-    def __init__(self, evaluator, manager, optimization_metrics, measurements, csv_path, predictor_mode):
+    def __init__(
+        self,
+        evaluator,
+        manager,
+        optimization_metrics,
+        measurements,
+        csv_path,
+        predictor_mode,
+        mixed_precision: bool = False,
+    ):
         self.evaluator = evaluator
         self.manager = manager
         self.optimization_metrics = optimization_metrics
         self.measurements = measurements
         self.predictor_mode = predictor_mode
         self.csv_path = csv_path
+        self.mixed_precision = mixed_precision
 
     def format_csv(self, csv_header):
         if self.csv_path:
@@ -48,3 +63,10 @@ class EvaluationInterface:
             f.close()
         log.info(f'(Re)Formatted results file: {self.csv_path}')
         log.info(f'csv file header: {csv_header}')
+
+    def _set_workspace(self):
+        LOCAL_RANK, WORLD_RANK, WORLD_SIZE, DIST_METHOD = get_distributed_vars()
+        WORLD_RANK = WORLD_RANK if WORLD_RANK is not None else 0
+        workspace_name = f"/tmp/dynast_nc_workspace_{WORLD_RANK}_{''.join(random.choices(string.ascii_letters, k=6))}"
+        set_workspace(workspace_name)
+        log.debug(f'Setting Neural Compressor workspace: {workspace_name}')

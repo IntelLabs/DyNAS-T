@@ -29,11 +29,12 @@ class EncodingBase:
     a user parameter dictionary to create the following representations:
     """
 
-    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0):
+    def __init__(self, param_dict: dict, verbose: bool = False, seed: int = 0, mixed_precision: bool = False):
         self.param_dict = param_dict
         self.verbose = verbose
         self.mapper, self.param_upperbound, self.param_count = self.process_param_dict()
         self.set_seed(seed)
+        self.mixed_precision = mixed_precision
         self.inv_mapper = self.create_inv_mapper()
 
     def process_param_dict(self) -> Tuple[List[Dict[int, Union[int, float]]], List[int], int]:
