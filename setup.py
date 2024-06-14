@@ -86,6 +86,7 @@ setup(
     extras_require={
         'all': get_dependencies('all'),
         'test': get_dependencies('test'),
+        'plot': ['matplotlib', 'shapely', 'alphashape', 'descartes'],
         'bootstrapnas': get_dependencies('bootstrapnas'),
         'neural_compressor': get_dependencies('neural_compressor'),
     },
