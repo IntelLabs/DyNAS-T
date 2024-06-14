@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import csv
+import os
 
 from dynast.utils import log
 
@@ -40,11 +41,13 @@ class EvaluationInterface:
         self.csv_path = csv_path
 
     def format_csv(self, csv_header):
-        if self.csv_path:
+        if os.path.exists(self.csv_path):
+            log.info(f'Reusing existing results file: {self.csv_path}')
+        else:
             f = open(self.csv_path, "w")
             writer = csv.writer(f)
             result = csv_header
             writer.writerow(result)
             f.close()
-        log.info(f'(Re)Formatted results file: {self.csv_path}')
+            log.info(f'Created new results file: {self.csv_path}')
         log.info(f'csv file header: {csv_header}')

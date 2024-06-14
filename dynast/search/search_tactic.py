@@ -242,7 +242,6 @@ class NASBaseConfig:
             csv_path=self.results_path,
         )
 
-        # Clear csv file if one exists
         self.validation_interface.format_csv(self.csv_header)
 
     def get_best_configs(self, sort_by: str = None, ascending: bool = False, limit: int = None):
@@ -511,210 +510,27 @@ class LINAS(NASBaseConfig):
 
         self._init_search()
 
-        # Randomly sample search space for initial population
-        latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
+        if os.path.exists(self.results_path) and len(pd.read_csv(self.results_path)) > 0:  # TODO(macsx: fix this, should not be read)
+            df = pd.read_csv(self.results_path)
+            full_populations = len(df) // self.population
+            log.info(f'Loaded {len(df)} evaluated configs. Will re-use {full_populations*self.population} samples from {full_populations} finished populations.')
+            df = df.iloc[:full_populations*self.population]
+            df.to_csv(self.results_path, index=False)
+            init_loop = full_populations
+            latest_population = self._inner_loop_low_fidelity_predictions()
+        else:
+            # Randomly sample search space for initial population
+            init_loop = 0
+            latest_population = [self.supernet_manager.random_sample() for _ in range(self.population)]
 
         # Start Lightweight Iterative Neural Architecture Search (LINAS)
         num_loops = round(self.num_evals / self.population)
-        for loop in range(num_loops):
+        for loop in range(init_loop, num_loops):
             log.info('Starting LINAS loop {} of {}.'.format(loop + 1, num_loops))
 
-            # High-Fidelity Validation measurements
-            for _, individual in enumerate(latest_population):
-                log.info(f'Evaluating subnetwork {_+1}/{self.population} in loop {loop+1} of {num_loops}')
-                self.validation_interface.eval_subnet(individual)
+            self._inner_loop_high_fidelity_validation(latest_population, loop, num_loops)
 
-            # Inner-loop Low-Fidelity Predictor Runner, need to re-instantiate every loop
-            self.train_predictors()
-
-            if self.supernet in [
-                'ofa_resnet50',
-                'ofa_mbv3_d234_e346_k357_w1.0',
-                'ofa_mbv3_d234_e346_k357_w1.2',
-                'ofa_proxyless_d234_e346_k357_w1.3',
-            ]:
-                runner_predict = OFARunner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
-                    dataset_path=self.dataset_path,
-                    device=self.device,
-                    dataloader_workers=self.dataloader_workers,
-                    test_fraction=self.test_fraction,
-                )
-            elif self.supernet == 'transformer_lt_wmt_en_de':
-                runner_predict = TransformerLTRunner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['bleu'],
-                    dataset_path=self.dataset_path,
-                    checkpoint_path=self.supernet_ckpt_path,
-                )
-
-            elif self.supernet == 'bert_base_sst2':
-                runner_predict = BertSST2Runner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_sst2'],
-                    dataset_path=self.dataset_path,
-                    checkpoint_path=self.supernet_ckpt_path,
-                    device=self.device,
-                )
-            elif self.supernet == 'bert_base_sst2_quantized':
-                runner_predict = BertSST2QuantizedRunner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    model_size_predictor=self.predictor_dict['model_size'],
-                    acc_predictor=self.predictor_dict['accuracy_sst2'],
-                    dataset_path=self.dataset_path,
-                    checkpoint_path=self.supernet_ckpt_path,
-                    device=self.device,
-                )
-            elif self.supernet == 'vit_base_imagenet':
-                runner_predict = ViTRunner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
-                    dataset_path=self.dataset_path,
-                    checkpoint_path=self.supernet_ckpt_path,
-                    batch_size=self.batch_size,
-                    device=self.device,
-                )
-
-            elif self.supernet == 'inc_quantization_ofa_resnet50':
-                runner_predict = QuantizedOFARunner(
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    model_size_predictor=self.predictor_dict['model_size'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
-                    dataset_path=self.dataset_path,
-                    device=self.device,
-                    dataloader_workers=self.dataloader_workers,
-                    test_fraction=self.test_fraction,
-                )
-
-            elif 'bootstrapnas' in self.supernet:
-                runner_predict = BootstrapNASRunner(
-                    bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
-                    supernet=self.supernet,
-                    latency_predictor=self.predictor_dict['latency'],
-                    macs_predictor=self.predictor_dict['macs'],
-                    params_predictor=self.predictor_dict['params'],
-                    acc_predictor=self.predictor_dict['accuracy_top1'],
-                    dataset_path=self.dataset_path,
-                    batch_size=self.batch_size,
-                    device=self.device,
-                )
-            else:
-                raise NotImplementedError
-            # Setup validation interface
-            prediction_interface = EVALUATION_INTERFACE[self.supernet](
-                evaluator=runner_predict,
-                manager=self.supernet_manager,
-                optimization_metrics=self.optimization_metrics,
-                measurements=self.measurements,
-                csv_path=None,
-                predictor_mode=True,
-            )
-
-            if self.num_objectives == 1:
-                problem = EvolutionarySingleObjective(
-                    evaluation_interface=prediction_interface,
-                    param_count=self.supernet_manager.param_count,
-                    param_upperbound=self.supernet_manager.param_upperbound,
-                )
-                if self.search_algo == 'cmaes':
-                    search_manager = EvolutionaryManager(
-                        algorithm='cmaes',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_cmaes(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
-                else:
-                    search_manager = EvolutionaryManager(
-                        algorithm='ga',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_ga(
-                        population=self.population,
-                        num_evals=LINAS_INNERLOOP_EVALS[self.supernet],
-                    )
-            elif self.num_objectives == 2:
-                problem = EvolutionaryMultiObjective(
-                    evaluation_interface=prediction_interface,
-                    param_count=self.supernet_manager.param_count,
-                    param_upperbound=self.supernet_manager.param_upperbound,
-                )
-                if self.search_algo == 'age':
-                    search_manager = EvolutionaryManager(
-                        algorithm='age',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_age(
-                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                    )
-                else:
-                    search_manager = EvolutionaryManager(
-                        algorithm='nsga2',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_nsga2(
-                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                    )
-            elif self.num_objectives == 3:
-                problem = EvolutionaryManyObjective(
-                    evaluation_interface=prediction_interface,
-                    param_count=self.supernet_manager.param_count,
-                    param_upperbound=self.supernet_manager.param_upperbound,
-                )
-                if self.search_algo == 'ctaea':
-                    search_manager = EvolutionaryManager(
-                        algorithm='ctaea',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_ctaea(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
-                elif self.search_algo == 'moead':
-                    search_manager = EvolutionaryManager(
-                        algorithm='moead',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_moead(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
-                else:
-                    search_manager = EvolutionaryManager(
-                        algorithm='unsga3',
-                        seed=self.seed,
-                        n_obj=self.num_objectives,
-                        verbose=self.verbose,
-                    )
-                    search_manager.configure_unsga3(
-                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
-                    )
-            else:
-                log.error('Number of objectives not supported. Update optimization_metrics!')
-
-            results = search_manager.run_search(problem)
-
-            latest_population = results.pop.get('X')
+            latest_population = self._inner_loop_low_fidelity_predictions()
 
         log.info("Validated model architectures in file: {}".format(self.results_path))
 
@@ -726,6 +542,212 @@ class LINAS(NASBaseConfig):
             output.append(param_individual)
 
         return output
+
+    def _inner_loop_high_fidelity_validation(self, latest_population, loop, num_loops):
+        # High-Fidelity Validation measurements
+        for _, individual in enumerate(latest_population):
+            log.info(f'Evaluating subnetwork {_+1}/{self.population} in loop {loop+1} of {num_loops}')
+            self.validation_interface.eval_subnet(individual)
+
+    def _setup_search_step(self, prediction_interface):
+        if self.num_objectives == 1:
+            problem = EvolutionarySingleObjective(
+                    evaluation_interface=prediction_interface,
+                    param_count=self.supernet_manager.param_count,
+                    param_upperbound=self.supernet_manager.param_upperbound,
+                )
+            if self.search_algo == 'cmaes':
+                search_manager = EvolutionaryManager(
+                        algorithm='cmaes',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_cmaes(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+            else:
+                search_manager = EvolutionaryManager(
+                        algorithm='ga',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_ga(
+                        population=self.population,
+                        num_evals=LINAS_INNERLOOP_EVALS[self.supernet],
+                    )
+        elif self.num_objectives == 2:
+            problem = EvolutionaryMultiObjective(
+                    evaluation_interface=prediction_interface,
+                    param_count=self.supernet_manager.param_count,
+                    param_upperbound=self.supernet_manager.param_upperbound,
+                )
+            if self.search_algo == 'age':
+                search_manager = EvolutionaryManager(
+                        algorithm='age',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_age(
+                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
+                    )
+            else:
+                search_manager = EvolutionaryManager(
+                        algorithm='nsga2',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_nsga2(
+                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
+                    )
+        elif self.num_objectives == 3:
+            problem = EvolutionaryManyObjective(
+                    evaluation_interface=prediction_interface,
+                    param_count=self.supernet_manager.param_count,
+                    param_upperbound=self.supernet_manager.param_upperbound,
+                )
+            if self.search_algo == 'ctaea':
+                search_manager = EvolutionaryManager(
+                        algorithm='ctaea',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_ctaea(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+            elif self.search_algo == 'moead':
+                search_manager = EvolutionaryManager(
+                        algorithm='moead',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_moead(num_evals=LINAS_INNERLOOP_EVALS[self.supernet])
+            else:
+                search_manager = EvolutionaryManager(
+                        algorithm='unsga3',
+                        seed=self.seed,
+                        n_obj=self.num_objectives,
+                        verbose=self.verbose,
+                    )
+                search_manager.configure_unsga3(
+                        population=self.population, num_evals=LINAS_INNERLOOP_EVALS[self.supernet]
+                    )
+        else:
+            log.error('Number of objectives not supported. Update optimization_metrics!')
+            raise Exception
+        return problem , search_manager
+
+    def _inner_loop_low_fidelity_predictions(self):
+        # Inner-loop Low-Fidelity Predictor Runner, need to re-instantiate every loop
+        self.train_predictors()
+        prediction_interface = self._create_prediction_interface()
+        problem, search_manager = self._setup_search_step(prediction_interface)
+        results = search_manager.run_search(problem)
+        latest_population = results.pop.get('X')
+        return latest_population
+
+    def _create_prediction_interface(self):
+        if self.supernet in [
+                'ofa_resnet50',
+                'ofa_mbv3_d234_e346_k357_w1.0',
+                'ofa_mbv3_d234_e346_k357_w1.2',
+                'ofa_proxyless_d234_e346_k357_w1.3',
+            ]:
+            runner_predict = OFARunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    test_fraction=self.test_fraction,
+                )
+        elif self.supernet == 'transformer_lt_wmt_en_de':
+            runner_predict = TransformerLTRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['bleu'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                )
+
+        elif self.supernet == 'bert_base_sst2':
+            runner_predict = BertSST2Runner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+        elif self.supernet == 'bert_base_sst2_quantized':
+            runner_predict = BertSST2QuantizedRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    acc_predictor=self.predictor_dict['accuracy_sst2'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    device=self.device,
+                )
+        elif self.supernet == 'vit_base_imagenet':
+            runner_predict = ViTRunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    checkpoint_path=self.supernet_ckpt_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                )
+
+        elif self.supernet == 'inc_quantization_ofa_resnet50':
+            runner_predict = QuantizedOFARunner(
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    model_size_predictor=self.predictor_dict['model_size'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    device=self.device,
+                    dataloader_workers=self.dataloader_workers,
+                    test_fraction=self.test_fraction,
+                )
+
+        elif 'bootstrapnas' in self.supernet:
+            runner_predict = BootstrapNASRunner(
+                    bootstrapnas_supernetwork=self.bootstrapnas_supernetwork,
+                    supernet=self.supernet,
+                    latency_predictor=self.predictor_dict['latency'],
+                    macs_predictor=self.predictor_dict['macs'],
+                    params_predictor=self.predictor_dict['params'],
+                    acc_predictor=self.predictor_dict['accuracy_top1'],
+                    dataset_path=self.dataset_path,
+                    batch_size=self.batch_size,
+                    device=self.device,
+                )
+        else:
+            raise NotImplementedError
+            # Setup validation interface
+        prediction_interface = EVALUATION_INTERFACE[self.supernet](
+                evaluator=runner_predict,
+                manager=self.supernet_manager,
+                optimization_metrics=self.optimization_metrics,
+                measurements=self.measurements,
+                csv_path=None,
+                predictor_mode=True,
+            )
+
+        return prediction_interface
 
 
 class RandomSearch(NASBaseConfig):
