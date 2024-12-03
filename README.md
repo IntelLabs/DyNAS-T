@@ -1,8 +1,17 @@
 # DyNAS-T
 
-![DyNAS-T Logo](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_logo.png?raw=true)
+<!--![DyNAS-T Logo](https://github.com/IntelLabs/DyNAS-T/blob/main/docs/images/dynast_logo.png?raw=true)
 
 [![PyPI DyNAS-T](https://img.shields.io/pypi/v/dynast)](https://pypi.org/project/dynast/) [![Python Versions](https://img.shields.io/pypi/pyversions/dynast)](https://pypi.org/project/dynast/) [![image](https://img.shields.io/badge/license-Apache--2-blue.svg?style=flat)](http://www.apache.org/licenses/LICENSE-2.0) [![Monthly Downloads](https://img.shields.io/pypi/dm/dynast)](https://pypi.org/project/dynast/)
+-->
+
+> [!CAUTION]
+> **PROJECT NOT UNDER ACTIVE MANAGEMENT**
+> * This project will no longer be maintained by Intel.
+> * Intel has ceased development and contributions including, but not limited to, maintenance, bug fixes, new releases, or updates, to this project.  
+> * Intel no longer accepts patches to this project.  
+> * If you have an ongoing need to use this project, are interested in independently developing it, or would like to maintain patches for the open source software community, please create your own fork of this project.
+
 
 DyNAS-T (**Dy**namic **N**eural **A**rchitecture **S**earch **T**oolkit) is a super-network neural architecture
 search NAS optimization package designed for efficiently discovering optimal deep neural network (DNN)
